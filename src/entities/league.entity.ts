@@ -12,7 +12,7 @@ export class League extends BaseApplicationEntity {
   abbreviation: string;
 
   @Column({ nullable: true, select: false })
-  password: string | null;
+  password: string;
 
   @OneToMany(() => LeagueUser, leagueUser => leagueUser.league)
   leagueUsers: LeagueUser[];

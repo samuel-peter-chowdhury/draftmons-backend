@@ -4,16 +4,16 @@ import { Move } from "./move.entity";
 
 @Entity('pokemon_move')
 export class PokemonMove {
-  @PrimaryColumn({ name: 'pokemon_id' })
+  @PrimaryColumn()
   pokemonId: number;
 
-  @PrimaryColumn({ name: 'move_id' })
+  @PrimaryColumn()
   moveId: number;
 
   @Column()
   gen: string;
 
-  @ManyToOne(() => Pokemon, pokemon => pokemon.moves)
+  @ManyToOne(() => Pokemon, pokemon => pokemon.pokemonMoves)
   @JoinColumn({ name: 'pokemon_id' })
   pokemon: Pokemon;
 

@@ -1,6 +1,7 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseApplicationEntity } from './base.entity';
 import { PokemonMove } from './pokemon-move.entity';
+import { PokemonType } from './pokemon-type.entity';
 
 @Entity('move')
 export class Move extends BaseApplicationEntity {
@@ -8,25 +9,29 @@ export class Move extends BaseApplicationEntity {
   name: string;
 
   @Column()
-  type: string;
+  pokemonTypeId: number;
+
+  @ManyToOne(() => PokemonType, pokemonType => pokemonType.moves)
+  @JoinColumn({ name: 'pokemon_type_id' })
+  pokemonType: PokemonType;
 
   @Column()
   category: string;
 
-  @Column({ nullable: true })
+  @Column()
   power: number;
 
-  @Column({ nullable: true })
-  accuracy: number | null;
+  @Column()
+  accuracy: number;
 
-  @Column({ default: 0 })
+  @Column()
   priority: number;
 
-  @Column({ nullable: true })
-  pp: number | null;
+  @Column()
+  pp: number;
 
-  @Column({ nullable: true })
-  description: string | null;
+  @Column()
+  description: string;
 
   @OneToMany(() => PokemonMove, pokemonMove => pokemonMove.move)
   pokemonMoves: PokemonMove[];

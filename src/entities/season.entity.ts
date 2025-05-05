@@ -5,6 +5,15 @@ import { Week } from "./week.entity";
 import { Team } from "./team.entity";
 import { BaseApplicationEntity } from "./base.entity";
 
+export enum SeasonStatus {
+  PRE_DRAFT = "PRE_DRAFT",
+  DRAFT = "DRAFT",
+  PRE_SEASON = "PRE_SEASON",
+  REGULAR_SEASON = "REGULAR_SEASON",
+  POST_SEASON = "POST_SEASON",
+  PLAYOFFS = "PLAYOFFS"
+}
+
 @Entity('season')
 export class Season extends BaseApplicationEntity {
   @Column()
@@ -13,19 +22,23 @@ export class Season extends BaseApplicationEntity {
   @Column()
   gen: string;
 
-  @Column()
-  status: string;
+  @Column({
+    type: "enum",
+    enum: SeasonStatus,
+    default: SeasonStatus.PRE_DRAFT,
+  })
+  status: SeasonStatus;
 
   @Column({ nullable: true })
-  rules: string | null;
+  rules: string;
 
-  @Column({ name: 'point_limit', nullable: true })
-  pointLimit: number | null;
+  @Column()
+  pointLimit: number;
 
-  @Column({ name: 'max_point_value', nullable: true })
-  maxPointValue: number | null;
+  @Column()
+  maxPointValue: number;
 
-  @Column({ name: 'league_id' })
+  @Column()
   leagueId: number;
 
   @ManyToOne(() => League, league => league.seasons)

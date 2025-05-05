@@ -4,13 +4,13 @@ import { User } from "./user.entity";
 
 @Entity('league_user')
 export class LeagueUser {
-  @Column({ primary: true, name: 'league_id' })
+  @Column({ primary: true })
   leagueId: number;
 
-  @Column({ primary: true, name: 'user_id' })
+  @Column({ primary: true })
   userId: number;
 
-  @Column({ default: false, name: 'isModerator' })
+  @Column({ default: false })
   isModerator: boolean;
 
   @ManyToOne(() => League, league => league.leagueUsers)

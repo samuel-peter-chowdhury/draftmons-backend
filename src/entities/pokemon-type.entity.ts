@@ -1,15 +1,23 @@
-import { Entity, JoinColumn, ManyToOne, PrimaryColumn } from "typeorm";
+import { Column, Entity, ManyToMany, OneToMany } from "typeorm";
+import { BaseApplicationEntity } from "./base.entity";
+import { Move } from "./move.entity";
 import { Pokemon } from "./pokemon.entity";
+import { TypeEffective } from "./type-effective.entity";
 
 @Entity('pokemon_type')
-export class PokemonType {
-  @PrimaryColumn({ name: 'pokemon_id' })
-  pokemonId: number;
+export class PokemonType extends BaseApplicationEntity {
+  @Column()
+  name: string;
 
-  @PrimaryColumn()
-  type: string;
+  @Column()
+  color: string;
 
-  @ManyToOne(() => Pokemon, pokemon => pokemon.types)
-  @JoinColumn({ name: 'pokemon_id' })
-  pokemon: Pokemon;
+  @OneToMany(() => Move, move => move.pokemonType)
+  moves: Move[];
+
+  @ManyToMany(() => Pokemon, pokemon => pokemon.pokemonTypes)
+  pokemon: Pokemon[];
+
+  @OneToMany(() => TypeEffective, typeEffective => typeEffective.pokemonType)
+  typeEffectiveness: TypeEffective[];
 }

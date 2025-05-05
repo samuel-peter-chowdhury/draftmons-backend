@@ -8,7 +8,7 @@ export class Week extends BaseApplicationEntity {
   @Column()
   name: string;
 
-  @Column({ name: 'season_id' })
+  @Column()
   seasonId: number;
 
   @ManyToOne(() => Season, season => season.weeks)

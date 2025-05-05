@@ -1,13 +1,18 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from "typeorm";
 import { Pokemon } from "./pokemon.entity";
+import { PokemonType } from "./pokemon-type.entity";
 
 @Entity('type_effective')
 export class TypeEffective {
-  @PrimaryColumn({ name: 'pokemon_id' })
+  @PrimaryColumn()
   pokemonId: number;
 
   @PrimaryColumn()
-  type: string;
+  pokemonTypeId: number;
+
+  @ManyToOne(() => PokemonType, pokemonType => pokemonType.typeEffectiveness)
+  @JoinColumn({ name: 'pokemon_type_id' })
+  pokemonType: PokemonType;
 
   @Column({ type: 'double precision' })
   value: number;

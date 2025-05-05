@@ -6,25 +6,25 @@ import { BaseApplicationEntity } from "./base.entity";
 
 @Entity('game')
 export class Game extends BaseApplicationEntity {
-  @Column({ name: 'match_id' })
+  @Column()
   matchId: number;
 
-  @Column({ name: 'winning_team_id', nullable: true })
-  winningTeamId: number | null;
+  @Column()
+  winningTeamId: number;
+
+  @Column()
+  differential: number;
 
   @Column({ nullable: true })
-  differential: number | null;
-
-  @Column({ name: 'replay_link', nullable: true })
-  replayLink: string | null;
+  replayLink: string;
 
   @ManyToOne(() => Match, match => match.games)
   @JoinColumn({ name: 'match_id' })
   match: Match;
 
-  @ManyToOne(() => Team, team => team.wonGames, { nullable: true })
+  @ManyToOne(() => Team, team => team.wonGames)
   @JoinColumn({ name: 'winning_team_id' })
-  winningTeam: Team | null;
+  winningTeam: Team;
 
   @OneToMany(() => GameStat, gameStat => gameStat.game)
   gameStats: GameStat[];

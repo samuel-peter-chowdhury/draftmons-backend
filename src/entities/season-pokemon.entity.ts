@@ -7,20 +7,20 @@ import { BaseApplicationEntity } from "./base.entity";
 
 @Entity('season_pokemon')
 export class SeasonPokemon extends BaseApplicationEntity {
-  @Column({ name: 'season_id' })
+  @Column()
   seasonId: number;
 
-  @Column({ name: 'pokemon_id' })
+  @Column()
   pokemonId: number;
 
-  @Column({ name: 'team_id', nullable: true })
-  teamId: number | null;
+  @Column({ nullable: true })
+  teamId: number;
 
   @Column({ nullable: true })
-  condition: string | null;
+  condition: string;
 
-  @Column({ name: 'point_value', nullable: true })
-  pointValue: number | null;
+  @Column({ nullable: true })
+  pointValue: number;
 
   @ManyToOne(() => Season, season => season.seasonPokemon)
   @JoinColumn({ name: 'season_id' })
@@ -32,7 +32,7 @@ export class SeasonPokemon extends BaseApplicationEntity {
 
   @ManyToOne(() => Team, team => team.seasonPokemon, { nullable: true })
   @JoinColumn({ name: 'team_id' })
-  team: Team | null;
+  team: Team;
 
   @OneToMany(() => GameStat, gameStat => gameStat.seasonPokemon)
   gameStats: GameStat[];

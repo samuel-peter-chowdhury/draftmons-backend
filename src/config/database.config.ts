@@ -1,6 +1,7 @@
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { config } from 'dotenv';
 import path from 'path';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 // Load environment variables
 config();
@@ -18,6 +19,7 @@ export const dataSourceOptions: DataSourceOptions = {
   synchronize: process.env.NODE_ENV === 'development', // Only true for development
   logging: process.env.NODE_ENV === 'development',
   ssl: process.env.NODE_ENV === 'production',
+  namingStrategy: new SnakeNamingStrategy(),
 };
 
 // Create and export the DataSource instance

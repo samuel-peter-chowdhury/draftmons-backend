@@ -1,5 +1,5 @@
-import { Column, Entity, OneToMany } from "typeorm";
-import { PokemonAbility } from "./pokemon-ability.entity";
+import { Column, Entity, ManyToMany } from "typeorm";
+import { Pokemon } from "./pokemon.entity";
 import { BaseApplicationEntity } from "./base.entity";
 
 @Entity('ability')
@@ -7,9 +7,9 @@ export class Ability extends BaseApplicationEntity {
   @Column()
   name: string;
 
-  @Column({ nullable: true })
-  description: string | null;
+  @Column()
+  description: string;
 
-  @OneToMany(() => PokemonAbility, pokemonAbility => pokemonAbility.ability)
-  pokemonAbilities: PokemonAbility[];
+  @ManyToMany(() => Pokemon, pokemon => pokemon.abilities)
+  pokemon: Pokemon[];
 }

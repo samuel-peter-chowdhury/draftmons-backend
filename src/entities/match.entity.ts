@@ -6,7 +6,7 @@ import { BaseApplicationEntity } from "./base.entity";
 
 @Entity('match')
 export class Match extends BaseApplicationEntity {
-  @Column({ name: 'week_id' })
+  @Column()
   weekId: number;
 
   @ManyToOne(() => Week, week => week.matches)

@@ -2,16 +2,26 @@ import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
 import { Match } from "./match.entity";
 import { Team } from "./team.entity";
 
+export enum MatchTeamStatus {
+  WINNER = "WINNER",
+  LOSER = "LOSER",
+}
+
 @Entity('match_team')
 export class MatchTeam {
-  @Column({ primary: true, name: 'match_id' })
+  @Column({ primary: true })
   matchId: number;
 
-  @Column({ primary: true, name: 'team_id' })
+  @Column({ primary: true })
   teamId: number;
 
-  @Column()
-  status: string;
+  @Column({
+    type: "enum",
+    enum: MatchTeamStatus,
+    nullable: true,
+    default: null,
+  })
+  status: MatchTeamStatus;
 
   @ManyToOne(() => Match, match => match.matchTeams)
   @JoinColumn({ name: 'match_id' })

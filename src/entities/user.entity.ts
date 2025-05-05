@@ -6,10 +6,10 @@ import { Team } from './team.entity';
 
 @Entity('user')
 export class User extends BaseApplicationEntity {
-  @Column({ nullable: true, name: 'first_name' })
+  @Column({ nullable: true })
   firstName: string;
 
-  @Column({ nullable: true, name: 'last_name' })
+  @Column({ nullable: true })
   lastName: string;
 
   @Column({ unique: true })
@@ -17,22 +17,22 @@ export class User extends BaseApplicationEntity {
 
   @Column({ nullable: true, select: false })
   @Exclude()
-  password: string | null;
+  password: string;
 
-  @Column({ default: false, name: 'isAdmin' })
+  @Column({ default: false })
   isAdmin: boolean;
 
-  @Column({ nullable: true, name: 'google_id', unique: true })
-  googleId: string | null;
-
-  @Column({ nullable: true, name: 'showdown_username' })
-  showdownUsername: string | null;
-
-  @Column({ nullable: true, name: 'discord_username' })
-  discordUsername: string | null;
+  @Column({ nullable: true, unique: true })
+  googleId: string;
 
   @Column({ nullable: true })
-  timezone: string | null;
+  showdownUsername: string;
+
+  @Column({ nullable: true })
+  discordUsername: string;
+
+  @Column({ nullable: true })
+  timezone: string;
 
   @OneToMany(() => LeagueUser, leagueUser => leagueUser.user)
   leagueUsers: LeagueUser[];

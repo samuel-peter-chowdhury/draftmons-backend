@@ -5,16 +5,16 @@ import { BaseApplicationEntity } from "./base.entity";
 
 @Entity('game_stat')
 export class GameStat extends BaseApplicationEntity {
-  @Column({ name: 'game_id' })
+  @Column()
   gameId: number;
 
-  @Column({ name: 'season_pokemon_id' })
+  @Column()
   seasonPokemonId: number;
 
-  @Column({ name: 'direct_kills', default: 0 })
+  @Column({ default: 0 })
   directKills: number;
 
-  @Column({ name: 'indirect_kills', default: 0 })
+  @Column({ default: 0 })
   indirectKills: number;
 
   @Column({ default: 0 })

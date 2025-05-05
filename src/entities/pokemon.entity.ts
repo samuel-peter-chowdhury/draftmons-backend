@@ -1,10 +1,10 @@
-import { Entity, Column, OneToMany } from 'typeorm';
+import { Entity, Column, OneToMany, ManyToMany, JoinTable } from 'typeorm';
 import { BaseApplicationEntity } from './base.entity';
-import { PokemonType } from './pokemon-type.entity';
 import { PokemonMove } from './pokemon-move.entity';
-import { PokemonAbility } from './pokemon-ability.entity';
 import { TypeEffective } from './type-effective.entity';
 import { SeasonPokemon } from './season-pokemon.entity';
+import { PokemonType } from './pokemon-type.entity';
+import { Ability } from './ability.entity';
 
 @Entity('pokemon')
 export class Pokemon extends BaseApplicationEntity {
@@ -41,14 +41,16 @@ export class Pokemon extends BaseApplicationEntity {
   @Column({ type: 'double precision' })
   weight: number;
 
-  @OneToMany(() => PokemonType, pokemonType => pokemonType.pokemon)
-  types: PokemonType[];
+  @ManyToMany(() => PokemonType, pokemonType => pokemonType.pokemon)
+  @JoinTable()
+  pokemonTypes: PokemonType[];
 
   @OneToMany(() => PokemonMove, pokemonMove => pokemonMove.pokemon)
-  moves: PokemonMove[];
+  pokemonMoves: PokemonMove[];
 
-  @OneToMany(() => PokemonAbility, pokemonAbility => pokemonAbility.pokemon)
-  abilities: PokemonAbility[];
+  @ManyToMany(() => Ability, ability => ability.pokemon)
+  @JoinTable()
+  abilities: Ability[];
 
   @OneToMany(() => TypeEffective, typeEffective => typeEffective.pokemon)
   typeEffectiveness: TypeEffective[];

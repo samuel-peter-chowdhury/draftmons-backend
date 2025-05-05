@@ -11,10 +11,10 @@ export class Team extends BaseApplicationEntity {
   @Column()
   name: string;
 
-  @Column({ name: 'season_id' })
+  @Column()
   seasonId: number;
 
-  @Column({ name: 'user_id' })
+  @Column()
   userId: number;
 
   @ManyToOne(() => Season, season => season.teams)
