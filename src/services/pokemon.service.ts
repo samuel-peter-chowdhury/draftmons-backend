@@ -1,8 +1,6 @@
 import { Repository } from 'typeorm';
 import { InjectRepository } from 'typeorm-typedi-extensions';
 import { Pokemon } from '../entities/pokemon.entity';
-import { PokemonType } from '../entities/pokemon-type.entity';
-import { PokemonAbility } from '../entities/pokemon-ability.entity';
 import { PokemonMove } from '../entities/pokemon-move.entity';
 import { TypeEffective } from '../entities/type-effective.entity';
 import { BaseService } from './base.service';
@@ -15,12 +13,6 @@ export class PokemonService extends BaseService<Pokemon> {
   constructor(
     @InjectRepository(Pokemon)
     private pokemonRepository: Repository<Pokemon>,
-
-    @InjectRepository(PokemonType)
-    private pokemonTypeRepository: Repository<PokemonType>,
-
-    @InjectRepository(PokemonAbility)
-    private pokemonAbilityRepository: Repository<PokemonAbility>,
 
     @InjectRepository(PokemonMove)
     private pokemonMoveRepository: Repository<PokemonMove>,
@@ -77,105 +69,7 @@ export class PokemonService extends BaseService<Pokemon> {
     // Create pokemon
     const pokemon = await this.pokemonRepository.create(createPokemonDto);
 
-    // Add types if provided
-    if (createPokemonDto.types && createPokemonDto.types.length > 0) {
-      for (const typeDto of createPokemonDto.types) {
-        await this.pokemonTypeRepository.save({
-          pokemonId: pokemon.id,
-          type: typeDto.type,
-        });
-      }
-    }
-
     return this.findOneWithDetails(pokemon.id);
-  }
-
-  async addType(pokemonId: number, type: string): Promise<PokemonType> {
-    // Check if pokemon exists
-    await this.findOne(pokemonId);
-
-    // Check if type already exists for this pokemon
-    const existingType = await this.pokemonTypeRepository.findOne({
-      where: {
-        pokemonId,
-        type,
-      },
-    });
-
-    if (existingType) {
-      throw new HttpException(400, 'This type is already assigned to this Pokemon');
-    }
-
-    // Add type
-    return this.pokemonTypeRepository.save({
-      pokemonId,
-      type,
-    });
-  }
-
-  async removeType(pokemonId: number, type: string): Promise<boolean> {
-    // Check if pokemon exists
-    await this.findOne(pokemonId);
-
-    // Check if type exists for this pokemon
-    const existingType = await this.pokemonTypeRepository.findOne({
-      where: {
-        pokemonId,
-        type,
-      },
-    });
-
-    if (!existingType) {
-      throw new HttpException(404, 'This type is not assigned to this Pokemon');
-    }
-
-    // Remove type
-    await this.pokemonTypeRepository.remove(existingType);
-    return true;
-  }
-
-  async addAbility(pokemonId: number, abilityId: number): Promise<PokemonAbility> {
-    // Check if pokemon exists
-    await this.findOne(pokemonId);
-
-    // Check if ability already exists for this pokemon
-    const existingAbility = await this.pokemonAbilityRepository.findOne({
-      where: {
-        pokemonId,
-        abilityId,
-      },
-    });
-
-    if (existingAbility) {
-      throw new HttpException(400, 'This ability is already assigned to this Pokemon');
-    }
-
-    // Add ability
-    return this.pokemonAbilityRepository.save({
-      pokemonId,
-      abilityId,
-    });
-  }
-
-  async removeAbility(pokemonId: number, abilityId: number): Promise<boolean> {
-    // Check if pokemon exists
-    await this.findOne(pokemonId);
-
-    // Check if ability exists for this pokemon
-    const existingAbility = await this.pokemonAbilityRepository.findOne({
-      where: {
-        pokemonId,
-        abilityId,
-      },
-    });
-
-    if (!existingAbility) {
-      throw new HttpException(404, 'This ability is not assigned to this Pokemon');
-    }
-
-    // Remove ability
-    await this.pokemonAbilityRepository.remove(existingAbility);
-    return true;
   }
 
   async addMove(pokemonId: number, moveId: number, gen: string): Promise<PokemonMove> {
@@ -223,7 +117,7 @@ export class PokemonService extends BaseService<Pokemon> {
     return true;
   }
 
-  async setTypeEffectiveness(pokemonId: number, type: string, value: number): Promise<TypeEffective> {
+  async setTypeEffectiveness(pokemonId: number, pokemonTypeId: number, value: number): Promise<TypeEffective> {
     // Check if pokemon exists
     await this.findOne(pokemonId);
 
@@ -231,7 +125,7 @@ export class PokemonService extends BaseService<Pokemon> {
     const existingEffectiveness = await this.typeEffectiveRepository.findOne({
       where: {
         pokemonId,
-        type,
+        pokemonTypeId,
       },
     });
 
@@ -244,7 +138,7 @@ export class PokemonService extends BaseService<Pokemon> {
     // Create new effectiveness
     return this.typeEffectiveRepository.save({
       pokemonId,
-      type,
+      pokemonTypeId,
       value,
     });
   }

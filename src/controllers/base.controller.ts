@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { plainToInstance, ClassConstructor } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 import { BaseService } from '../services/base.service';
-import { BaseApplicationEntity } from '@/entities/base.entity';
+import { BaseApplicationEntity } from '../entities/base.entity';
 
 export abstract class BaseController<T extends BaseApplicationEntity, C, U> {
   protected service: BaseService<T>;

@@ -6,11 +6,8 @@ import {
   PokemonDto,
   CreatePokemonDto,
   UpdatePokemonDto,
-  PokemonTypeDto,
-  PokemonAbilityDto,
   PokemonMoveDto,
   TypeEffectiveDto,
-  CreatePokemonTypeDto
 } from '../dtos/pokemon.dto';
 import { validateDto } from '../middleware/validation.middleware';
 import { isAuthenticated, isAdmin } from '../middleware/auth.middleware';
@@ -35,20 +32,12 @@ export class PokemonController extends BaseController<Pokemon, PokemonDto, Updat
     this.router.put('/:id', isAuthenticated, isAdmin, validateDto(UpdatePokemonDto), this.update);
     this.router.delete('/:id', isAuthenticated, isAdmin, this.delete);
 
-    // Type routes
-    this.router.post('/:id/types', isAuthenticated, isAdmin, validateDto(CreatePokemonTypeDto), this.addType);
-    this.router.delete('/:id/types/:type', isAuthenticated, isAdmin, this.removeType);
-
-    // Ability routes
-    this.router.post('/:id/abilities/:abilityId', isAuthenticated, isAdmin, this.addAbility);
-    this.router.delete('/:id/abilities/:abilityId', isAuthenticated, isAdmin, this.removeAbility);
-
     // Move routes
     this.router.post('/:id/moves/:moveId', isAuthenticated, isAdmin, this.addMove);
     this.router.delete('/:id/moves/:moveId', isAuthenticated, isAdmin, this.removeMove);
 
     // Type effectiveness routes
-    this.router.post('/:id/effectiveness/:type/:value', isAuthenticated, isAdmin, this.setTypeEffectiveness);
+    this.router.post('/:id/effectiveness/:typeId/:value', isAuthenticated, isAdmin, this.setTypeEffectiveness);
   }
 
   // Pokemon methods
@@ -102,52 +91,6 @@ export class PokemonController extends BaseController<Pokemon, PokemonDto, Updat
     );
   });
 
-  // Type methods
-  addType = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const pokemonId = parseInt(req.params.id);
-    const { type } = req.body;
-
-    const pokemonType = await this.pokemonService.addType(pokemonId, type);
-
-    res.status(201).json(
-      plainToInstance(PokemonTypeDto, pokemonType, {
-        excludeExtraneousValues: true,
-      })
-    );
-  });
-
-  removeType = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const pokemonId = parseInt(req.params.id);
-    const type = req.params.type;
-
-    await this.pokemonService.removeType(pokemonId, type);
-
-    res.status(204).send();
-  });
-
-  // Ability methods
-  addAbility = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const pokemonId = parseInt(req.params.id);
-    const abilityId = parseInt(req.params.abilityId);
-
-    const pokemonAbility = await this.pokemonService.addAbility(pokemonId, abilityId);
-
-    res.status(201).json(
-      plainToInstance(PokemonAbilityDto, pokemonAbility, {
-        excludeExtraneousValues: true,
-      })
-    );
-  });
-
-  removeAbility = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const pokemonId = parseInt(req.params.id);
-    const abilityId = parseInt(req.params.abilityId);
-
-    await this.pokemonService.removeAbility(pokemonId, abilityId);
-
-    res.status(204).send();
-  });
-
   // Move methods
   addMove = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const pokemonId = parseInt(req.params.id);
@@ -179,14 +122,14 @@ export class PokemonController extends BaseController<Pokemon, PokemonDto, Updat
   // Type effectiveness methods
   setTypeEffectiveness = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const pokemonId = parseInt(req.params.id);
-    const type = req.params.type;
+    const typeId = parseInt(req.params.typeId);
     const value = parseFloat(req.params.value);
 
     if (isNaN(value)) {
       throw new HttpException(400, 'Invalid effectiveness value');
     }
 
-    const typeEffective = await this.pokemonService.setTypeEffectiveness(pokemonId, type, value);
+    const typeEffective = await this.pokemonService.setTypeEffectiveness(pokemonId, typeId, value);
 
     res.status(201).json(
       plainToInstance(TypeEffectiveDto, typeEffective, {

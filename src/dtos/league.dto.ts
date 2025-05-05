@@ -1,6 +1,7 @@
 import { Expose, Type } from "class-transformer";
 import { IsString, IsOptional, IsNumber, IsBoolean } from "class-validator";
 import { UserDto } from "./user.dto";
+import { SeasonStatus } from "../entities/season.entity";
 
 export class LeagueDto {
   @Expose()
@@ -101,16 +102,16 @@ export class SeasonDto {
   gen: string;
 
   @Expose()
-  status: string;
+  status: SeasonStatus;
 
   @Expose()
   rules: string | null;
 
   @Expose()
-  pointLimit: number | null;
+  pointLimit: number;
 
   @Expose()
-  maxPointValue: number | null;
+  maxPointValue: number;
 
   @Expose()
   leagueId: number;
@@ -145,7 +146,7 @@ export class SeasonSummaryDto {
   gen: string;
 
   @Expose()
-  status: string;
+  status: SeasonStatus;
 }
 
 export class CreateSeasonDto {
@@ -156,7 +157,7 @@ export class CreateSeasonDto {
   gen: string;
 
   @IsString()
-  status: string;
+  status: SeasonStatus;
 
   @IsOptional()
   @IsString()
@@ -185,7 +186,7 @@ export class UpdateSeasonDto {
 
   @IsOptional()
   @IsString()
-  status?: string;
+  status?: SeasonStatus;
 
   @IsOptional()
   @IsString()

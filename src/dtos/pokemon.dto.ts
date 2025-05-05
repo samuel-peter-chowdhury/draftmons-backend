@@ -43,8 +43,8 @@ export class PokemonDto {
   types?: PokemonTypeDto[];
 
   @Expose({ groups: ['pokemon.full'] })
-  @Type(() => PokemonAbilityDto)
-  abilities?: PokemonAbilityDto[];
+  @Type(() => AbilityDto)
+  abilities?: AbilityDto[];
 
   @Expose({ groups: ['pokemon.full'] })
   @Type(() => TypeEffectiveDto)
@@ -60,10 +60,13 @@ export class PokemonDto {
 // Pokemon Type DTO
 export class PokemonTypeDto {
   @Expose()
-  pokemonId: number;
+  id: number;
 
   @Expose()
-  type: string;
+  name: string;
+
+  @Expose()
+  color: string;
 }
 
 // Ability DTO
@@ -75,20 +78,7 @@ export class AbilityDto {
   name: string;
 
   @Expose()
-  description: string | null;
-}
-
-// Pokemon Ability DTO
-export class PokemonAbilityDto {
-  @Expose()
-  pokemonId: number;
-
-  @Expose()
-  abilityId: number;
-
-  @Expose({ groups: ['pokemonAbility.full'] })
-  @Type(() => AbilityDto)
-  ability?: AbilityDto;
+  description: string;
 }
 
 // Type Effective DTO
@@ -97,7 +87,8 @@ export class TypeEffectiveDto {
   pokemonId: number;
 
   @Expose()
-  type: string;
+  @Type(() => PokemonTypeDto)
+  pokemonType?: PokemonTypeDto;
 
   @Expose()
   value: number;
@@ -110,27 +101,28 @@ export class MoveDto {
 
   @Expose()
   name: string;
-
+  
   @Expose()
-  type: string;
+  @Type(() => PokemonTypeDto)
+  pokemonType?: PokemonTypeDto;
 
   @Expose()
   category: string;
 
   @Expose()
-  power: number | null;
+  power: number;
 
   @Expose()
-  accuracy: number | null;
+  accuracy: number;
 
   @Expose()
   priority: number;
 
   @Expose()
-  pp: number | null;
+  pp: number;
 
   @Expose()
-  description: string | null;
+  description: string;
 }
 
 // Pokemon Move DTO
@@ -187,14 +179,8 @@ export class CreatePokemonDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreatePokemonTypeDto)
-  types?: CreatePokemonTypeDto[];
-}
-
-// Create Pokemon Type DTO
-export class CreatePokemonTypeDto {
-  @IsString()
-  type: string;
+  @Type(() => PokemonTypeDto)
+  types?: PokemonTypeDto[];
 }
 
 // Update Pokemon DTO
