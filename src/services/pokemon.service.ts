@@ -3,7 +3,7 @@ import { Pokemon } from '../entities/pokemon.entity';
 import { PokemonMove } from '../entities/pokemon-move.entity';
 import { TypeEffective } from '../entities/type-effective.entity';
 import { BaseService } from './base.service';
-import { HttpException } from '../utils/error.utils';
+import { NotFoundError, ConflictError } from '../errors';
 import { CreatePokemonDto } from '../dtos/pokemon.dto';
 import { Service, Inject } from 'typedi';
 
@@ -35,7 +35,7 @@ export class PokemonService extends BaseService<Pokemon> {
     });
 
     if (!pokemon) {
-      throw new HttpException(404, 'Pokemon not found');
+      throw new NotFoundError('Pokemon', id);
     }
 
     return pokemon;
@@ -57,12 +57,12 @@ export class PokemonService extends BaseService<Pokemon> {
     // Check if pokemon with same name or dexId already exists
     const existingByName = await this.findByName(createPokemonDto.name);
     if (existingByName) {
-      throw new HttpException(400, 'Pokemon with this name already exists');
+      throw new ConflictError('Pokemon with this name already exists');
     }
 
     const existingByDexId = await this.findByDexId(createPokemonDto.dexId);
     if (existingByDexId) {
-      throw new HttpException(400, 'Pokemon with this Pokedex ID already exists');
+      throw new ConflictError('Pokemon with this Pokedex ID already exists');
     }
 
     // Create pokemon
@@ -84,7 +84,7 @@ export class PokemonService extends BaseService<Pokemon> {
     });
 
     if (existingMove) {
-      throw new HttpException(400, 'This move is already assigned to this Pokemon');
+      throw new ConflictError('This move is already assigned to this Pokemon');
     }
 
     // Add move
@@ -108,7 +108,7 @@ export class PokemonService extends BaseService<Pokemon> {
     });
 
     if (!existingMove) {
-      throw new HttpException(404, 'This move is not assigned to this Pokemon');
+      throw new NotFoundError('Pokemon move', `${pokemonId}-${moveId}`);
     }
 
     // Remove move

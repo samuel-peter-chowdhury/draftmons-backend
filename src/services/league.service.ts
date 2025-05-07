@@ -3,7 +3,7 @@ import { League } from '../entities/league.entity';
 import { LeagueUser } from '../entities/league-user.entity';
 import { Season } from '../entities/season.entity';
 import { BaseService } from './base.service';
-import { HttpException } from '../utils/error.utils';
+import { NotFoundError, ConflictError } from '../errors';
 import { CreateLeagueDto, CreateSeasonDto, UpdateSeasonDto } from '../dtos/league.dto';
 import { Service, Inject } from 'typedi';
 
@@ -35,7 +35,7 @@ export class LeagueService extends BaseService<League> {
     });
 
     if (!league) {
-      throw new HttpException(404, 'League not found');
+      throw new NotFoundError('League', id);
     }
 
     return league;
@@ -71,7 +71,7 @@ export class LeagueService extends BaseService<League> {
         return this.leagueUserRepository.save(existingMembership);
       }
 
-      throw new HttpException(400, 'User is already a member of this league');
+      throw new ConflictError('User is already a member of this league');
     }
 
     // Add user to league
@@ -92,7 +92,7 @@ export class LeagueService extends BaseService<League> {
     });
 
     if (!membership) {
-      throw new HttpException(404, 'User is not a member of this league');
+      throw new NotFoundError('League membership', `${leagueId}-${userId}`);
     }
 
     // Remove user from league
@@ -121,7 +121,7 @@ export class LeagueService extends BaseService<League> {
     });
 
     if (!season) {
-      throw new HttpException(404, 'Season not found');
+      throw new NotFoundError('Season', id);
     }
 
     return season;

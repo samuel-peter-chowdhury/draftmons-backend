@@ -1,5 +1,6 @@
-import { HttpException } from '../utils/error.utils';
 import { Request, Response, NextFunction } from 'express';
+import { BaseError } from '../errors';
+import { QueryFailedError } from 'typeorm';
 
 export const errorMiddleware = (
   error: Error,
@@ -9,38 +10,29 @@ export const errorMiddleware = (
 ): void => {
   console.error(`[Error] ${error.stack}`);
 
-  if (error instanceof HttpException) {
-    res.status(error.status).json({
-      status: error.status,
-      message: error.message,
-    });
+  if (error instanceof BaseError) {
+    res.status(error.statusCode).json(error.toJSON());
     return;
   }
 
   // TypeORM specific errors
-  if (error.name === 'QueryFailedError') {
+  if (error instanceof QueryFailedError) {
     res.status(400).json({
-      status: 400,
+      statusCode: 400,
+      errorCode: 'DATABASE_ERROR',
       message: 'Database query failed',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
-    return;
-  }
-
-  // Handle validation errors
-  if (error.name === 'ValidationError') {
-    res.status(400).json({
-      status: 400,
-      message: 'Validation failed',
-      error: error.message,
+      timestamp: new Date().toISOString(),
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
     return;
   }
 
   // Default internal server error
   res.status(500).json({
-    status: 500,
+    statusCode: 500,
+    errorCode: 'INTERNAL_SERVER_ERROR',
     message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    timestamp: new Date().toISOString(),
+    details: process.env.NODE_ENV === 'development' ? error.message : undefined
   });
 };

@@ -5,14 +5,15 @@ import { League } from '../entities/league.entity';
 import { LeagueDto, CreateLeagueDto, UpdateLeagueDto, LeagueUserDto, CreateLeagueUserDto, UpdateLeagueUserDto, SeasonDto, CreateSeasonDto, UpdateSeasonDto } from '../dtos/league.dto';
 import { validateDto } from '../middleware/validation.middleware';
 import { isAuthenticated, isLeagueModerator, isLeagueMember, AuthenticatedRequest } from '../middleware/auth.middleware';
-import { HttpException, asyncHandler } from '../utils/error.utils';
+import { ValidationError, UnauthorizedError } from '../errors';
 import { plainToInstance } from 'class-transformer';
+import { asyncHandler } from '../utils/error.utils';
 
-export class LeagueController extends BaseController<League, LeagueDto, UpdateLeagueDto> {
+export class LeagueController extends BaseController<League, LeagueDto, CreateLeagueDto> {
   public router = Router();
 
   constructor(private leagueService: LeagueService) {
-    super(leagueService, LeagueDto);
+    super(leagueService, LeagueDto, CreateLeagueDto, UpdateLeagueDto as any);
     this.initializeRoutes();
   }
 
@@ -22,11 +23,11 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
     this.router.get('/:id', this.getLeagueById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(CreateLeagueDto), this.createLeague);
+    this.router.post('/', isAuthenticated, validateDto(CreateLeagueDto), this.create);
 
     // League moderator routes
-    this.router.put('/:id', isAuthenticated, isLeagueModerator(), validateDto(UpdateLeagueDto), this.updateLeague);
-    this.router.delete('/:id', isAuthenticated, isLeagueModerator(), this.deleteLeague);
+    this.router.put('/:id', isAuthenticated, isLeagueModerator(), validateDto(UpdateLeagueDto), this.update);
+    this.router.delete('/:id', isAuthenticated, isLeagueModerator(), this.delete);
 
     // League user management
     this.router.get('/:id/members', isAuthenticated, isLeagueMember(), this.getLeagueMembers);
@@ -57,6 +58,10 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
 
   getLeagueById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new ValidationError('Invalid League ID format');
+    }
+
     let league: League;
 
     if (req.query.full === 'true') {
@@ -75,9 +80,9 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
     );
   });
 
-  createLeague = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (!req.user) {
-      throw new HttpException(401, 'Unauthorized');
+      throw new UnauthorizedError();
     }
 
     const league = await this.leagueService.createLeague(req.body, req.user.id);
@@ -89,27 +94,13 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
     );
   });
 
-  updateLeague = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const id = parseInt(req.params.id);
-    const league = await this.leagueService.update(id, req.body);
-
-    res.json(
-      plainToInstance(LeagueDto, league, {
-        excludeExtraneousValues: true,
-      })
-    );
-  });
-
-  deleteLeague = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const id = parseInt(req.params.id);
-    await this.leagueService.delete(id);
-
-    res.status(204).send();
-  });
-
   // League member methods
   getLeagueMembers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
+    if (isNaN(leagueId)) {
+      throw new ValidationError('Invalid League ID format');
+    }
+
     const members = await this.leagueService.getLeagueMembers(leagueId);
 
     res.json(
@@ -122,7 +113,14 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
 
   addMember = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
+    if (isNaN(leagueId)) {
+      throw new ValidationError('Invalid League ID format');
+    }
+
     const { userId, isModerator } = req.body;
+    if (!userId) {
+      throw new ValidationError('User ID is required');
+    }
 
     const member = await this.leagueService.addUserToLeague(leagueId, userId, isModerator);
 
@@ -136,7 +134,17 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
   updateMember = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
     const userId = parseInt(req.params.userId);
+    if (isNaN(leagueId)) {
+      throw new ValidationError('Invalid League ID format');
+    }
+    if (isNaN(userId)) {
+      throw new ValidationError('Invalid User ID format');
+    }
+
     const { isModerator } = req.body;
+    if (typeof isModerator !== 'boolean') {
+      throw new ValidationError('isModerator must be a boolean');
+    }
 
     // Remove and re-add to update
     await this.leagueService.removeUserFromLeague(leagueId, userId);
@@ -152,6 +160,12 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
   removeMember = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
     const userId = parseInt(req.params.userId);
+    if (isNaN(leagueId)) {
+      throw new ValidationError('Invalid League ID format');
+    }
+    if (isNaN(userId)) {
+      throw new ValidationError('Invalid User ID format');
+    }
 
     await this.leagueService.removeUserFromLeague(leagueId, userId);
 
@@ -161,6 +175,10 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
   // Season methods
   getSeasons = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
+    if (isNaN(leagueId)) {
+      throw new ValidationError('Invalid League ID format');
+    }
+
     const seasons = await this.leagueService.getSeasons(leagueId);
 
     res.json(
@@ -172,6 +190,10 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
 
   getSeasonById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const seasonId = parseInt(req.params.seasonId);
+    if (isNaN(seasonId)) {
+      throw new ValidationError('Invalid Season ID format');
+    }
+
     const season = await this.leagueService.getSeason(seasonId);
     const group = req.query.full === 'true' ? ['season.full'] : undefined;
 
@@ -185,6 +207,9 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
 
   createSeason = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
+    if (isNaN(leagueId)) {
+      throw new ValidationError('Invalid League ID format');
+    }
 
     // Ensure leagueId in path matches leagueId in body
     req.body.leagueId = leagueId;
@@ -200,6 +225,10 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
 
   updateSeason = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const seasonId = parseInt(req.params.seasonId);
+    if (isNaN(seasonId)) {
+      throw new ValidationError('Invalid Season ID format');
+    }
+
     const season = await this.leagueService.updateSeason(seasonId, req.body);
 
     res.json(
@@ -211,6 +240,10 @@ export class LeagueController extends BaseController<League, LeagueDto, UpdateLe
 
   deleteSeason = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const seasonId = parseInt(req.params.seasonId);
+    if (isNaN(seasonId)) {
+      throw new ValidationError('Invalid Season ID format');
+    }
+
     await this.leagueService.deleteSeason(seasonId);
 
     res.status(204).send();

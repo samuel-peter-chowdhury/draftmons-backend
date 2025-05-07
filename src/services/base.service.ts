@@ -1,5 +1,5 @@
 import { Repository, FindOptionsWhere } from 'typeorm';
-import { HttpException } from '../utils/error.utils';
+import { NotFoundError } from '../errors';
 import { BaseApplicationEntity } from '../entities/base-application-entity.entity';
 
 export abstract class BaseService<T extends BaseApplicationEntity> {
@@ -17,7 +17,7 @@ export abstract class BaseService<T extends BaseApplicationEntity> {
     const entity = await this.repository.findOne({ where: { id } as any });
 
     if (!entity) {
-      throw new HttpException(404, 'Entity not found');
+      throw new NotFoundError('Entity', id);
     }
 
     return entity;

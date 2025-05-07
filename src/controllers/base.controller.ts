@@ -1,17 +1,17 @@
 import { Request, Response } from 'express';
-import { plainToInstance, ClassConstructor } from 'class-transformer';
-import { asyncHandler } from '../utils/error.utils';
 import { BaseService } from '../services/base.service';
 import { BaseApplicationEntity } from '../entities/base-application-entity.entity';
+import { plainToInstance, ClassConstructor } from 'class-transformer';
+import { asyncHandler } from '../utils/error.utils';
+import { ValidationError } from '../errors';
 
-export abstract class BaseController<T extends BaseApplicationEntity, C, U> {
-  protected service: BaseService<T>;
-  protected dtoClass: ClassConstructor<C>;
-
-  constructor(service: BaseService<T>, dtoClass: ClassConstructor<C>) {
-    this.service = service;
-    this.dtoClass = dtoClass;
-  }
+export abstract class BaseController<T extends BaseApplicationEntity, C, U extends object> {
+  constructor(
+    protected readonly service: BaseService<T>,
+    protected readonly dtoClass: ClassConstructor<C>,
+    protected readonly createDtoClass: ClassConstructor<U>,
+    protected readonly updateDtoClass: ClassConstructor<U>
+  ) {}
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const entities = await this.service.findAll();
@@ -27,6 +27,10 @@ export abstract class BaseController<T extends BaseApplicationEntity, C, U> {
 
   getById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new ValidationError('Invalid ID format');
+    }
+
     const entity = await this.service.findOne(id);
     const group = req.query.full === 'true' ? this.getFullTransformGroup() : undefined;
 
@@ -50,6 +54,10 @@ export abstract class BaseController<T extends BaseApplicationEntity, C, U> {
 
   update = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new ValidationError('Invalid ID format');
+    }
+
     const entity = await this.service.update(id, req.body);
 
     res.json(
@@ -61,13 +69,14 @@ export abstract class BaseController<T extends BaseApplicationEntity, C, U> {
 
   delete = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new ValidationError('Invalid ID format');
+    }
+
     await this.service.delete(id);
 
     res.status(204).send();
   });
 
-  // Override in child classes to specify the full transform group
-  protected getFullTransformGroup(): string[] {
-    return [];
-  }
+  protected abstract getFullTransformGroup(): string[];
 }

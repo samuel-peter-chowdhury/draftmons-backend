@@ -1,7 +1,7 @@
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { BaseService } from './base.service';
-import { HttpException } from '../utils/error.utils';
+import { ConflictError } from '../errors';
 import { GoogleUserDto, UpdateUserDto } from '../dtos/user.dto';
 import { Service, Inject } from 'typedi';
 
@@ -72,7 +72,7 @@ export class UserService extends BaseService<User> {
       const existingUser = await this.findByEmail(updateUserDto.email);
 
       if (existingUser && existingUser.id !== id) {
-        throw new HttpException(400, 'Email is already in use');
+        throw new ConflictError('Email is already in use');
       }
     }
 
