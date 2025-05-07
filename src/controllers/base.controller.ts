@@ -5,12 +5,10 @@ import { plainToInstance, ClassConstructor } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 import { ValidationError } from '../errors';
 
-export abstract class BaseController<T extends BaseApplicationEntity, C, U extends object> {
+export abstract class BaseController<T extends BaseApplicationEntity, C> {
   constructor(
     protected readonly service: BaseService<T>,
-    protected readonly dtoClass: ClassConstructor<C>,
-    protected readonly createDtoClass: ClassConstructor<U>,
-    protected readonly updateDtoClass: ClassConstructor<U>
+    protected readonly dtoClass: ClassConstructor<C>
   ) {}
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {

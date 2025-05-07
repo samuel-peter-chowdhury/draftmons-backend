@@ -9,11 +9,11 @@ import { ValidationError, UnauthorizedError } from '../errors';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 
-export class UserController extends BaseController<User, UserDto, CreateUserDto> {
+export class UserController extends BaseController<User, UserDto> {
   public router = Router();
 
   constructor(private userService: UserService) {
-    super(userService, UserDto, CreateUserDto, UpdateUserDto as any);
+    super(userService, UserDto);
     this.initializeRoutes();
   }
 

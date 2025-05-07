@@ -9,11 +9,11 @@ import { ValidationError, UnauthorizedError } from '../errors';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 
-export class LeagueController extends BaseController<League, LeagueDto, CreateLeagueDto> {
+export class LeagueController extends BaseController<League, LeagueDto> {
   public router = Router();
 
   constructor(private leagueService: LeagueService) {
-    super(leagueService, LeagueDto, CreateLeagueDto, UpdateLeagueDto as any);
+    super(leagueService, LeagueDto);
     this.initializeRoutes();
   }
 

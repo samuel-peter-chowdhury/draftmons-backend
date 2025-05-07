@@ -15,11 +15,11 @@ import { ValidationError } from '../errors';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 
-export class PokemonController extends BaseController<Pokemon, PokemonDto, CreatePokemonDto> {
+export class PokemonController extends BaseController<Pokemon, PokemonDto> {
   public router = Router();
 
   constructor(private pokemonService: PokemonService) {
-    super(pokemonService, PokemonDto, CreatePokemonDto, UpdatePokemonDto as any);
+    super(pokemonService, PokemonDto);
     this.initializeRoutes();
   }
 
