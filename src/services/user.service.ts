@@ -1,15 +1,14 @@
 import { Repository } from 'typeorm';
-import { InjectRepository } from 'typeorm-typedi-extensions';
 import { User } from '../entities/user.entity';
 import { BaseService } from './base.service';
 import { HttpException } from '../utils/error.utils';
 import { GoogleUserDto, UpdateUserDto } from '../dtos/user.dto';
-import { Service } from 'typedi';
+import { Service, Inject } from 'typedi';
 
 @Service()
 export class UserService extends BaseService<User> {
   constructor(
-    @InjectRepository(User)
+    @Inject('UserRepository')
     private userRepository: Repository<User>
   ) {
     super(userRepository);

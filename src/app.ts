@@ -26,16 +26,18 @@ export class App {
 
   constructor() {
     this.app = express();
-
-    this.initializeMiddlewares();
-    this.initializeRedis();
-    this.initializeServices();
-    this.initializePassport();
-    this.initializeControllers();
-    this.initializeErrorHandling();
   }
 
-  private initializeMiddlewares(): void {
+  public async initialize(): Promise<void> {
+    await this.initializeMiddlewares();
+    //await this.initializeRedis();
+    await this.initializeServices();
+    await this.initializePassport();
+    await this.initializeControllers();
+    await this.initializeErrorHandling();
+  }
+
+  private async initializeMiddlewares(): Promise<void> {
     // Security and logging middleware
     this.app.use(helmet());
     this.app.use(cors({
@@ -97,12 +99,12 @@ export class App {
     this.userService = Container.get(UserService);
   }
 
-  private initializePassport(): void {
+  private async initializePassport(): Promise<void> {
     // Configure passport with Google OAuth
     configurePassport(this.userService);
   }
 
-  private initializeControllers(): void {
+  private async initializeControllers(): Promise<void> {
     // Create and set up controllers
     const authController = new AuthController();
     const userController = new UserController(this.userService);
@@ -123,14 +125,14 @@ export class App {
     });
   }
 
-  private initializeErrorHandling(): void {
+  private async initializeErrorHandling(): Promise<void> {
     // Global error handler middleware
     this.app.use(errorMiddleware);
   }
 
   public async close(): Promise<void> {
     // Close database and Redis connections
-    await this.redisClient.disconnect();
+    //await this.redisClient.disconnect();
     await AppDataSource.destroy();
   }
 }

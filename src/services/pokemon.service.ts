@@ -1,23 +1,22 @@
 import { Repository } from 'typeorm';
-import { InjectRepository } from 'typeorm-typedi-extensions';
 import { Pokemon } from '../entities/pokemon.entity';
 import { PokemonMove } from '../entities/pokemon-move.entity';
 import { TypeEffective } from '../entities/type-effective.entity';
 import { BaseService } from './base.service';
 import { HttpException } from '../utils/error.utils';
 import { CreatePokemonDto } from '../dtos/pokemon.dto';
-import { Service } from 'typedi';
+import { Service, Inject } from 'typedi';
 
 @Service()
 export class PokemonService extends BaseService<Pokemon> {
   constructor(
-    @InjectRepository(Pokemon)
+    @Inject('PokemonRepository')
     private pokemonRepository: Repository<Pokemon>,
 
-    @InjectRepository(PokemonMove)
+    @Inject('PokemonMoveRepository')
     private pokemonMoveRepository: Repository<PokemonMove>,
 
-    @InjectRepository(TypeEffective)
+    @Inject('TypeEffectiveRepository')
     private typeEffectiveRepository: Repository<TypeEffective>
   ) {
     super(pokemonRepository);

@@ -1,23 +1,22 @@
 import { Repository } from 'typeorm';
-import { InjectRepository } from 'typeorm-typedi-extensions';
 import { League } from '../entities/league.entity';
 import { LeagueUser } from '../entities/league-user.entity';
 import { Season } from '../entities/season.entity';
 import { BaseService } from './base.service';
 import { HttpException } from '../utils/error.utils';
 import { CreateLeagueDto, CreateSeasonDto, UpdateSeasonDto } from '../dtos/league.dto';
-import { Service } from 'typedi';
+import { Service, Inject } from 'typedi';
 
 @Service()
 export class LeagueService extends BaseService<League> {
   constructor(
-    @InjectRepository(League)
+    @Inject('LeagueRepository')
     private leagueRepository: Repository<League>,
 
-    @InjectRepository(LeagueUser)
+    @Inject('LeagueUserRepository')
     private leagueUserRepository: Repository<LeagueUser>,
 
-    @InjectRepository(Season)
+    @Inject('SeasonRepository')
     private seasonRepository: Repository<Season>
   ) {
     super(leagueRepository);
