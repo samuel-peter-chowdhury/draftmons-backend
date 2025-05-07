@@ -1,6 +1,6 @@
 import { Repository, FindOptionsWhere } from 'typeorm';
 import { HttpException } from '../utils/error.utils';
-import { BaseApplicationEntity } from '../entities/base.entity';
+import { BaseApplicationEntity } from '../entities/base-application-entity.entity';
 
 export abstract class BaseService<T extends BaseApplicationEntity> {
   protected repository: Repository<T>;

@@ -1,5 +1,5 @@
 import { Entity, Column, OneToMany } from 'typeorm';
-import { BaseApplicationEntity } from './base.entity';
+import { BaseApplicationEntity } from './base-application-entity.entity';
 import { LeagueUser } from './league-user.entity';
 import { Season } from './season.entity';
 

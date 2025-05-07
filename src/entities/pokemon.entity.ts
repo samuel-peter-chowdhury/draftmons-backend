@@ -1,14 +1,15 @@
 import { Entity, Column, OneToMany, ManyToMany, JoinTable } from 'typeorm';
-import { BaseApplicationEntity } from './base.entity';
+import { BaseApplicationEntity } from './base-application-entity.entity';
 import { PokemonMove } from './pokemon-move.entity';
 import { TypeEffective } from './type-effective.entity';
 import { SeasonPokemon } from './season-pokemon.entity';
 import { PokemonType } from './pokemon-type.entity';
 import { Ability } from './ability.entity';
+import { Generation } from './generation.entity';
 
 @Entity('pokemon')
 export class Pokemon extends BaseApplicationEntity {
-  @Column({ name: 'dex_id' })
+  @Column()
   dexId: number;
 
   @Column()
@@ -23,33 +24,53 @@ export class Pokemon extends BaseApplicationEntity {
   @Column()
   defense: number;
 
-  @Column({ name: 'special_attack' })
+  @Column()
   specialAttack: number;
 
-  @Column({ name: 'special_defense' })
+  @Column()
   specialDefense: number;
 
   @Column()
   speed: number;
 
-  @Column({ name: 'base_stat_total' })
+  @Column()
   baseStatTotal: number;
 
-  @Column({ type: 'double precision' })
+  @Column()
   height: number;
 
-  @Column({ type: 'double precision' })
+  @Column()
   weight: number;
 
   @ManyToMany(() => PokemonType, pokemonType => pokemonType.pokemon)
-  @JoinTable()
+  @JoinTable({
+    name: 'pokemon_pokemon_types',
+    joinColumn: {
+      name: 'pokemon_id',
+      referencedColumnName: 'id'
+    },
+    inverseJoinColumn: {
+      name: 'pokemon_type_id',
+      referencedColumnName: 'id'
+    }
+  })
   pokemonTypes: PokemonType[];
 
   @OneToMany(() => PokemonMove, pokemonMove => pokemonMove.pokemon)
   pokemonMoves: PokemonMove[];
 
   @ManyToMany(() => Ability, ability => ability.pokemon)
-  @JoinTable()
+  @JoinTable({
+    name: 'pokemon_abilities',
+    joinColumn: {
+      name: 'pokemon_id',
+      referencedColumnName: 'id'
+    },
+    inverseJoinColumn: {
+      name: 'ability_id',
+      referencedColumnName: 'id'
+    }
+  })
   abilities: Ability[];
 
   @OneToMany(() => TypeEffective, typeEffective => typeEffective.pokemon)
@@ -57,4 +78,18 @@ export class Pokemon extends BaseApplicationEntity {
 
   @OneToMany(() => SeasonPokemon, seasonPokemon => seasonPokemon.pokemon)
   seasonPokemon: SeasonPokemon[];
+
+  @ManyToMany(() => Generation, generation => generation.pokemon)
+  @JoinTable({
+    name: 'pokemon_generations',
+    joinColumn: {
+      name: 'pokemon_id',
+      referencedColumnName: 'id'
+    },
+    inverseJoinColumn: {
+      name: 'generation_id',
+      referencedColumnName: 'id'
+    }
+  })
+  generations: Generation[];
 }

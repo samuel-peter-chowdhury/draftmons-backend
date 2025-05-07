@@ -1,6 +1,6 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { Exclude, Expose } from 'class-transformer';
-import { BaseApplicationEntity } from './base.entity';
+import { BaseApplicationEntity } from './base-application-entity.entity';
 import { LeagueUser } from './league-user.entity';
 import { Team } from './team.entity';
 

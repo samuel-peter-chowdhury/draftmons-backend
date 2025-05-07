@@ -3,7 +3,7 @@ import { League } from "./league.entity";
 import { SeasonPokemon } from "./season-pokemon.entity";
 import { Week } from "./week.entity";
 import { Team } from "./team.entity";
-import { BaseApplicationEntity } from "./base.entity";
+import { BaseApplicationEntity } from "./base-application-entity.entity";
 
 export enum SeasonStatus {
   PRE_DRAFT = "PRE_DRAFT",

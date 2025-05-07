@@ -2,7 +2,7 @@ import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm";
 import { Match } from "./match.entity";
 import { Team } from "./team.entity";
 import { GameStat } from "./game-stat.entity";
-import { BaseApplicationEntity } from "./base.entity";
+import { BaseApplicationEntity } from "./base-application-entity.entity";
 
 @Entity('game')
 export class Game extends BaseApplicationEntity {
