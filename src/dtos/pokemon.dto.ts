@@ -141,7 +141,7 @@ export class PokemonMoveDto {
   moveId: number;
 
   @Expose()
-  gen: string;
+  generationId: number;
 
   @Expose({ groups: ['pokemonMove.full'] })
   @Type(() => MoveDto)

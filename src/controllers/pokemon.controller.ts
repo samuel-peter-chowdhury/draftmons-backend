@@ -37,9 +37,9 @@ export class PokemonController extends BaseController<Pokemon, PokemonDto> {
     let pokemon: Pokemon[];
 
     if (req.query.full === 'true') {
-      pokemon = await this.pokemonService.findAllWithDetails();
+      pokemon = await this.pokemonService.findAllFull();
     } else {
-      pokemon = await this.pokemonService.findAll();
+      pokemon = await this.pokemonService.findAllBasic();
     }
 
     const group = req.query.full === 'true' ? this.getFullTransformGroup() : undefined;
@@ -61,9 +61,9 @@ export class PokemonController extends BaseController<Pokemon, PokemonDto> {
     let pokemon: Pokemon;
 
     if (req.query.full === 'true') {
-      pokemon = await this.pokemonService.findOneWithDetails(id);
+      pokemon = await this.pokemonService.findOneFull(id, req.body);
     } else {
-      pokemon = await this.pokemonService.findOne(id);
+      pokemon = await this.pokemonService.findOneBasic(id);
     }
 
     const group = req.query.full === 'true' ? this.getFullTransformGroup() : undefined;
