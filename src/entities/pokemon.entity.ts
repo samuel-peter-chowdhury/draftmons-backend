@@ -42,6 +42,9 @@ export class Pokemon extends BaseApplicationEntity {
   @Column()
   weight: number;
 
+  @Column()
+  sprite: string;
+
   @ManyToMany(() => PokemonType, pokemonType => pokemonType.pokemon)
   @JoinTable({
     name: 'pokemon_pokemon_types',

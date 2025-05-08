@@ -9,6 +9,19 @@ import { Service, Inject } from 'typedi';
 
 @Service()
 export class PokemonService extends BaseService<Pokemon> {
+
+  private readonly basic_relations = {
+    pokemonTypes: true,
+    abilities: true,
+  };
+
+  private readonly detailed_relations = {
+    ...this.basic_relations,
+    pokemonMoves: {
+      move: true,
+    },
+  };
+
   constructor(
     @Inject('PokemonRepository')
     private pokemonRepository: Repository<Pokemon>,
@@ -19,38 +32,23 @@ export class PokemonService extends BaseService<Pokemon> {
     @Inject('TypeEffectiveRepository')
     private typeEffectiveRepository: Repository<TypeEffective>
   ) {
-    super(pokemonRepository);
+    super(pokemonRepository, 'Pokemon');
   }
 
-  async findAllWithDetails(): Promise<Pokemon[]> {
-    return this.pokemonRepository.find({
-      relations: ['types', 'abilities', 'abilities.ability', 'typeEffectiveness'],
-    });
+  async findAllWithDetails(where?: any): Promise<Pokemon[]> {
+    return this.findAll(where, this.detailed_relations);
   }
 
-  async findOneWithDetails(id: number): Promise<Pokemon> {
-    const pokemon = await this.pokemonRepository.findOne({
-      where: { id },
-      relations: ['types', 'abilities', 'abilities.ability', 'typeEffectiveness'],
-    });
-
-    if (!pokemon) {
-      throw new NotFoundError('Pokemon', id);
-    }
-
-    return pokemon;
+  async findOneWithDetails(id: number, where?: any): Promise<Pokemon> {
+    return this.findOne(id, where, this.detailed_relations);
   }
 
   async findByName(name: string): Promise<Pokemon | null> {
-    return this.pokemonRepository.findOne({
-      where: { name },
-    });
+    return this.pokemonRepository.findOneBy({ name });
   }
 
   async findByDexId(dexId: number): Promise<Pokemon | null> {
-    return this.pokemonRepository.findOne({
-      where: { dexId },
-    });
+    return this.pokemonRepository.findOneBy({ dexId });
   }
 
   async createPokemon(createPokemonDto: CreatePokemonDto): Promise<Pokemon> {

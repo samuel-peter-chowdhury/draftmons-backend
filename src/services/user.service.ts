@@ -11,7 +11,7 @@ export class UserService extends BaseService<User> {
     @Inject('UserRepository')
     private userRepository: Repository<User>
   ) {
-    super(userRepository);
+    super(userRepository, 'User');
   }
 
   async findByEmail(email: string): Promise<User | null> {

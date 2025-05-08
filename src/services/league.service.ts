@@ -19,7 +19,7 @@ export class LeagueService extends BaseService<League> {
     @Inject('SeasonRepository')
     private seasonRepository: Repository<Season>
   ) {
-    super(leagueRepository);
+    super(leagueRepository, 'League');
   }
 
   async findAllWithDetails(): Promise<League[]> {

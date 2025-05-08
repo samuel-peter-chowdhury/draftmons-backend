@@ -1,23 +1,29 @@
-import { Repository, FindOptionsWhere } from 'typeorm';
+import { Repository } from 'typeorm';
 import { NotFoundError } from '../errors';
 import { BaseApplicationEntity } from '../entities/base-application-entity.entity';
 
 export abstract class BaseService<T extends BaseApplicationEntity> {
   protected repository: Repository<T>;
+  protected entityName: string;
 
-  constructor(repository: Repository<T>) {
+  constructor(repository: Repository<T>, entityName: string) {
     this.repository = repository;
+    this.entityName = entityName;
   }
 
-  async findAll(options?: FindOptionsWhere<T>): Promise<T[]> {
-    return this.repository.find({ where: options as any });
+  async findAll(where?: any, relations?: any): Promise<T[]> {
+    return this.repository.find({ where: where, relations: relations });
   }
 
-  async findOne(id: number): Promise<T> {
-    const entity = await this.repository.findOne({ where: { id } as any });
+  async findOne(id: number, where?: any, relations?: any): Promise<T> {
+    const specific_where = { id: id, ...where } as any;
+    const entity = await this.repository.findOne({
+      where: specific_where,
+      relations: relations
+    });
 
     if (!entity) {
-      throw new NotFoundError('Entity', id);
+      throw new NotFoundError(this.entityName, id);
     }
 
     return entity;

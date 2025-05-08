@@ -3,6 +3,12 @@ import { BaseApplicationEntity } from './base-application-entity.entity';
 import { PokemonMove } from './pokemon-move.entity';
 import { PokemonType } from './pokemon-type.entity';
 
+export enum MoveCategory {
+  PHYSICAL = "PHYSICAL",
+  SPECIAL = "SPECIAL",
+  STATUS = "STATUS",
+}
+
 @Entity('move')
 export class Move extends BaseApplicationEntity {
   @Column()
@@ -15,8 +21,11 @@ export class Move extends BaseApplicationEntity {
   @JoinColumn({ name: 'pokemon_type_id' })
   pokemonType: PokemonType;
 
-  @Column()
-  category: string;
+  @Column({
+    type: "enum",
+    enum: MoveCategory,
+  })
+  category: MoveCategory;
 
   @Column()
   power: number;

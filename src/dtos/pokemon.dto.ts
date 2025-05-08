@@ -38,11 +38,18 @@ export class PokemonDto {
   @Expose()
   weight: number;
 
-  @Expose({ groups: ['pokemon.full'] })
+  @Expose()
+  sprite: string;
+
+  @Expose()
   @Type(() => PokemonTypeDto)
-  types?: PokemonTypeDto[];
+  pokemonTypes?: PokemonTypeDto[];
 
   @Expose({ groups: ['pokemon.full'] })
+  @Type(() => PokemonMoveDto)
+  pokemonMoves?: PokemonMoveDto[];
+
+  @Expose()
   @Type(() => AbilityDto)
   abilities?: AbilityDto[];
 

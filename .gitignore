@@ -50,3 +50,6 @@ coverage/
 
 # Output of 'npm pack'
 *.tgz
+
+# Postman collection
+*.postman_collection.json
