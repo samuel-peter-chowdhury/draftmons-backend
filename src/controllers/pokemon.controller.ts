@@ -12,6 +12,7 @@ import { isAuthenticated, isAdmin } from '../middleware/auth.middleware';
 import { ValidationError } from '../errors';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
+import { PaginationOptions } from '../services/base.service';
 
 export class PokemonController extends BaseController<Pokemon, PokemonDto> {
   public router = Router();
@@ -34,22 +35,45 @@ export class PokemonController extends BaseController<Pokemon, PokemonDto> {
 
   // Pokemon methods
   getAllPokemon = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    let pokemon: Pokemon[];
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 25;
 
+    if (page < 1 || pageSize < 1) {
+      throw new ValidationError('Page and pageSize must be greater than 0');
+    }
+
+    const pagination: PaginationOptions = {
+      page,
+      pageSize,
+    };
+
+    let result;
     if (req.query.full === 'true') {
-      pokemon = await this.pokemonService.findAllFull();
+      result = await this.pokemonService.findAllFull(undefined, pagination);
     } else {
-      pokemon = await this.pokemonService.findAllBasic();
+      result = await this.pokemonService.findAllBasic(undefined, pagination);
     }
 
     const group = req.query.full === 'true' ? this.getFullTransformGroup() : undefined;
 
-    res.json(
-      plainToInstance(PokemonDto, pokemon, {
-        excludeExtraneousValues: true,
-        groups: group,
-      })
-    );
+    if ('data' in result) {
+      // Paginated response
+      res.json({
+        ...result,
+        data: plainToInstance(PokemonDto, result.data, {
+          excludeExtraneousValues: true,
+          groups: group,
+        }),
+      });
+    } else {
+      // Non-paginated response (fallback)
+      res.json(
+        plainToInstance(PokemonDto, result, {
+          excludeExtraneousValues: true,
+          groups: group,
+        })
+      );
+    }
   });
 
   getPokemonById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -61,7 +85,7 @@ export class PokemonController extends BaseController<Pokemon, PokemonDto> {
     let pokemon: Pokemon;
 
     if (req.query.full === 'true') {
-      pokemon = await this.pokemonService.findOneFull(id, req.body);
+      pokemon = await this.pokemonService.findOneFull(id);
     } else {
       pokemon = await this.pokemonService.findOneBasic(id);
     }

@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
 import { Pokemon } from '../entities/pokemon.entity';
-import { BaseService } from './base.service';
+import { BaseService, PaginationOptions, PaginatedResponse } from './base.service';
 import { Service, Inject } from 'typedi';
 
 @Service()
@@ -33,11 +33,11 @@ export class PokemonService extends BaseService<Pokemon> {
     return this.findOne(id, where, this.detailed_relations);
   }
 
-  async findAllBasic(where?: any): Promise<Pokemon[]> {
-    return this.findAll(where, this.basic_relations);
+  async findAllBasic(where?: any, pagination?: PaginationOptions): Promise<PaginatedResponse<Pokemon> | Pokemon[]> {
+    return this.findAll(where, this.basic_relations, pagination);
   }
 
-  async findAllFull(where?: any): Promise<Pokemon[]> {
-    return this.findAll(where, this.detailed_relations);
+  async findAllFull(where?: any, pagination?: PaginationOptions): Promise<PaginatedResponse<Pokemon> | Pokemon[]> {
+    return this.findAll(where, this.detailed_relations, pagination);
   }
 }

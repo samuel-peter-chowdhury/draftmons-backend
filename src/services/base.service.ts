@@ -2,6 +2,19 @@ import { Repository } from 'typeorm';
 import { NotFoundError } from '../errors';
 import { BaseApplicationEntity } from '../entities/base-application-entity.entity';
 
+export interface PaginationOptions {
+  page: number;
+  pageSize: number;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export abstract class BaseService<T extends BaseApplicationEntity> {
   protected repository: Repository<T>;
   protected entityName: string;
@@ -11,8 +24,28 @@ export abstract class BaseService<T extends BaseApplicationEntity> {
     this.entityName = entityName;
   }
 
-  async findAll(where?: any, relations?: any): Promise<T[]> {
-    return this.repository.find({ where: where, relations: relations });
+  async findAll(where?: any, relations?: any, pagination?: PaginationOptions): Promise<PaginatedResponse<T> | T[]> {
+    if (!pagination) {
+      return this.repository.find({ where: where, relations: relations });
+    }
+
+    const { page, pageSize } = pagination;
+    const skip = (page - 1) * pageSize;
+
+    const [data, total] = await this.repository.findAndCount({
+      where: where,
+      relations: relations,
+      skip: skip,
+      take: pageSize,
+    });
+
+    return {
+      data,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 
   async findOne(id: number, where?: any, relations?: any): Promise<T> {
