@@ -6,6 +6,7 @@ import {
   PokemonDto,
   CreatePokemonDto,
   UpdatePokemonDto,
+  PokemonSearchDto,
 } from '../dtos/pokemon.dto';
 import { validateDto } from '../middleware/validation.middleware';
 import { isAuthenticated, isAdmin } from '../middleware/auth.middleware';
@@ -48,7 +49,11 @@ export class PokemonController extends BaseController<Pokemon, PokemonDto> {
     };
 
     let result;
-    if (req.query.full === 'true') {
+    if (Object.keys(req.body).length > 0) {
+      // If there's a search body, use the search method
+      const searchDto = plainToInstance(PokemonSearchDto, req.body);
+      result = await this.pokemonService.search(searchDto, pagination);
+    } else if (req.query.full === 'true') {
       result = await this.pokemonService.findAllFull(undefined, pagination);
     } else {
       result = await this.pokemonService.findAllBasic(undefined, pagination);

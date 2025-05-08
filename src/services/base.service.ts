@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsOrder } from 'typeorm';
 import { NotFoundError } from '../errors';
 import { BaseApplicationEntity } from '../entities/base-application-entity.entity';
 
@@ -24,9 +24,13 @@ export abstract class BaseService<T extends BaseApplicationEntity> {
     this.entityName = entityName;
   }
 
-  async findAll(where?: any, relations?: any, pagination?: PaginationOptions): Promise<PaginatedResponse<T> | T[]> {
+  async findAll(where?: any, relations?: any, pagination?: PaginationOptions, order?: FindOptionsOrder<T>): Promise<PaginatedResponse<T> | T[]> {
     if (!pagination) {
-      return this.repository.find({ where: where, relations: relations });
+      return this.repository.find({ 
+        where: where, 
+        relations: relations,
+        order: order
+      });
     }
 
     const { page, pageSize } = pagination;
@@ -37,6 +41,7 @@ export abstract class BaseService<T extends BaseApplicationEntity> {
       relations: relations,
       skip: skip,
       take: pageSize,
+      order: order
     });
 
     return {

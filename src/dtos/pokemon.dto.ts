@@ -1,5 +1,5 @@
 import { Expose, Type } from 'class-transformer';
-import { IsString, IsOptional, IsNumber, IsArray, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsArray, ValidateNested, IsIn } from 'class-validator';
 
 export class PokemonDto {
   @Expose()
@@ -235,4 +235,109 @@ export class UpdatePokemonDto {
   @IsOptional()
   @IsNumber()
   weight?: number;
+}
+
+// Pokemon Search DTO
+export class PokemonSearchDto {
+  @IsOptional()
+  @IsNumber()
+  generationId?: number;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsNumber()
+  dexId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  pokemonTypeId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  pokemonMoveId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  abilityId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  seasonId?: number;
+
+  @IsOptional()
+  @IsNumber()
+  weight?: number;
+
+  @IsOptional()
+  @IsNumber()
+  height?: number;
+
+  @IsOptional()
+  @IsNumber()
+  minHp?: number;
+
+  @IsOptional()
+  @IsNumber()
+  maxHp?: number;
+
+  @IsOptional()
+  @IsNumber()
+  minAttack?: number;
+
+  @IsOptional()
+  @IsNumber()
+  maxAttack?: number;
+
+  @IsOptional()
+  @IsNumber()
+  minDefense?: number;
+
+  @IsOptional()
+  @IsNumber()
+  maxDefense?: number;
+
+  @IsOptional()
+  @IsNumber()
+  minSpecialAttack?: number;
+
+  @IsOptional()
+  @IsNumber()
+  maxSpecialAttack?: number;
+
+  @IsOptional()
+  @IsNumber()
+  minSpecialDefense?: number;
+
+  @IsOptional()
+  @IsNumber()
+  maxSpecialDefense?: number;
+
+  @IsOptional()
+  @IsNumber()
+  minSpeed?: number;
+
+  @IsOptional()
+  @IsNumber()
+  maxSpeed?: number;
+
+  @IsOptional()
+  @IsNumber()
+  minBaseStatTotal?: number;
+
+  @IsOptional()
+  @IsNumber()
+  maxBaseStatTotal?: number;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['dexId', 'name', 'hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed', 'baseStatTotal', 'height', 'weight'])
+  sortBy?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(['ASC', 'DESC'])
+  sortOrder?: 'ASC' | 'DESC';
 }
