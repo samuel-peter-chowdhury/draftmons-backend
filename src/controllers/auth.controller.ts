@@ -5,6 +5,28 @@ import { isAuthenticated, AuthenticatedRequest } from '../middleware/auth.middle
 import { plainToInstance } from 'class-transformer';
 import { UserDto } from '../dtos/user.dto';
 
+/**
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: User authentication and session management
+ * 
+ * components:
+ *   schemas:
+ *     AuthStatus:
+ *       type: object
+ *       properties:
+ *         isAuthenticated:
+ *           type: boolean
+ *         user:
+ *           $ref: '#/components/schemas/User'
+ *     AuthResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ */
+
 export class AuthController {
   public router = Router();
 
@@ -34,6 +56,18 @@ export class AuthController {
     this.router.get('/login-succeeded', this.loginSucceeded);
   }
 
+  /**
+   * @swagger
+   * /api/auth/google:
+   *   get:
+   *     tags:
+   *       - Authentication
+   *     summary: Initiate Google OAuth login
+   *     description: Redirects to Google's OAuth consent screen
+   *     responses:
+   *       302:
+   *         description: Redirect to Google OAuth
+   */
   getAuthStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (req.isAuthenticated() && req.user) {
       res.json({
@@ -49,6 +83,40 @@ export class AuthController {
     }
   });
 
+  /**
+   * @swagger
+   * /api/auth/google/callback:
+   *   get:
+   *     tags:
+   *       - Authentication
+   *     summary: Google OAuth callback
+   *     description: Handles the OAuth callback from Google
+   *     responses:
+   *       302:
+   *         description: Redirect to success or failure URL
+   *         headers:
+   *           Location:
+   *             schema:
+   *               type: string
+   *             description: Redirect URL based on authentication result
+   */
+
+  /**
+   * @swagger
+   * /api/auth/status:
+   *   get:
+   *     tags:
+   *       - Authentication
+   *     summary: Get authentication status
+   *     description: Returns the current authentication status and user information if authenticated
+   *     responses:
+   *       200:
+   *         description: Authentication status
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/AuthStatus'
+   */
   logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     req.logout((err) => {
       if (err) {
@@ -61,15 +129,67 @@ export class AuthController {
     });
   });
 
+  /**
+   * @swagger
+   * /api/auth/logout:
+   *   post:
+   *     tags:
+   *       - Authentication
+   *     summary: Logout user
+   *     security:
+   *       - sessionAuth: []
+   *     responses:
+   *       200:
+   *         description: Logout successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/AuthResponse'
+   *       401:
+   *         description: Unauthorized
+   */
   loginSucceeded = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     res.status(200).json({
       message: 'Authentication succeeded',
     });
   });
 
+  /**
+   * @swagger
+   * /api/auth/login-succeeded:
+   *   get:
+   *     tags:
+   *       - Authentication
+   *     summary: Authentication success callback
+   *     description: Called after successful authentication
+   *     responses:
+   *       200:
+   *         description: Authentication success message
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/AuthResponse'
+   */
   loginFailed = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     res.status(401).json({
       message: 'Authentication failed',
     });
   });
+
+  /**
+   * @swagger
+   * /api/auth/login-failed:
+   *   get:
+   *     tags:
+   *       - Authentication
+   *     summary: Authentication failure callback
+   *     description: Called after failed authentication
+   *     responses:
+   *       401:
+   *         description: Authentication failure message
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/AuthResponse'
+   */
 }

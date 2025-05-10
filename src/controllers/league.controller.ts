@@ -9,6 +9,120 @@ import { ValidationError, UnauthorizedError } from '../errors';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 
+/**
+ * @swagger
+ * tags:
+ *   name: Leagues
+ *   description: League management and operations
+ * 
+ * components:
+ *   schemas:
+ *     League:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         name:
+ *           type: string
+ *         abbreviation:
+ *           type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *         seasons:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/SeasonSummary'
+ *         leagueUsers:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/LeagueUser'
+ *     SeasonSummary:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         name:
+ *           type: string
+ *         gen:
+ *           type: string
+ *         status:
+ *           type: string
+ *           enum: [DRAFT, ACTIVE, COMPLETED]
+ *     LeagueUser:
+ *       type: object
+ *       properties:
+ *         leagueId:
+ *           type: integer
+ *         userId:
+ *           type: integer
+ *         isModerator:
+ *           type: boolean
+ *         user:
+ *           $ref: '#/components/schemas/User'
+ *         league:
+ *           $ref: '#/components/schemas/League'
+ *     Season:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         name:
+ *           type: string
+ *         gen:
+ *           type: string
+ *         status:
+ *           type: string
+ *           enum: [DRAFT, ACTIVE, COMPLETED]
+ *         rules:
+ *           type: string
+ *           nullable: true
+ *         pointLimit:
+ *           type: number
+ *         maxPointValue:
+ *           type: number
+ *         leagueId:
+ *           type: integer
+ *         league:
+ *           $ref: '#/components/schemas/League'
+ *         teams:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/TeamSummary'
+ *         weeks:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/WeekSummary'
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *     TeamSummary:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         name:
+ *           type: string
+ *         userId:
+ *           type: integer
+ *     WeekSummary:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *         number:
+ *           type: integer
+ *         status:
+ *           type: string
+ *           enum: [PENDING, ACTIVE, COMPLETED]
+ */
+
 export class LeagueController extends BaseController<League, LeagueDto> {
   public router = Router();
 
@@ -43,7 +157,29 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     this.router.delete('/:id/seasons/:seasonId', isAuthenticated, isLeagueModerator(), this.deleteSeason);
   }
 
-  // League methods
+  /**
+   * @swagger
+   * /api/leagues:
+   *   get:
+   *     tags:
+   *       - Leagues
+   *     summary: Get all leagues
+   *     parameters:
+   *       - in: query
+   *         name: full
+   *         schema:
+   *           type: boolean
+   *         description: Whether to include full league details
+   *     responses:
+   *       200:
+   *         description: List of leagues
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/League'
+   */
   getAllLeagues = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagues = await this.leagueService.findAll();
     const group = req.query.full === 'true' ? this.getFullTransformGroup() : undefined;
@@ -56,6 +192,37 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
+  /**
+   * @swagger
+   * /api/leagues/{id}:
+   *   get:
+   *     tags:
+   *       - Leagues
+   *     summary: Get a league by ID
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *       - in: query
+   *         name: full
+   *         schema:
+   *           type: boolean
+   *         description: Whether to include full league details
+   *     responses:
+   *       200:
+   *         description: League details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/League'
+   *       404:
+   *         description: League not found
+   *       400:
+   *         description: Invalid League ID format
+   */
   getLeagueById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
@@ -80,6 +247,43 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
+  /**
+   * @swagger
+   * /api/leagues:
+   *   post:
+   *     tags:
+   *       - Leagues
+   *     summary: Create a new league
+   *     security:
+   *       - sessionAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - name
+   *               - abbreviation
+   *             properties:
+   *               name:
+   *                 type: string
+   *               abbreviation:
+   *                 type: string
+   *               password:
+   *                 type: string
+   *     responses:
+   *       201:
+   *         description: League created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/League'
+   *       401:
+   *         description: Unauthorized
+   *       400:
+   *         description: Invalid input
+   */
   create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedError();
@@ -94,7 +298,40 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
-  // League member methods
+  /**
+   * @swagger
+   * /api/leagues/{id}/members:
+   *   get:
+   *     tags:
+   *       - Leagues
+   *     summary: Get league members
+   *     security:
+   *       - sessionAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *     responses:
+   *       200:
+   *         description: List of league members
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/LeagueUser'
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Not a league member
+   *       404:
+   *         description: League not found
+   *       400:
+   *         description: Invalid League ID format
+   */
   getLeagueMembers = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
     if (isNaN(leagueId)) {
@@ -111,6 +348,51 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
+  /**
+   * @swagger
+   * /api/leagues/{id}/members:
+   *   post:
+   *     tags:
+   *       - Leagues
+   *     summary: Add a member to the league
+   *     security:
+   *       - sessionAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - userId
+   *             properties:
+   *               userId:
+   *                 type: integer
+   *               isModerator:
+   *                 type: boolean
+   *     responses:
+   *       201:
+   *         description: Member added successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/LeagueUser'
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Not a league moderator
+   *       404:
+   *         description: League or user not found
+   *       400:
+   *         description: Invalid input
+   */
   addMember = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
     if (isNaN(leagueId)) {
@@ -131,6 +413,55 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
+  /**
+   * @swagger
+   * /api/leagues/{id}/members/{userId}:
+   *   put:
+   *     tags:
+   *       - Leagues
+   *     summary: Update a league member's role
+   *     security:
+   *       - sessionAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: User ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - isModerator
+   *             properties:
+   *               isModerator:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Member updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/LeagueUser'
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Not a league moderator
+   *       404:
+   *         description: League or user not found
+   *       400:
+   *         description: Invalid input
+   */
   updateMember = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
     const userId = parseInt(req.params.userId);
@@ -157,6 +488,40 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
+  /**
+   * @swagger
+   * /api/leagues/{id}/members/{userId}:
+   *   delete:
+   *     tags:
+   *       - Leagues
+   *     summary: Remove a member from the league
+   *     security:
+   *       - sessionAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: User ID
+   *     responses:
+   *       204:
+   *         description: Member removed successfully
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Not a league moderator
+   *       404:
+   *         description: League or user not found
+   *       400:
+   *         description: Invalid input
+   */
   removeMember = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
     const userId = parseInt(req.params.userId);
@@ -172,7 +537,34 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     res.status(204).send();
   });
 
-  // Season methods
+  /**
+   * @swagger
+   * /api/leagues/{id}/seasons:
+   *   get:
+   *     tags:
+   *       - Leagues
+   *     summary: Get all seasons for a league
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *     responses:
+   *       200:
+   *         description: List of seasons
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/Season'
+   *       404:
+   *         description: League not found
+   *       400:
+   *         description: Invalid League ID format
+   */
   getSeasons = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
     if (isNaN(leagueId)) {
@@ -188,6 +580,43 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
+  /**
+   * @swagger
+   * /api/leagues/{id}/seasons/{seasonId}:
+   *   get:
+   *     tags:
+   *       - Leagues
+   *     summary: Get a season by ID
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *       - in: path
+   *         name: seasonId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Season ID
+   *       - in: query
+   *         name: full
+   *         schema:
+   *           type: boolean
+   *         description: Whether to include full season details
+   *     responses:
+   *       200:
+   *         description: Season details
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Season'
+   *       404:
+   *         description: Season not found
+   *       400:
+   *         description: Invalid ID format
+   */
   getSeasonById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const seasonId = parseInt(req.params.seasonId);
     if (isNaN(seasonId)) {
@@ -205,6 +634,65 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
+  /**
+   * @swagger
+   * /api/leagues/{id}/seasons:
+   *   post:
+   *     tags:
+   *       - Leagues
+   *     summary: Create a new season
+   *     security:
+   *       - sessionAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - name
+   *               - gen
+   *               - status
+   *               - leagueId
+   *             properties:
+   *               name:
+   *                 type: string
+   *               gen:
+   *                 type: string
+   *               status:
+   *                 type: string
+   *                 enum: [DRAFT, ACTIVE, COMPLETED]
+   *               rules:
+   *                 type: string
+   *               pointLimit:
+   *                 type: number
+   *               maxPointValue:
+   *                 type: number
+   *               leagueId:
+   *                 type: integer
+   *     responses:
+   *       201:
+   *         description: Season created successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Season'
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Not a league moderator
+   *       404:
+   *         description: League not found
+   *       400:
+   *         description: Invalid input
+   */
   createSeason = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const leagueId = parseInt(req.params.id);
     if (isNaN(leagueId)) {
@@ -223,6 +711,64 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
+  /**
+   * @swagger
+   * /api/leagues/{id}/seasons/{seasonId}:
+   *   put:
+   *     tags:
+   *       - Leagues
+   *     summary: Update a season
+   *     security:
+   *       - sessionAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *       - in: path
+   *         name: seasonId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Season ID
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               gen:
+   *                 type: string
+   *               status:
+   *                 type: string
+   *                 enum: [DRAFT, ACTIVE, COMPLETED]
+   *               rules:
+   *                 type: string
+   *               pointLimit:
+   *                 type: number
+   *               maxPointValue:
+   *                 type: number
+   *     responses:
+   *       200:
+   *         description: Season updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Season'
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Not a league moderator
+   *       404:
+   *         description: Season not found
+   *       400:
+   *         description: Invalid input
+   */
   updateSeason = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const seasonId = parseInt(req.params.seasonId);
     if (isNaN(seasonId)) {
@@ -238,6 +784,40 @@ export class LeagueController extends BaseController<League, LeagueDto> {
     );
   });
 
+  /**
+   * @swagger
+   * /api/leagues/{id}/seasons/{seasonId}:
+   *   delete:
+   *     tags:
+   *       - Leagues
+   *     summary: Delete a season
+   *     security:
+   *       - sessionAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: League ID
+   *       - in: path
+   *         name: seasonId
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: Season ID
+   *     responses:
+   *       204:
+   *         description: Season deleted successfully
+   *       401:
+   *         description: Unauthorized
+   *       403:
+   *         description: Forbidden - Not a league moderator
+   *       404:
+   *         description: Season not found
+   *       400:
+   *         description: Invalid ID format
+   */
   deleteSeason = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const seasonId = parseInt(req.params.seasonId);
     if (isNaN(seasonId)) {

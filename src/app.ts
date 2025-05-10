@@ -6,8 +6,10 @@ import session from 'express-session';
 import passport from 'passport';
 import { createClient } from 'redis';
 import RedisStore from 'connect-redis';
+import swaggerUi from 'swagger-ui-express';
 import { errorMiddleware } from './middleware/error.middleware';
 import { APP_CONFIG } from './config/app.config';
+import { swaggerSpec } from './config/swagger.config';
 import { configurePassport } from './config/passport.config';
 import { AuthController } from './controllers/auth.controller';
 import { UserController } from './controllers/user.controller';
@@ -33,6 +35,7 @@ export class App {
     await this.initializeServices();
     await this.initializePassport();
     await this.initializeSession();
+    await this.initializeSwagger();
     await this.initializeControllers();
     await this.initializeErrorHandling();
   }
@@ -115,6 +118,13 @@ export class App {
   private async initializePassport(): Promise<void> {
     // Configure passport with Google OAuth
     configurePassport(this.userService);
+  }
+
+  private async initializeSwagger(): Promise<void> {
+    this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'Draftmons API Documentation',
+    }));
   }
 
   private async initializeControllers(): Promise<void> {
