@@ -18,9 +18,6 @@ export class UserController extends BaseController<User, UserDto> {
   }
 
   private initializeRoutes(): void {
-    // Public routes
-    this.router.get('/:id', this.getById);
-
     // Authenticated routes
     this.router.get('/me', isAuthenticated, this.getCurrentUser);
     this.router.put('/me', isAuthenticated, validateDto(UpdateUserDto), this.updateCurrentUser);
@@ -33,13 +30,15 @@ export class UserController extends BaseController<User, UserDto> {
     this.router.delete('/:id', isAuthenticated, isAdmin, this.delete);
     this.router.post('/:id/promote', isAuthenticated, isAdmin, this.promoteToAdmin);
     this.router.post('/:id/demote', isAuthenticated, isAdmin, this.demoteFromAdmin);
+
+    // Public routes
+    this.router.get('/:id', this.getById);
   }
 
   getCurrentUser = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     if (!req.user) {
       throw new UnauthorizedError();
     }
-
     const user = await this.userService.findOne(req.user.id);
     const group = req.query.full === 'true' ? this.getFullTransformGroup() : undefined;
 

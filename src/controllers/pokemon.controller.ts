@@ -25,8 +25,8 @@ export class PokemonController extends BaseController<Pokemon, PokemonDto> {
 
   private initializeRoutes(): void {
     // Public routes
-    this.router.get('/', this.getAllPokemon);
-    this.router.get('/:id', this.getPokemonById);
+    this.router.get('/', isAuthenticated, this.getAllPokemon);
+    this.router.get('/:id', isAuthenticated, this.getPokemonById);
 
     // Admin routes - Pokemon CRUD
     this.router.post('/', isAuthenticated, isAdmin, validateDto(CreatePokemonDto), this.create);

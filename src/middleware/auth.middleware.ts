@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { HttpException } from '../utils/error.utils';
+import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../errors';
 
 // Interface for authenticated request with user
 export interface AuthenticatedRequest extends Request {
@@ -12,7 +12,7 @@ export const isAuthenticated = (req: AuthenticatedRequest, res: Response, next: 
     return next();
   }
 
-  throw new HttpException(401, 'Unauthorized: Please log in to access this resource');
+  throw new UnauthorizedError('Please log in to access this resource');
 };
 
 // Check if user is admin
@@ -21,20 +21,20 @@ export const isAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunc
     return next();
   }
 
-  throw new HttpException(403, 'Forbidden: Admin access required');
+  throw new ForbiddenError('Admin access required');
 };
 
 // Check if user is league moderator
 export const isLeagueModerator = (leagueIdParam: string = 'id') => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     if (!req.isAuthenticated()) {
-      throw new HttpException(401, 'Unauthorized: Please log in to access this resource');
+      throw new UnauthorizedError('Please log in to access this resource');
     }
 
     const leagueId = parseInt(req.params[leagueIdParam]);
 
     if (isNaN(leagueId)) {
-      throw new HttpException(400, 'Invalid league ID');
+      throw new ValidationError('Invalid league ID');
     }
 
     // If user is admin, allow access
@@ -51,7 +51,7 @@ export const isLeagueModerator = (leagueIdParam: string = 'id') => {
       return next();
     }
 
-    throw new HttpException(403, 'Forbidden: League moderator access required');
+    throw new ForbiddenError('League moderator access required');
   };
 };
 
@@ -59,13 +59,13 @@ export const isLeagueModerator = (leagueIdParam: string = 'id') => {
 export const isLeagueMember = (leagueIdParam: string = 'id') => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     if (!req.isAuthenticated()) {
-      throw new HttpException(401, 'Unauthorized: Please log in to access this resource');
+      throw new UnauthorizedError('Please log in to access this resource');
     }
 
     const leagueId = parseInt(req.params[leagueIdParam]);
 
     if (isNaN(leagueId)) {
-      throw new HttpException(400, 'Invalid league ID');
+      throw new ValidationError('Invalid league ID');
     }
 
     // If user is admin, allow access
@@ -82,7 +82,7 @@ export const isLeagueMember = (leagueIdParam: string = 'id') => {
       return next();
     }
 
-    throw new HttpException(403, 'Forbidden: League membership required');
+    throw new ForbiddenError('League membership required');
   };
 };
 
@@ -90,13 +90,13 @@ export const isLeagueMember = (leagueIdParam: string = 'id') => {
 export const isResourceOwner = (resourceIdParam: string, userIdField: string = 'userId') => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     if (!req.isAuthenticated()) {
-      throw new HttpException(401, 'Unauthorized: Please log in to access this resource');
+      throw new UnauthorizedError('Please log in to access this resource');
     }
 
     const resourceId = parseInt(req.params[resourceIdParam]);
 
     if (isNaN(resourceId)) {
-      throw new HttpException(400, 'Invalid resource ID');
+      throw new ValidationError('Invalid resource ID');
     }
 
     // If user is admin, allow access
@@ -108,7 +108,7 @@ export const isResourceOwner = (resourceIdParam: string, userIdField: string = '
     const resource = res.locals.resource;
 
     if (!resource) {
-      throw new HttpException(404, 'Resource not found');
+      throw new NotFoundError('Resource', resourceId);
     }
 
     // Check if user owns the resource
@@ -116,6 +116,6 @@ export const isResourceOwner = (resourceIdParam: string, userIdField: string = '
       return next();
     }
 
-    throw new HttpException(403, 'Forbidden: You do not have permission to access this resource');
+    throw new ForbiddenError('You do not have permission to access this resource');
   };
 };
