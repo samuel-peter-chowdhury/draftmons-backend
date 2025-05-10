@@ -22,8 +22,8 @@ export class AuthController {
     this.router.get(
       '/google/callback',
       passport.authenticate('google', {
-        failureRedirect: '/auth/login-failed',
-        successRedirect: process.env.CLIENT_URL || '/',
+        failureRedirect: 'api/auth/login-failed',
+        successRedirect: process.env.CLIENT_URL || '/api/auth/login-succeeded',
       })
     );
 
@@ -31,6 +31,7 @@ export class AuthController {
     this.router.get('/status', this.getAuthStatus);
     this.router.post('/logout', isAuthenticated, this.logout);
     this.router.get('/login-failed', this.loginFailed);
+    this.router.get('/login-succeeded', this.loginSucceeded);
   }
 
   getAuthStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -57,6 +58,12 @@ export class AuthController {
 
     res.json({
       message: 'Logged out successfully',
+    });
+  });
+
+  loginSucceeded = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    res.status(200).json({
+      message: 'Authentication succeeded',
     });
   });
 

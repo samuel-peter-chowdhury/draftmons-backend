@@ -30,9 +30,9 @@ export class App {
 
   public async initialize(): Promise<void> {
     await this.initializeMiddlewares();
-    //await this.initializeRedis();
     await this.initializeServices();
     await this.initializePassport();
+    await this.initializeSession();
     await this.initializeControllers();
     await this.initializeErrorHandling();
   }
@@ -51,6 +51,28 @@ export class App {
     this.app.use(express.urlencoded({ extended: true }));
   }
 
+  private async initializeSession(): Promise<void> {
+    if (APP_CONFIG.isProduction) {
+      await this.initializeRedis();
+    } else {
+      // Use MemoryStore for development
+      this.app.use(session({
+        secret: APP_CONFIG.sessionSecret,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          secure: false, // Set to false in development
+          httpOnly: true,
+          maxAge: 24 * 60 * 60 * 1000, // 1 day
+        },
+      }));
+    }
+
+    // Initialize passport middleware
+    this.app.use(passport.initialize());
+    this.app.use(passport.session());
+  }
+
   private async initializeRedis(): Promise<void> {
     // Initialize Redis for session storage
     this.redisClient = createClient({
@@ -63,15 +85,10 @@ export class App {
       console.log('📦 Redis connected successfully');
     } catch (error) {
       console.error('❌ Redis connection failed:', error);
-      // Fallback to memory store in development
-      if (!APP_CONFIG.isProduction) {
-        console.warn('⚠️ Using memory store for session (not suitable for production)');
-      } else {
-        throw error;
-      }
+      throw error; // In production, we want to fail if Redis is not available
     }
 
-    // Session middleware
+    // Session middleware with Redis store
     const redisStore = new RedisStore({
       client: this.redisClient,
       prefix: 'draftmons:session:',
@@ -88,10 +105,6 @@ export class App {
         maxAge: 24 * 60 * 60 * 1000, // 1 day
       },
     }));
-
-    // Initialize passport middleware
-    this.app.use(passport.initialize());
-    this.app.use(passport.session());
   }
 
   private async initializeServices(): Promise<void> {
@@ -132,7 +145,9 @@ export class App {
 
   public async close(): Promise<void> {
     // Close database and Redis connections
-    //await this.redisClient.disconnect();
+    if (this.redisClient) {
+      await this.redisClient.disconnect();
+    }
     await AppDataSource.destroy();
   }
 }
