@@ -70,6 +70,7 @@ export class PokemonService extends BaseService<Pokemon> {
     }
     if (search.generationId) {
       where.generations = { id: search.generationId };
+      where.pokemonMoves = { generationId: search.generationId };
     }
     if (search.seasonId) {
       where.seasonPokemon = { seasonId: search.seasonId };
