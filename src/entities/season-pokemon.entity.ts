@@ -3,7 +3,7 @@ import { Season } from "./season.entity";
 import { Pokemon } from "./pokemon.entity";
 import { Team } from "./team.entity";
 import { GameStat } from "./game-stat.entity";
-import { BaseApplicationEntity } from "./base-application-entity.entity";
+import { BaseApplicationEntity } from "./base-application.entity";
 
 @Entity('season_pokemon')
 export class SeasonPokemon extends BaseApplicationEntity {

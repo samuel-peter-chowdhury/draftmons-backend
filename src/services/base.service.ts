@@ -1,33 +1,24 @@
-import { Repository, FindOptionsOrder } from 'typeorm';
+import { Repository, FindOptionsOrder, FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { NotFoundError } from '../errors';
-import { BaseApplicationEntity } from '../entities/base-application-entity.entity';
+import { BaseApplicationEntity } from '../entities/base-application.entity';
+import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
+import { BaseInputDto } from '../dtos/base-input.dto';
 
-export interface PaginationOptions {
-  page: number;
-  pageSize: number;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-export abstract class BaseService<T extends BaseApplicationEntity> {
-  protected repository: Repository<T>;
+export abstract class BaseService<E extends BaseApplicationEntity, I extends BaseInputDto> {
+  protected repository: Repository<E>;
   protected entityName: string;
 
-  constructor(repository: Repository<T>, entityName: string) {
+  constructor(repository: Repository<E>, entityName: string) {
     this.repository = repository;
     this.entityName = entityName;
   }
 
-  async findAll(where?: any, relations?: any, pagination?: PaginationOptions, order?: FindOptionsOrder<T>): Promise<PaginatedResponse<T> | T[]> {
+  async findAll(where?: FindOptionsWhere<E>, relations?: FindOptionsRelations<E>, pagination?: PaginationOptions, sort?: SortOptions): Promise<PaginatedResponse<E> | E[]> {
+    const order = sort ? { [sort.sortBy]: sort.sortOrder } as FindOptionsOrder<E> : undefined;
+
     if (!pagination) {
-      return this.repository.find({ 
-        where: where, 
+      return this.repository.find({
+        where: where,
         relations: relations,
         order: order
       });
@@ -53,34 +44,49 @@ export abstract class BaseService<T extends BaseApplicationEntity> {
     };
   }
 
-  async findOne(id: number, where?: any, relations?: any): Promise<T> {
-    const specific_where = { id: id, ...where } as any;
+  async findOne(where: FindOptionsWhere<E>, relations?: FindOptionsRelations<E>): Promise<E> {
     const entity = await this.repository.findOne({
-      where: specific_where,
+      where: where,
       relations: relations
     });
 
     if (!entity) {
-      throw new NotFoundError(this.entityName, id);
+      throw new NotFoundError(this.entityName, String(where));
     }
 
     return entity;
   }
 
-  async create(data: Partial<T>): Promise<T> {
+  async create(data: I): Promise<E> {
     const entity = this.repository.create(data as any);
     return this.repository.save(entity as any);
   }
 
-  async update(id: number, data: Partial<T>): Promise<T> {
-    await this.findOne(id);
-    await this.repository.update(id, data as any);
-    return this.findOne(id);
+  async update(where: FindOptionsWhere<E>, data: Partial<I>, relations?: FindOptionsRelations<E>): Promise<E> {
+    await this.findOne(where);
+    await this.repository.update(where, data as any);
+    return this.findOne(where, relations);
   }
 
-  async delete(id: number): Promise<boolean> {
-    await this.findOne(id);
-    await this.repository.delete(id);
+  async delete(where: FindOptionsWhere<E>): Promise<boolean> {
+    await this.findOne(where);
+    await this.repository.delete(where);
     return true;
+  }
+
+  async findOrCreate(where: FindOptionsWhere<E>, data: I, relations?: FindOptionsRelations<E>): Promise<E> {
+    try {
+      return this.findOne(where, relations);
+    } catch (NotFoundError) {
+      return this.create(data);
+    }
+  }
+
+  async updateOrCreate(where: FindOptionsWhere<E>, data: I, relations?: FindOptionsRelations<E>): Promise<E> {
+    try {
+      return this.update(where, data, relations);
+    } catch (NotFoundError) {
+      return this.create(data);
+    }
   }
 }

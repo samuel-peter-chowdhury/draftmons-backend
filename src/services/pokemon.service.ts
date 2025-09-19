@@ -1,24 +1,12 @@
 import { Repository, Like, Between, In } from 'typeorm';
 import { Pokemon } from '../entities/pokemon.entity';
-import { BaseService, PaginationOptions, PaginatedResponse } from './base.service';
+import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
-import { PokemonSearchDto } from '../dtos/pokemon.dto';
+import { PokemonInputDto } from '../dtos/pokemon.dto';
+import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 
 @Service()
-export class PokemonService extends BaseService<Pokemon> {
-
-  private readonly basic_relations = {
-    pokemonTypes: true,
-    abilities: true,
-  };
-
-  private readonly detailed_relations = {
-    ...this.basic_relations,
-    pokemonMoves: {
-      move: true,
-    },
-  };
-
+export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
   constructor(
     @Inject('PokemonRepository')
     private pokemonRepository: Repository<Pokemon>,
@@ -26,7 +14,12 @@ export class PokemonService extends BaseService<Pokemon> {
     super(pokemonRepository, 'Pokemon');
   }
 
-  private buildWhereClause(search: PokemonSearchDto): any {
+  async search(search: any, pagination?: PaginationOptions, sort?: SortOptions): Promise<PaginatedResponse<Pokemon> | Pokemon[]> {
+    const where = this.buildWhereClause(search);
+    return this.findAll(where, {}, pagination, sort);
+  }
+
+  private buildWhereClause(search: any): any {
     const where: any = {};
 
     // Direct matches
@@ -77,31 +70,5 @@ export class PokemonService extends BaseService<Pokemon> {
     }
 
     return where;
-  }
-
-  async findOneBasic(id: number, where?: any): Promise<Pokemon> {
-    return this.findOne(id, where, this.basic_relations);
-  }
-
-  async findOneFull(id: number, where?: any): Promise<Pokemon> {
-    return this.findOne(id, where, this.detailed_relations);
-  }
-
-  async findAllBasic(where?: any, pagination?: PaginationOptions, order?: { [key: string]: 'ASC' | 'DESC' }): Promise<PaginatedResponse<Pokemon> | Pokemon[]> {
-    return this.findAll(where, this.basic_relations, pagination, order);
-  }
-
-  async findAllFull(where?: any, pagination?: PaginationOptions, order?: { [key: string]: 'ASC' | 'DESC' }): Promise<PaginatedResponse<Pokemon> | Pokemon[]> {
-    return this.findAll(where, this.detailed_relations, pagination, order);
-  }
-
-  async search(search: PokemonSearchDto, pagination?: PaginationOptions): Promise<PaginatedResponse<Pokemon> | Pokemon[]> {
-    const where = this.buildWhereClause(search);
-    const order = search.sortBy ? { [search.sortBy]: search.sortOrder || 'ASC' } : undefined;
-
-    if (search.pokemonMoveId || search.generationId || search.seasonId) {
-      return this.findAllFull(where, pagination, order);
-    }
-    return this.findAllBasic(where, pagination, order);
   }
 }

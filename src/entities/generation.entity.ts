@@ -1,5 +1,5 @@
 import { Entity, Column, OneToMany, ManyToMany } from 'typeorm';
-import { BaseApplicationEntity } from './base-application-entity.entity';
+import { BaseApplicationEntity } from './base-application.entity';
 import { PokemonMove } from './pokemon-move.entity';
 import { Pokemon } from './pokemon.entity';
 

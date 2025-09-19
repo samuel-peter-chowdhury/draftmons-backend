@@ -1,6 +1,5 @@
 import { Entity, Column, OneToMany } from 'typeorm';
-import { Exclude, Expose } from 'class-transformer';
-import { BaseApplicationEntity } from './base-application-entity.entity';
+import { BaseApplicationEntity } from './base-application.entity';
 import { LeagueUser } from './league-user.entity';
 import { Team } from './team.entity';
 
@@ -16,7 +15,6 @@ export class User extends BaseApplicationEntity {
   email: string;
 
   @Column({ nullable: true, select: false })
-  @Exclude()
   password: string;
 
   @Column({ default: false })
@@ -39,9 +37,4 @@ export class User extends BaseApplicationEntity {
 
   @OneToMany(() => Team, team => team.user)
   teams: Team[];
-
-  @Expose({ groups: ['user.full'] })
-  get fullName(): string {
-    return `${this.firstName} ${this.lastName}`;
-  }
 }

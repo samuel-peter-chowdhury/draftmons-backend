@@ -3,7 +3,7 @@ import passport from 'passport';
 import { asyncHandler } from '../utils/error.utils';
 import { isAuthenticated, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { plainToInstance } from 'class-transformer';
-import { UserDto } from '../dtos/user.dto';
+import { UserOutputDto } from '../dtos/user.dto';
 
 /**
  * @swagger
@@ -44,16 +44,14 @@ export class AuthController {
     this.router.get(
       '/google/callback',
       passport.authenticate('google', {
-        failureRedirect: 'api/auth/login-failed',
-        successRedirect: process.env.CLIENT_URL || '/api/auth/login-succeeded',
+        failureRedirect: 'http://localhost:3333',
+        successRedirect: process.env.CLIENT_URL || 'http://localhost:3333/home',
       })
     );
 
     // Session management routes
     this.router.get('/status', this.getAuthStatus);
     this.router.post('/logout', isAuthenticated, this.logout);
-    this.router.get('/login-failed', this.loginFailed);
-    this.router.get('/login-succeeded', this.loginSucceeded);
   }
 
   /**
@@ -68,20 +66,6 @@ export class AuthController {
    *       302:
    *         description: Redirect to Google OAuth
    */
-  getAuthStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    if (req.isAuthenticated() && req.user) {
-      res.json({
-        isAuthenticated: true,
-        user: plainToInstance(UserDto, req.user, {
-          excludeExtraneousValues: true,
-        }),
-      });
-    } else {
-      res.json({
-        isAuthenticated: false,
-      });
-    }
-  });
 
   /**
    * @swagger
@@ -117,16 +101,19 @@ export class AuthController {
    *             schema:
    *               $ref: '#/components/schemas/AuthStatus'
    */
-  logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    req.logout((err) => {
-      if (err) {
-        console.error('Logout error:', err);
-      }
-    });
-
-    res.json({
-      message: 'Logged out successfully',
-    });
+  getAuthStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.isAuthenticated() && req.user) {
+      res.json({
+        isAuthenticated: true,
+        user: plainToInstance(UserOutputDto, req.user, {
+          excludeExtraneousValues: true,
+        }),
+      });
+    } else {
+      res.json({
+        isAuthenticated: false,
+      });
+    }
   });
 
   /**
@@ -148,48 +135,15 @@ export class AuthController {
    *       401:
    *         description: Unauthorized
    */
-  loginSucceeded = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    res.status(200).json({
-      message: 'Authentication succeeded',
+  logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    req.logout((err) => {
+      if (err) {
+        console.error('Logout error:', err);
+      }
+    });
+
+    res.json({
+      message: 'Logged out successfully',
     });
   });
-
-  /**
-   * @swagger
-   * /api/auth/login-succeeded:
-   *   get:
-   *     tags:
-   *       - Authentication
-   *     summary: Authentication success callback
-   *     description: Called after successful authentication
-   *     responses:
-   *       200:
-   *         description: Authentication success message
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/AuthResponse'
-   */
-  loginFailed = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    res.status(401).json({
-      message: 'Authentication failed',
-    });
-  });
-
-  /**
-   * @swagger
-   * /api/auth/login-failed:
-   *   get:
-   *     tags:
-   *       - Authentication
-   *     summary: Authentication failure callback
-   *     description: Called after failed authentication
-   *     responses:
-   *       401:
-   *         description: Authentication failure message
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/AuthResponse'
-   */
 }

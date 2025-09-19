@@ -4,7 +4,7 @@ import { SeasonPokemon } from "./season-pokemon.entity";
 import { User } from "./user.entity";
 import { Game } from "./game.entity";
 import { MatchTeam } from "./match-team.entity";
-import { BaseApplicationEntity } from "./base-application-entity.entity";
+import { BaseApplicationEntity } from "./base-application.entity";
 
 @Entity('team')
 export class Team extends BaseApplicationEntity {

@@ -1,7 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
 import { Pokemon } from "./pokemon.entity";
 import { Move } from "./move.entity";
-import { BaseApplicationEntity } from "./base-application-entity.entity";
+import { BaseApplicationEntity } from "./base-application.entity";
 import { Generation } from "./generation.entity";
 
 @Entity('pokemon_move')

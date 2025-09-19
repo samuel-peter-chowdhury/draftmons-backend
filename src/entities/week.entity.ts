@@ -1,5 +1,5 @@
 import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
-import { BaseApplicationEntity } from './base-application-entity.entity';
+import { BaseApplicationEntity } from './base-application.entity';
 import { Season } from './season.entity';
 import { Match } from './match.entity';
 

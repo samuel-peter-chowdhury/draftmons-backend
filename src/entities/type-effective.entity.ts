@@ -1,7 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
 import { Pokemon } from "./pokemon.entity";
 import { PokemonType } from "./pokemon-type.entity";
-import { BaseApplicationEntity } from "./base-application-entity.entity";
+import { BaseApplicationEntity } from "./base-application.entity";
 
 @Entity('type_effective')
 export class TypeEffective extends BaseApplicationEntity {

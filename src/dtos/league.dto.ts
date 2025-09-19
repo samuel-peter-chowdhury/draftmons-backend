@@ -1,34 +1,30 @@
-import { Expose, Type } from "class-transformer";
-import { IsString, IsOptional, IsNumber, IsBoolean } from "class-validator";
-import { UserDto } from "./user.dto";
-import { SeasonStatus } from "../entities/season.entity";
+import { Exclude, Expose, Type } from "class-transformer";
+import { BaseOutputDto } from "./base-output.dto";
+import { IsOptional, IsString } from "class-validator";
+import { BaseInputDto } from "./base-input.dto";
+import { LeagueUserOutputDto } from "./league-user.dto";
+import { SeasonOutputDto } from "./season.dto";
 
-export class LeagueDto {
-  @Expose()
-  id: number;
-
+export class LeagueOutputDto extends BaseOutputDto {
   @Expose()
   name: string;
 
   @Expose()
   abbreviation: string;
 
-  @Expose({ groups: ["league.full"] })
-  createdAt: Date;
+  @Exclude()
+  password: string;
 
-  @Expose({ groups: ["league.full"] })
-  updatedAt: Date;
+  @Expose({ groups: ['league.full'] })
+  @Type(() => LeagueUserOutputDto)
+  leagueUsers: LeagueUserOutputDto[];
 
-  @Expose({ groups: ["league.full"] })
-  @Type(() => SeasonSummaryDto)
-  seasons?: SeasonSummaryDto[];
-
-  @Expose({ groups: ["league.full"] })
-  @Type(() => LeagueUserDto)
-  leagueUsers?: LeagueUserDto[];
+  @Expose({ groups: ['league.full'] })
+  @Type(() => SeasonOutputDto)
+  seasons: SeasonOutputDto[];
 }
 
-export class CreateLeagueDto {
+export class LeagueInputDto extends BaseInputDto {
   @IsString()
   name: string;
 
@@ -37,185 +33,5 @@ export class CreateLeagueDto {
 
   @IsOptional()
   @IsString()
-  password?: string;
-}
-
-export class UpdateLeagueDto {
-  @IsOptional()
-  @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsString()
-  abbreviation?: string;
-
-  @IsOptional()
-  @IsString()
-  password?: string;
-}
-
-export class LeagueUserDto {
-  @Expose()
-  leagueId: number;
-
-  @Expose()
-  userId: number;
-
-  @Expose()
-  isModerator: boolean;
-
-  @Expose({ groups: ["leagueUser.full"] })
-  @Type(() => UserDto)
-  user?: UserDto;
-
-  @Expose({ groups: ["leagueUser.full"] })
-  @Type(() => LeagueDto)
-  league?: LeagueDto;
-}
-
-export class CreateLeagueUserDto {
-  @IsNumber()
-  leagueId: number;
-
-  @IsNumber()
-  userId: number;
-
-  @IsOptional()
-  @IsBoolean()
-  isModerator?: boolean;
-}
-
-export class UpdateLeagueUserDto {
-  @IsOptional()
-  @IsBoolean()
-  isModerator?: boolean;
-}
-
-export class SeasonDto {
-  @Expose()
-  id: number;
-
-  @Expose()
-  name: string;
-
-  @Expose()
-  gen: string;
-
-  @Expose()
-  status: SeasonStatus;
-
-  @Expose()
-  rules: string | null;
-
-  @Expose()
-  pointLimit: number;
-
-  @Expose()
-  maxPointValue: number;
-
-  @Expose()
-  leagueId: number;
-
-  @Expose({ groups: ["season.full"] })
-  @Type(() => LeagueDto)
-  league?: LeagueDto;
-
-  @Expose({ groups: ["season.full"] })
-  @Type(() => TeamSummaryDto)
-  teams?: TeamSummaryDto[];
-
-  @Expose({ groups: ["season.full"] })
-  @Type(() => WeekSummaryDto)
-  weeks?: WeekSummaryDto[];
-
-  @Expose({ groups: ["season.full"] })
-  createdAt: Date;
-
-  @Expose({ groups: ["season.full"] })
-  updatedAt: Date;
-}
-
-export class SeasonSummaryDto {
-  @Expose()
-  id: number;
-
-  @Expose()
-  name: string;
-
-  @Expose()
-  gen: string;
-
-  @Expose()
-  status: SeasonStatus;
-}
-
-export class CreateSeasonDto {
-  @IsString()
-  name: string;
-
-  @IsString()
-  gen: string;
-
-  @IsString()
-  status: SeasonStatus;
-
-  @IsOptional()
-  @IsString()
-  rules?: string;
-
-  @IsOptional()
-  @IsNumber()
-  pointLimit?: number;
-
-  @IsOptional()
-  @IsNumber()
-  maxPointValue?: number;
-
-  @IsNumber()
-  leagueId: number;
-}
-
-export class UpdateSeasonDto {
-  @IsOptional()
-  @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsString()
-  gen?: string;
-
-  @IsOptional()
-  @IsString()
-  status?: SeasonStatus;
-
-  @IsOptional()
-  @IsString()
-  rules?: string;
-
-  @IsOptional()
-  @IsNumber()
-  pointLimit?: number;
-
-  @IsOptional()
-  @IsNumber()
-  maxPointValue?: number;
-}
-
-export class TeamSummaryDto {
-  @Expose()
-  id: number;
-
-  @Expose()
-  name: string;
-
-  @Expose()
-  userId: number;
-}
-
-export class WeekSummaryDto {
-  @Expose()
-  id: number;
-
-  @Expose()
-  name: string;
+  password: string;
 }

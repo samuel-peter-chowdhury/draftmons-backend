@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToMany } from "typeorm";
 import { Pokemon } from "./pokemon.entity";
-import { BaseApplicationEntity } from "./base-application-entity.entity";
+import { BaseApplicationEntity } from "./base-application.entity";
 
 @Entity('ability')
 export class Ability extends BaseApplicationEntity {

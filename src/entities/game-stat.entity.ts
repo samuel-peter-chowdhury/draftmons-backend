@@ -1,7 +1,7 @@
 import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
 import { SeasonPokemon } from "./season-pokemon.entity";
 import { Game } from "./game.entity";
-import { BaseApplicationEntity } from "./base-application-entity.entity";
+import { BaseApplicationEntity } from "./base-application.entity";
 
 @Entity('game_stat')
 export class GameStat extends BaseApplicationEntity {

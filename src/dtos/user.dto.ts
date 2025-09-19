@@ -1,11 +1,11 @@
-import { Expose } from 'class-transformer';
-import { IsEmail, IsString, IsOptional, IsBoolean } from 'class-validator';
+import { Exclude, Expose, Type } from "class-transformer";
+import { BaseOutputDto } from "./base-output.dto";
+import { IsBoolean, IsOptional, IsString } from "class-validator";
+import { BaseInputDto } from "./base-input.dto";
+import { LeagueUserOutputDto } from "./league-user.dto";
+import { TeamOutputDto } from "./team.dto";
 
-// User response DTO with transformation groups
-export class UserDto {
-  @Expose()
-  id: number;
-
+export class UserOutputDto extends BaseOutputDto {
   @Expose()
   firstName: string;
 
@@ -13,101 +13,73 @@ export class UserDto {
   lastName: string;
 
   @Expose()
+  get fullName(): string {
+    return `${this.firstName} ${this.lastName}`;
+  }
+
+  @Expose()
   email: string;
 
-  @Expose({ groups: ['user.admin'] })
+  @Exclude()
+  password: string;
+
+  @Expose()
   isAdmin: boolean;
 
   @Expose()
-  showdownUsername: string | null;
+  googleId: string;
 
   @Expose()
-  discordUsername: string | null;
+  showdownUsername: string;
 
   @Expose()
-  timezone: string | null;
+  discordUsername: string;
+
+  @Expose()
+  timezone: string;
 
   @Expose({ groups: ['user.full'] })
-  get fullName(): string {
-    return `${this.firstName} ${this.lastName}`.trim();
-  }
+  @Type(() => LeagueUserOutputDto)
+  leagueUsers: LeagueUserOutputDto[];
 
   @Expose({ groups: ['user.full'] })
-  createdAt: Date;
-
-  @Expose({ groups: ['user.full'] })
-  updatedAt: Date;
+  @Type(() => TeamOutputDto)
+  teams: TeamOutputDto[];
 }
 
-// DTO for creating a user
-export class CreateUserDto {
+export class UserInputDto extends BaseInputDto {
+  @IsOptional()
   @IsString()
   firstName: string;
 
+  @IsOptional()
   @IsString()
   lastName: string;
 
-  @IsEmail()
+  @IsOptional()
+  @IsString()
   email: string;
 
   @IsOptional()
   @IsString()
-  showdownUsername?: string;
+  password: string;
+
+  @IsBoolean()
+  isAdmin: boolean;
 
   @IsOptional()
-  @IsString()
-  discordUsername?: string;
-
-  @IsOptional()
-  @IsString()
-  timezone?: string;
-}
-
-// DTO for updating a user
-export class UpdateUserDto {
-  @IsOptional()
-  @IsString()
-  firstName?: string;
-
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  @IsOptional()
-  @IsEmail()
-  email?: string;
-
-  @IsOptional()
-  @IsString()
-  showdownUsername?: string;
-
-  @IsOptional()
-  @IsString()
-  discordUsername?: string;
-
-  @IsOptional()
-  @IsString()
-  timezone?: string;
-}
-
-// DTO for Google OAuth user
-export class GoogleUserDto {
   @IsString()
   googleId: string;
 
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  firstName: string;
-
-  @IsString()
-  lastName: string;
-}
-
-// Admin update user DTO with additional fields
-export class AdminUpdateUserDto extends UpdateUserDto {
   @IsOptional()
-  @IsBoolean()
-  isAdmin?: boolean;
+  @IsString()
+  showdownUsername: string;
+
+  @IsOptional()
+  @IsString()
+  discordUsername: string;
+
+  @IsOptional()
+  @IsString()
+  timezone: string;
 }

@@ -1,10 +1,15 @@
-import { Expose, Type } from 'class-transformer';
-import { IsString, IsOptional, IsNumber, IsArray, ValidateNested, IsIn } from 'class-validator';
+import { Expose, Type } from "class-transformer";
+import { BaseOutputDto } from "./base-output.dto";
+import { IsNumber, IsString } from "class-validator";
+import { BaseInputDto } from "./base-input.dto";
+import { PokemonMoveOutputDto } from "./pokemon-move.dto";
+import { AbilityOutputDto } from "./ability.dto";
+import { GenerationOutputDto } from "./generation.dto";
+import { PokemonTypeOutputDto } from "./pokemon-type.dto";
+import { TypeEffectiveOutputDto } from "./type-effective.dto";
+import { SeasonPokemonOutputDto } from "./season-pokemon.dto";
 
-export class PokemonDto {
-  @Expose()
-  id: number;
-
+export class PokemonOutputDto extends BaseOutputDto {
   @Expose()
   dexId: number;
 
@@ -41,115 +46,32 @@ export class PokemonDto {
   @Expose()
   sprite: string;
 
-  @Expose()
-  @Type(() => PokemonTypeDto)
-  pokemonTypes?: PokemonTypeDto[];
+  @Expose({ groups: ['pokemon.full'] })
+  @Type(() => PokemonTypeOutputDto)
+  pokemonTypes: PokemonTypeOutputDto[];
 
   @Expose({ groups: ['pokemon.full'] })
-  @Type(() => PokemonMoveDto)
-  pokemonMoves?: PokemonMoveDto[];
-
-  @Expose()
-  @Type(() => AbilityDto)
-  abilities?: AbilityDto[];
+  @Type(() => PokemonMoveOutputDto)
+  pokemonMoves: PokemonMoveOutputDto[];
 
   @Expose({ groups: ['pokemon.full'] })
-  @Type(() => TypeEffectiveDto)
-  typeEffectiveness?: TypeEffectiveDto[];
+  @Type(() => AbilityOutputDto)
+  abilities: AbilityOutputDto[];
 
   @Expose({ groups: ['pokemon.full'] })
-  createdAt: Date;
+  @Type(() => TypeEffectiveOutputDto)
+  typeEffectiveness: TypeEffectiveOutputDto[];
 
   @Expose({ groups: ['pokemon.full'] })
-  updatedAt: Date;
+  @Type(() => SeasonPokemonOutputDto)
+  seasonPokemon: SeasonPokemonOutputDto[];
+
+  @Expose({ groups: ['pokemon.full'] })
+  @Type(() => GenerationOutputDto)
+  generations: GenerationOutputDto[];
 }
 
-// Pokemon Type DTO
-export class PokemonTypeDto {
-  @Expose()
-  id: number;
-
-  @Expose()
-  name: string;
-
-  @Expose()
-  color: string;
-}
-
-// Ability DTO
-export class AbilityDto {
-  @Expose()
-  id: number;
-
-  @Expose()
-  name: string;
-
-  @Expose()
-  description: string;
-}
-
-// Type Effective DTO
-export class TypeEffectiveDto {
-  @Expose()
-  pokemonId: number;
-
-  @Expose()
-  @Type(() => PokemonTypeDto)
-  pokemonType?: PokemonTypeDto;
-
-  @Expose()
-  value: number;
-}
-
-// Move DTO
-export class MoveDto {
-  @Expose()
-  id: number;
-
-  @Expose()
-  name: string;
-  
-  @Expose()
-  @Type(() => PokemonTypeDto)
-  pokemonType?: PokemonTypeDto;
-
-  @Expose()
-  category: string;
-
-  @Expose()
-  power: number;
-
-  @Expose()
-  accuracy: number;
-
-  @Expose()
-  priority: number;
-
-  @Expose()
-  pp: number;
-
-  @Expose()
-  description: string;
-}
-
-// Pokemon Move DTO
-export class PokemonMoveDto {
-  @Expose()
-  pokemonId: number;
-
-  @Expose()
-  moveId: number;
-
-  @Expose()
-  generationId: number;
-
-  @Expose({ groups: ['pokemonMove.full'] })
-  @Type(() => MoveDto)
-  move?: MoveDto;
-}
-
-// Create Pokemon DTO
-export class CreatePokemonDto {
+export class PokemonInputDto extends BaseInputDto {
   @IsNumber()
   dexId: number;
 
@@ -183,161 +105,6 @@ export class CreatePokemonDto {
   @IsNumber()
   weight: number;
 
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PokemonTypeDto)
-  types?: PokemonTypeDto[];
-}
-
-// Update Pokemon DTO
-export class UpdatePokemonDto {
-  @IsOptional()
-  @IsNumber()
-  dexId?: number;
-
-  @IsOptional()
   @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsNumber()
-  hp?: number;
-
-  @IsOptional()
-  @IsNumber()
-  attack?: number;
-
-  @IsOptional()
-  @IsNumber()
-  defense?: number;
-
-  @IsOptional()
-  @IsNumber()
-  specialAttack?: number;
-
-  @IsOptional()
-  @IsNumber()
-  specialDefense?: number;
-
-  @IsOptional()
-  @IsNumber()
-  speed?: number;
-
-  @IsOptional()
-  @IsNumber()
-  baseStatTotal?: number;
-
-  @IsOptional()
-  @IsNumber()
-  height?: number;
-
-  @IsOptional()
-  @IsNumber()
-  weight?: number;
-}
-
-// Pokemon Search DTO
-export class PokemonSearchDto {
-  @IsOptional()
-  @IsNumber()
-  generationId?: number;
-
-  @IsOptional()
-  @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsNumber()
-  dexId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  pokemonTypeId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  pokemonMoveId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  abilityId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  seasonId?: number;
-
-  @IsOptional()
-  @IsNumber()
-  weight?: number;
-
-  @IsOptional()
-  @IsNumber()
-  height?: number;
-
-  @IsOptional()
-  @IsNumber()
-  minHp?: number;
-
-  @IsOptional()
-  @IsNumber()
-  maxHp?: number;
-
-  @IsOptional()
-  @IsNumber()
-  minAttack?: number;
-
-  @IsOptional()
-  @IsNumber()
-  maxAttack?: number;
-
-  @IsOptional()
-  @IsNumber()
-  minDefense?: number;
-
-  @IsOptional()
-  @IsNumber()
-  maxDefense?: number;
-
-  @IsOptional()
-  @IsNumber()
-  minSpecialAttack?: number;
-
-  @IsOptional()
-  @IsNumber()
-  maxSpecialAttack?: number;
-
-  @IsOptional()
-  @IsNumber()
-  minSpecialDefense?: number;
-
-  @IsOptional()
-  @IsNumber()
-  maxSpecialDefense?: number;
-
-  @IsOptional()
-  @IsNumber()
-  minSpeed?: number;
-
-  @IsOptional()
-  @IsNumber()
-  maxSpeed?: number;
-
-  @IsOptional()
-  @IsNumber()
-  minBaseStatTotal?: number;
-
-  @IsOptional()
-  @IsNumber()
-  maxBaseStatTotal?: number;
-
-  @IsOptional()
-  @IsString()
-  @IsIn(['dexId', 'name', 'hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed', 'baseStatTotal', 'height', 'weight'])
-  sortBy?: string;
-
-  @IsOptional()
-  @IsString()
-  @IsIn(['ASC', 'DESC'])
-  sortOrder?: 'ASC' | 'DESC';
+  sprite: string;
 }

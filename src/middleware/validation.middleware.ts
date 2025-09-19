@@ -4,7 +4,7 @@ import { plainToInstance } from 'class-transformer';
 import { ValidationError as AppValidationError } from '../errors';
 
 // Helper function to format validation errors
-const formatValidationErrors = (errors: ValidationError[]): string => {
+export const formatValidationErrors = (errors: ValidationError[]): string => {
   return errors.map((error: ValidationError) => {
     const constraints = error.constraints ? Object.values(error.constraints).join(', ') : 'Invalid value';
     return `${error.property}: ${constraints}`;
@@ -28,6 +28,24 @@ export const validateDto = (dtoClass: any) => {
       if (errors.length > 0) {
         throw new AppValidationError(formatValidationErrors(errors));
       }
+
+      // Validation passed, proceed
+      req.body = dtoObj;
+      next();
+    } catch (error) {
+      if (error instanceof AppValidationError) {
+        throw error;
+      }
+      throw new AppValidationError('Invalid request body format');
+    }
+  };
+};
+
+export const validatePartialDto = (dtoClass: any) => {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Convert plain object to class instance
+      const dtoObj: Object = plainToInstance(dtoClass, req.body);
 
       // Validation passed, proceed
       req.body = dtoObj;

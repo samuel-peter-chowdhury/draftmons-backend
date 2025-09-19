@@ -2,6 +2,8 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { APP_CONFIG } from './app.config';
 import { UserService } from '../services/user.service';
+import { UserInputDto } from '../dtos/user.dto';
+import { plainToInstance } from 'class-transformer';
 
 export const configurePassport = (userService: UserService): void => {
   // Configure Google OAuth2.0 Strategy
@@ -22,12 +24,13 @@ export const configurePassport = (userService: UserService): void => {
           const lastName = profile.name?.familyName || '';
 
           // Check if user exists and update or create as needed
-          const user = await userService.findOrCreateGoogleUser({
+          const userInputDto: UserInputDto = plainToInstance(UserInputDto, {
             googleId,
             email,
             firstName,
-            lastName,
+            lastName
           });
+          const user = await userService.findOrCreate({ googleId }, userInputDto);
 
           // Return user to passport
           return done(null, user);
@@ -46,7 +49,7 @@ export const configurePassport = (userService: UserService): void => {
   // Deserialize user from session
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const user = await userService.findOne(id);
+      const user = await userService.findOne({ id });
       done(null, user);
     } catch (error) {
       done(error);

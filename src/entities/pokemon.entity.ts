@@ -1,5 +1,5 @@
 import { Entity, Column, OneToMany, ManyToMany, JoinTable } from 'typeorm';
-import { BaseApplicationEntity } from './base-application-entity.entity';
+import { BaseApplicationEntity } from './base-application.entity';
 import { PokemonMove } from './pokemon-move.entity';
 import { TypeEffective } from './type-effective.entity';
 import { SeasonPokemon } from './season-pokemon.entity';

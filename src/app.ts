@@ -12,9 +12,7 @@ import { APP_CONFIG } from './config/app.config';
 import { swaggerSpec } from './config/swagger.config';
 import { configurePassport } from './config/passport.config';
 import { AuthController } from './controllers/auth.controller';
-import { UserController } from './controllers/user.controller';
 import { LeagueController } from './controllers/league.controller';
-import { PokemonController } from './controllers/pokemon.controller';
 import { UserService } from './services/user.service';
 import { LeagueService } from './services/league.service';
 import { PokemonService } from './services/pokemon.service';
@@ -130,17 +128,14 @@ export class App {
   private async initializeControllers(): Promise<void> {
     // Create and set up controllers
     const authController = new AuthController();
-    const userController = new UserController(this.userService);
+    //const userController = new UserController(this.userService);
     const leagueService = Container.get(LeagueService);
     const leagueController = new LeagueController(leagueService);
     const pokemonService = Container.get(PokemonService);
-    const pokemonController = new PokemonController(pokemonService);
 
     // Set up routes
     this.app.use('/api/auth', authController.router);
-    this.app.use('/api/users', userController.router);
-    this.app.use('/api/leagues', leagueController.router);
-    this.app.use('/api/pokemon', pokemonController.router);
+    this.app.use('/api/league', leagueController.router);
 
     // Health check route
     this.app.get('/health', (req, res) => {
