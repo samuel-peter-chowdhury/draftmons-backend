@@ -4,6 +4,7 @@ import { IsNumber, IsString } from "class-validator";
 import { BaseInputDto } from "./base-input.dto";
 import { MatchOutputDto } from "./match.dto";
 import { TeamOutputDto } from "./team.dto";
+import { MatchTeamStatus } from "../entities/match-team.entity";
 
 export class MatchTeamOutputDto extends BaseOutputDto {
   @Expose()
@@ -13,7 +14,7 @@ export class MatchTeamOutputDto extends BaseOutputDto {
   teamId: number;
 
   @Expose()
-  status: string;
+  status: MatchTeamStatus;
 
   @Expose({ groups: ['matchTeam.full'] })
   @Type(() => MatchOutputDto)
@@ -32,5 +33,5 @@ export class MatchTeamInputDto extends BaseInputDto {
   teamId: number;
 
   @IsString()
-  status: string;
+  status: MatchTeamStatus;
 }

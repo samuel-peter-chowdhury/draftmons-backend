@@ -4,6 +4,7 @@ import { IsNumber, IsString } from "class-validator";
 import { BaseInputDto } from "./base-input.dto";
 import { PokemonTypeOutputDto } from "./pokemon-type.dto";
 import { PokemonMoveOutputDto } from "./pokemon-move.dto";
+import { MoveCategory } from "../entities/move.entity";
 
 export class MoveOutputDto extends BaseOutputDto {
   @Expose()
@@ -17,7 +18,7 @@ export class MoveOutputDto extends BaseOutputDto {
   pokemonType: PokemonTypeOutputDto;
 
   @Expose()
-  category: string;
+  category: MoveCategory;
 
   @Expose()
   power: number;
@@ -47,7 +48,7 @@ export class MoveInputDto extends BaseInputDto {
   pokemonTypeId: number;
 
   @IsString()
-  category: string;
+  category: MoveCategory;
 
   @IsNumber()
   power: number;

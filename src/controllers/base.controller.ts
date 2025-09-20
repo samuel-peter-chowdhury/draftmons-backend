@@ -26,10 +26,9 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
     const group = isFull ? this.getFullTransformGroup() : undefined;
 
     const entities = await this.service.findAll(where, relations, paginationOptions, sortOptions);
-
+    
     res.json(
       plainToInstance(this.outputDtoClass, entities, {
-        excludeExtraneousValues: true,
         groups: group,
       })
     );
@@ -50,7 +49,6 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
 
     res.json(
       plainToInstance(this.outputDtoClass, entity, {
-        excludeExtraneousValues: true,
         groups: group,
       })
     );
@@ -60,9 +58,7 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
     const entity = await this.service.create(req.body);
 
     res.status(201).json(
-      plainToInstance(this.outputDtoClass, entity, {
-        excludeExtraneousValues: true,
-      })
+      plainToInstance(this.outputDtoClass, entity)
     );
   });
 
@@ -81,7 +77,6 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
 
     res.json(
       plainToInstance(this.outputDtoClass, entity, {
-        excludeExtraneousValues: true,
         groups: group,
       })
     );

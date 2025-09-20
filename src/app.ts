@@ -18,6 +18,38 @@ import { LeagueService } from './services/league.service';
 import { PokemonService } from './services/pokemon.service';
 import { Container } from 'typedi';
 import AppDataSource from './config/database.config';
+import { UserController } from './controllers/user.controller';
+import { PokemonController } from './controllers/pokemon.controller';
+import { AbilityService } from './services/ability.service';
+import { AbilityController } from './controllers/ability.controller';
+import { GameStatService } from './services/game-stat.service';
+import { GameStatController } from './controllers/game-stat.controller';
+import { GameService } from './services/game.service';
+import { GameController } from './controllers/game.controller';
+import { GenerationController } from './controllers/generation.controller';
+import { GenerationService } from './services/generation.service';
+import { LeagueUserController } from './controllers/league-user.controller';
+import { LeagueUserService } from './services/league-user.service';
+import { MatchTeamController } from './controllers/match-team.controller';
+import { MatchTeamService } from './services/match-team.service';
+import { MatchController } from './controllers/match.controller';
+import { MatchService } from './services/match.service';
+import { MoveController } from './controllers/move.controller';
+import { MoveService } from './services/move.service';
+import { PokemonMoveController } from './controllers/pokemon-move.controller';
+import { PokemonMoveService } from './services/pokemon-move.service';
+import { PokemonTypeController } from './controllers/pokemon-type.controller';
+import { PokemonTypeService } from './services/pokemon-type.service';
+import { SeasonPokemonController } from './controllers/season-pokemon.controller';
+import { SeasonPokemonService } from './services/season-pokemon.service';
+import { SeasonController } from './controllers/season.controller';
+import { SeasonService } from './services/season.service';
+import { TeamController } from './controllers/team.controller';
+import { TeamService } from './services/team.service';
+import { TypeEffectiveController } from './controllers/type-effective.controller';
+import { TypeEffectiveService } from './services/type-effective.service';
+import { WeekController } from './controllers/week.controller';
+import { WeekService } from './services/week.service';
 
 export class App {
   public app: Application;
@@ -128,14 +160,62 @@ export class App {
   private async initializeControllers(): Promise<void> {
     // Create and set up controllers
     const authController = new AuthController();
-    //const userController = new UserController(this.userService);
+    const abilityService = Container.get(AbilityService);
+    const abilityController = new AbilityController(abilityService);
+    const gameStatService = Container.get(GameStatService);
+    const gameStatController = new GameStatController(gameStatService);
+    const gameService = Container.get(GameService);
+    const gameController = new GameController(gameService);
+    const generationService = Container.get(GenerationService);
+    const generationController = new GenerationController(generationService);
+    const leagueUserService = Container.get(LeagueUserService);
+    const leagueUserController = new LeagueUserController(leagueUserService);
     const leagueService = Container.get(LeagueService);
     const leagueController = new LeagueController(leagueService);
+    const matchTeamService = Container.get(MatchTeamService);
+    const matchTeamController = new MatchTeamController(matchTeamService);
+    const matchService = Container.get(MatchService);
+    const matchController = new MatchController(matchService);
+    const moveService = Container.get(MoveService);
+    const moveController = new MoveController(moveService);
+    const pokemonMoveService = Container.get(PokemonMoveService);
+    const pokemonMoveController = new PokemonMoveController(pokemonMoveService);
+    const pokemonTypeService = Container.get(PokemonTypeService);
+    const pokemonTypeController = new PokemonTypeController(pokemonTypeService);
     const pokemonService = Container.get(PokemonService);
+    const pokemonController = new PokemonController(pokemonService);
+    const seasonPokemonService = Container.get(SeasonPokemonService);
+    const seasonPokemonController = new SeasonPokemonController(seasonPokemonService);
+    const seasonService = Container.get(SeasonService);
+    const seasonController = new SeasonController(seasonService);
+    const teamService = Container.get(TeamService);
+    const teamController = new TeamController(teamService);
+    const typeEffectiveService = Container.get(TypeEffectiveService);
+    const typeEffectiveController = new TypeEffectiveController(typeEffectiveService);
+    const userController = new UserController(this.userService);
+    const weekService = Container.get(WeekService);
+    const weekController = new WeekController(weekService);
 
     // Set up routes
     this.app.use('/api/auth', authController.router);
+    this.app.use('/api/ability', abilityController.router);
+    this.app.use('/api/game-stat', gameStatController.router);
+    this.app.use('/api/game', gameController.router);
+    this.app.use('/api/generation', generationController.router);
+    this.app.use('/api/league-user', leagueUserController.router);
     this.app.use('/api/league', leagueController.router);
+    this.app.use('/api/match-team', matchTeamController.router);
+    this.app.use('/api/match', matchController.router);
+    this.app.use('/api/move', moveController.router);
+    this.app.use('/api/pokemon-move', pokemonMoveController.router);
+    this.app.use('/api/pokemon-type', pokemonTypeController.router);
+    this.app.use('/api/pokemon', pokemonController.router);
+    this.app.use('/api/season-pokemon', seasonPokemonController.router);
+    this.app.use('/api/season', seasonController.router);
+    this.app.use('/api/team', teamController.router);
+    this.app.use('/api/type-effective', typeEffectiveController.router);
+    this.app.use('/api/user', userController.router);
+    this.app.use('/api/week', weekController.router);
 
     // Health check route
     this.app.get('/health', (req, res) => {

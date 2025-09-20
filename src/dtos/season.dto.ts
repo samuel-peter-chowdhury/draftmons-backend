@@ -6,6 +6,7 @@ import { LeagueOutputDto } from "./league.dto";
 import { SeasonPokemonOutputDto } from "./season-pokemon.dto";
 import { TeamOutputDto } from "./team.dto";
 import { WeekOutputDto } from "./week.dto";
+import { SeasonStatus } from "../entities/season.entity";
 
 export class SeasonOutputDto extends BaseOutputDto {
   @Expose()
@@ -15,7 +16,7 @@ export class SeasonOutputDto extends BaseOutputDto {
   gen: string;
 
   @Expose()
-  status: string;
+  status: SeasonStatus;
 
   @Expose()
   rules: string;
@@ -54,7 +55,7 @@ export class SeasonInputDto extends BaseInputDto {
   gen: string;
 
   @IsString()
-  status: string;
+  status: SeasonStatus;
 
   @IsOptional()
   @IsString()
