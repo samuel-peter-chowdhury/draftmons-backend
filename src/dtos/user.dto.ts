@@ -1,4 +1,4 @@
-import { Exclude, Expose, Type } from "class-transformer";
+import { Expose, Type } from "class-transformer";
 import { BaseOutputDto } from "./base-output.dto";
 import { IsBoolean, IsOptional, IsString } from "class-validator";
 import { BaseInputDto } from "./base-input.dto";
@@ -19,9 +19,6 @@ export class UserOutputDto extends BaseOutputDto {
 
   @Expose()
   email: string;
-
-  @Exclude()
-  password: string;
 
   @Expose()
   isAdmin: boolean;
@@ -59,10 +56,6 @@ export class UserInputDto extends BaseInputDto {
   @IsOptional()
   @IsString()
   email: string;
-
-  @IsOptional()
-  @IsString()
-  password: string;
 
   @IsBoolean()
   isAdmin: boolean;

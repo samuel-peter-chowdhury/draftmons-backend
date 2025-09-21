@@ -10,17 +10,24 @@ export class Game extends BaseApplicationEntity {
   matchId: number;
 
   @Column()
+  losingTeamId: number;
+
+  @Column()
   winningTeamId: number;
 
   @Column()
   differential: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, unique: true })
   replayLink: string;
 
   @ManyToOne(() => Match, match => match.games)
   @JoinColumn({ name: 'match_id' })
   match: Match;
+
+  @ManyToOne(() => Team, team => team.lostGames)
+  @JoinColumn({ name: 'losing_team_id' })
+  losingTeam: Team;
 
   @ManyToOne(() => Team, team => team.wonGames)
   @JoinColumn({ name: 'winning_team_id' })

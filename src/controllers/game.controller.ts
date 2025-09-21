@@ -3,7 +3,7 @@ import { GameService } from '../services/game.service';
 import { BaseController } from './base.controller';
 import { Game } from '../entities/game.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { GameInputDto, GameOutputDto } from '../dtos/game.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(GameInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(GameInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(GameInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(GameInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<Game> | undefined> {
-    return plainToInstance(GameInputDto, req.query);
+    return plainToInstance(GameInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<Game> | undefined {

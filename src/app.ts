@@ -30,8 +30,6 @@ import { GenerationController } from './controllers/generation.controller';
 import { GenerationService } from './services/generation.service';
 import { LeagueUserController } from './controllers/league-user.controller';
 import { LeagueUserService } from './services/league-user.service';
-import { MatchTeamController } from './controllers/match-team.controller';
-import { MatchTeamService } from './services/match-team.service';
 import { MatchController } from './controllers/match.controller';
 import { MatchService } from './services/match.service';
 import { MoveController } from './controllers/move.controller';
@@ -54,7 +52,23 @@ import { WeekService } from './services/week.service';
 export class App {
   public app: Application;
   private redisClient: ReturnType<typeof createClient>;
+  private abilityService: AbilityService;
+  private gameStatService: GameStatService;
+  private gameService: GameService;
+  private generationService: GenerationService;
+  private leagueUserService: LeagueUserService;
+  private leagueService: LeagueService;
+  private matchService: MatchService;
+  private moveService: MoveService;
+  private pokemonMoveService: PokemonMoveService;
+  private pokemonTypeService: PokemonTypeService;
+  private pokemonService: PokemonService;
+  private seasonPokemonService: SeasonPokemonService;
+  private seasonService: SeasonService;
+  private teamService: TeamService;
+  private typeEffectiveService: TypeEffectiveService;
   private userService: UserService;
+  private weekService: WeekService;
 
   constructor() {
     this.app = express();
@@ -142,7 +156,23 @@ export class App {
 
   private async initializeServices(): Promise<void> {
     // Initialize services
+    this.abilityService = Container.get(AbilityService);
+    this.gameStatService = Container.get(GameStatService);
+    this.gameService = Container.get(GameService);
+    this.generationService = Container.get(GenerationService);
+    this.leagueUserService = Container.get(LeagueUserService);
+    this.leagueService = Container.get(LeagueService);
+    this.matchService = Container.get(MatchService);
+    this.moveService = Container.get(MoveService);
+    this.pokemonMoveService = Container.get(PokemonMoveService);
+    this.pokemonTypeService = Container.get(PokemonTypeService);
+    this.pokemonService = Container.get(PokemonService);
+    this.seasonPokemonService = Container.get(SeasonPokemonService);
+    this.seasonService = Container.get(SeasonService);
+    this.teamService = Container.get(TeamService);
+    this.typeEffectiveService = Container.get(TypeEffectiveService);
     this.userService = Container.get(UserService);
+    this.weekService = Container.get(WeekService);
   }
 
   private async initializePassport(): Promise<void> {
@@ -160,41 +190,23 @@ export class App {
   private async initializeControllers(): Promise<void> {
     // Create and set up controllers
     const authController = new AuthController();
-    const abilityService = Container.get(AbilityService);
-    const abilityController = new AbilityController(abilityService);
-    const gameStatService = Container.get(GameStatService);
-    const gameStatController = new GameStatController(gameStatService);
-    const gameService = Container.get(GameService);
-    const gameController = new GameController(gameService);
-    const generationService = Container.get(GenerationService);
-    const generationController = new GenerationController(generationService);
-    const leagueUserService = Container.get(LeagueUserService);
-    const leagueUserController = new LeagueUserController(leagueUserService);
-    const leagueService = Container.get(LeagueService);
-    const leagueController = new LeagueController(leagueService);
-    const matchTeamService = Container.get(MatchTeamService);
-    const matchTeamController = new MatchTeamController(matchTeamService);
-    const matchService = Container.get(MatchService);
-    const matchController = new MatchController(matchService);
-    const moveService = Container.get(MoveService);
-    const moveController = new MoveController(moveService);
-    const pokemonMoveService = Container.get(PokemonMoveService);
-    const pokemonMoveController = new PokemonMoveController(pokemonMoveService);
-    const pokemonTypeService = Container.get(PokemonTypeService);
-    const pokemonTypeController = new PokemonTypeController(pokemonTypeService);
-    const pokemonService = Container.get(PokemonService);
-    const pokemonController = new PokemonController(pokemonService);
-    const seasonPokemonService = Container.get(SeasonPokemonService);
-    const seasonPokemonController = new SeasonPokemonController(seasonPokemonService);
-    const seasonService = Container.get(SeasonService);
-    const seasonController = new SeasonController(seasonService);
-    const teamService = Container.get(TeamService);
-    const teamController = new TeamController(teamService);
-    const typeEffectiveService = Container.get(TypeEffectiveService);
-    const typeEffectiveController = new TypeEffectiveController(typeEffectiveService);
+    const abilityController = new AbilityController(this.abilityService);
+    const gameStatController = new GameStatController(this.gameStatService);
+    const gameController = new GameController(this.gameService);
+    const generationController = new GenerationController(this.generationService);
+    const leagueUserController = new LeagueUserController(this.leagueUserService);
+    const leagueController = new LeagueController(this.leagueService, this.leagueUserService);
+    const matchController = new MatchController(this.matchService);
+    const moveController = new MoveController(this.moveService);
+    const pokemonMoveController = new PokemonMoveController(this.pokemonMoveService);
+    const pokemonTypeController = new PokemonTypeController(this.pokemonTypeService);
+    const pokemonController = new PokemonController(this.pokemonService);
+    const seasonPokemonController = new SeasonPokemonController(this.seasonPokemonService);
+    const seasonController = new SeasonController(this.seasonService);
+    const teamController = new TeamController(this.teamService);
+    const typeEffectiveController = new TypeEffectiveController(this.typeEffectiveService);
     const userController = new UserController(this.userService);
-    const weekService = Container.get(WeekService);
-    const weekController = new WeekController(weekService);
+    const weekController = new WeekController(this.weekService);
 
     // Set up routes
     this.app.use('/api/auth', authController.router);
@@ -204,7 +216,6 @@ export class App {
     this.app.use('/api/generation', generationController.router);
     this.app.use('/api/league-user', leagueUserController.router);
     this.app.use('/api/league', leagueController.router);
-    this.app.use('/api/match-team', matchTeamController.router);
     this.app.use('/api/match', matchController.router);
     this.app.use('/api/move', moveController.router);
     this.app.use('/api/pokemon-move', pokemonMoveController.router);

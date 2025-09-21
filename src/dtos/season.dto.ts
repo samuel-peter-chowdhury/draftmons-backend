@@ -1,6 +1,6 @@
 import { Expose, Type } from "class-transformer";
 import { BaseOutputDto } from "./base-output.dto";
-import { IsNumber, IsOptional, IsString } from "class-validator";
+import { IsEnum, IsNumber, IsOptional, IsString } from "class-validator";
 import { BaseInputDto } from "./base-input.dto";
 import { LeagueOutputDto } from "./league.dto";
 import { SeasonPokemonOutputDto } from "./season-pokemon.dto";
@@ -54,7 +54,7 @@ export class SeasonInputDto extends BaseInputDto {
   @IsString()
   gen: string;
 
-  @IsString()
+  @IsEnum(SeasonStatus)
   status: SeasonStatus;
 
   @IsOptional()

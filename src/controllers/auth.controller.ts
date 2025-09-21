@@ -107,6 +107,7 @@ export class AuthController {
         isAuthenticated: true,
         user: plainToInstance(UserOutputDto, req.user, {
           excludeExtraneousValues: true,
+          groups: ['user.full']
         }),
       });
     } else {

@@ -3,7 +3,7 @@ import { MoveService } from '../services/move.service';
 import { BaseController } from './base.controller';
 import { Move } from '../entities/move.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { MoveInputDto, MoveOutputDto } from '../dtos/move.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(MoveInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(MoveInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(MoveInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(MoveInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<Move> | undefined> {
-    return plainToInstance(MoveInputDto, req.query);
+    return plainToInstance(MoveInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<Move> | undefined {

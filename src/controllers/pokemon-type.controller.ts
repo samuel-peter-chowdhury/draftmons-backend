@@ -3,7 +3,7 @@ import { PokemonTypeService } from '../services/pokemon-type.service';
 import { BaseController } from './base.controller';
 import { PokemonType } from '../entities/pokemon-type.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { PokemonTypeInputDto, PokemonTypeOutputDto } from '../dtos/pokemon-type.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class PokemonTypeController extends BaseController<PokemonType, PokemonTy
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(PokemonTypeInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(PokemonTypeInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(PokemonTypeInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(PokemonTypeInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class PokemonTypeController extends BaseController<PokemonType, PokemonTy
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<PokemonType> | undefined> {
-    return plainToInstance(PokemonTypeInputDto, req.query);
+    return plainToInstance(PokemonTypeInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<PokemonType> | undefined {

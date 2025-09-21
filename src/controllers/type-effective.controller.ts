@@ -3,7 +3,7 @@ import { TypeEffectiveService } from '../services/type-effective.service';
 import { BaseController } from './base.controller';
 import { TypeEffective } from '../entities/type-effective.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { TypeEffectiveInputDto, TypeEffectiveOutputDto } from '../dtos/type-effective.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class TypeEffectiveController extends BaseController<TypeEffective, TypeE
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(TypeEffectiveInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(TypeEffectiveInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(TypeEffectiveInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(TypeEffectiveInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class TypeEffectiveController extends BaseController<TypeEffective, TypeE
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<TypeEffective> | undefined> {
-    return plainToInstance(TypeEffectiveInputDto, req.query);
+    return plainToInstance(TypeEffectiveInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<TypeEffective> | undefined {

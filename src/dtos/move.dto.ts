@@ -1,6 +1,6 @@
 import { Expose, Type } from "class-transformer";
 import { BaseOutputDto } from "./base-output.dto";
-import { IsNumber, IsString } from "class-validator";
+import { IsEnum, IsNumber, IsString } from "class-validator";
 import { BaseInputDto } from "./base-input.dto";
 import { PokemonTypeOutputDto } from "./pokemon-type.dto";
 import { PokemonMoveOutputDto } from "./pokemon-move.dto";
@@ -47,7 +47,7 @@ export class MoveInputDto extends BaseInputDto {
   @IsNumber()
   pokemonTypeId: number;
 
-  @IsString()
+  @IsEnum(MoveCategory)
   category: MoveCategory;
 
   @IsNumber()

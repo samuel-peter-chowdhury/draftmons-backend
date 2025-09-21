@@ -146,12 +146,16 @@ For production deployment:
    ```
 
 2. Set environment variables for production
-3. Run migrations:
+3. Create migrations:
+   ```bash
+   npm run migration:generate --name=[Your_migration_name]
+   ```
+4. Run migrations:
    ```bash
    npm run migration:run
    ```
 
-4. Start the server:
+5. Start the server:
    ```bash
    npm start
    ```

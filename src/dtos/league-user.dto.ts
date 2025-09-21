@@ -1,6 +1,6 @@
 import { Expose, Type } from "class-transformer";
 import { BaseOutputDto } from "./base-output.dto";
-import { IsString } from "class-validator";
+import { IsBoolean, IsNumber } from "class-validator";
 import { BaseInputDto } from "./base-input.dto";
 import { UserOutputDto } from "./user.dto";
 import { LeagueOutputDto } from "./league.dto";
@@ -25,12 +25,12 @@ export class LeagueUserOutputDto extends BaseOutputDto {
 }
 
 export class LeagueUserInputDto extends BaseInputDto {
-  @IsString()
+  @IsNumber()
   leagueId: number;
 
-  @IsString()
+  @IsNumber()
   userId: number;
 
-  @IsString()
+  @IsBoolean()
   isModerator: boolean;
 }

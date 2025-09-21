@@ -3,7 +3,7 @@ import { TeamService } from '../services/team.service';
 import { BaseController } from './base.controller';
 import { Team } from '../entities/team.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { TeamInputDto, TeamOutputDto } from '../dtos/team.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(TeamInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(TeamInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(TeamInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(TeamInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<Team> | undefined> {
-    return plainToInstance(TeamInputDto, req.query);
+    return plainToInstance(TeamInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<Team> | undefined {

@@ -11,6 +11,9 @@ export class GameOutputDto extends BaseOutputDto {
   matchId: number;
 
   @Expose()
+  losingTeamId: number;
+
+  @Expose()
   winningTeamId: number;
 
   @Expose()
@@ -25,6 +28,10 @@ export class GameOutputDto extends BaseOutputDto {
 
   @Expose({ groups: ['game.full'] })
   @Type(() => TeamOutputDto)
+  losingTeam: TeamOutputDto;
+
+  @Expose({ groups: ['game.full'] })
+  @Type(() => TeamOutputDto)
   winningTeam: TeamOutputDto;
 
   @Expose({ groups: ['game.full'] })
@@ -35,6 +42,9 @@ export class GameOutputDto extends BaseOutputDto {
 export class GameInputDto extends BaseInputDto {
   @IsNumber()
   matchId: number;
+
+  @IsNumber()
+  losingTeamId: number;
 
   @IsNumber()
   winningTeamId: number;

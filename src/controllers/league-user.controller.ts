@@ -3,7 +3,7 @@ import { LeagueUserService } from '../services/league-user.service';
 import { BaseController } from './base.controller';
 import { LeagueUser } from '../entities/league-user.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { LeagueUserInputDto, LeagueUserOutputDto } from '../dtos/league-user.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class LeagueUserController extends BaseController<LeagueUser, LeagueUserI
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(LeagueUserInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(LeagueUserInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(LeagueUserInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(LeagueUserInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class LeagueUserController extends BaseController<LeagueUser, LeagueUserI
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<LeagueUser> | undefined> {
-    return plainToInstance(LeagueUserInputDto, req.query);
+    return plainToInstance(LeagueUserInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<LeagueUser> | undefined {

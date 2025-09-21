@@ -3,7 +3,7 @@ import { MatchService } from '../services/match.service';
 import { BaseController } from './base.controller';
 import { Match } from '../entities/match.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { MatchInputDto, MatchOutputDto } from '../dtos/match.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class MatchController extends BaseController<Match, MatchInputDto, MatchO
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(MatchInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(MatchInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(MatchInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(MatchInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class MatchController extends BaseController<Match, MatchInputDto, MatchO
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<Match> | undefined> {
-    return plainToInstance(MatchInputDto, req.query);
+    return plainToInstance(MatchInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<Match> | undefined {

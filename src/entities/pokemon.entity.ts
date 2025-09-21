@@ -12,7 +12,7 @@ export class Pokemon extends BaseApplicationEntity {
   @Column()
   dexId: number;
 
-  @Column()
+  @Column({ unique: true })
   name: string;
 
   @Column()

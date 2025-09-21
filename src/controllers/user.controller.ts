@@ -3,7 +3,7 @@ import { UserService } from '../services/user.service';
 import { BaseController } from './base.controller';
 import { User } from '../entities/user.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(UserInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(UserInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(UserInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(UserInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<User> | undefined> {
-    return plainToInstance(UserInputDto, req.query);
+    return plainToInstance(UserInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<User> | undefined {
@@ -162,12 +162,6 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *           description: User's email address (must be unique)
    *           example: "john.doe@example.com"
    *           maxLength: 255
-   *         password:
-   *           type: string
-   *           format: password
-   *           description: User's password (will be hashed)
-   *           example: "SecurePassword123!"
-   *           minLength: 8
    *         isAdmin:
    *           type: boolean
    *           description: Whether the user has admin privileges
@@ -218,12 +212,6 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *           description: User's email address (must be unique)
    *           example: "john.doe@example.com"
    *           maxLength: 255
-   *         password:
-   *           type: string
-   *           format: password
-   *           description: User's new password (will be hashed)
-   *           example: "NewSecurePassword123!"
-   *           minLength: 8
    *         isAdmin:
    *           type: boolean
    *           description: Whether the user has admin privileges
@@ -431,7 +419,6 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *                 firstName: "Alice"
    *                 lastName: "Johnson"
    *                 email: "alice.johnson@example.com"
-   *                 password: "SecurePass456!"
    *                 isAdmin: false
    *                 showdownUsername: "AliceJ"
    *                 discordUsername: "AliceJ#9012"
@@ -442,7 +429,6 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *                 firstName: "Bob"
    *                 lastName: "Admin"
    *                 email: "bob.admin@example.com"
-   *                 password: "AdminPass789!"
    *                 isAdmin: true
    *                 timezone: "UTC"
    *     responses:
@@ -495,7 +481,7 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *     tags:
    *       - User
    *     summary: Update a user
-   *     description: Update an existing user's information. All fields are optional for partial updates. Password will be hashed if provided.
+   *     description: Update an existing user's information. All fields are optional for partial updates.
    *     security:
    *       - sessionAuth: []
    *     parameters:
@@ -526,10 +512,6 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *                 firstName: "Johnny"
    *                 showdownUsername: "JohnnyD"
    *                 timezone: "America/Los_Angeles"
-   *             updatePassword:
-   *               summary: Update password only
-   *               value:
-   *                 password: "NewSecurePassword999!"
    *             updateMultiple:
    *               summary: Update multiple fields
    *               value:

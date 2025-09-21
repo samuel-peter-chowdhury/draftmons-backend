@@ -1,9 +1,10 @@
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Unique } from 'typeorm';
 import { BaseApplicationEntity } from './base-application.entity';
 import { Season } from './season.entity';
 import { Match } from './match.entity';
 
 @Entity('week')
+@Unique(['name', 'seasonId'])
 export class Week extends BaseApplicationEntity {
   @Column()
   name: string;

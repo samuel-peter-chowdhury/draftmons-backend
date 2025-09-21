@@ -3,7 +3,7 @@ import { SeasonPokemonService } from '../services/season-pokemon.service';
 import { BaseController } from './base.controller';
 import { SeasonPokemon } from '../entities/season-pokemon.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { SeasonPokemonInputDto, SeasonPokemonOutputDto } from '../dtos/season-pokemon.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class SeasonPokemonController extends BaseController<SeasonPokemon, Seaso
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(SeasonPokemonInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(SeasonPokemonInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(SeasonPokemonInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(SeasonPokemonInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class SeasonPokemonController extends BaseController<SeasonPokemon, Seaso
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<SeasonPokemon> | undefined> {
-    return plainToInstance(SeasonPokemonInputDto, req.query);
+    return plainToInstance(SeasonPokemonInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<SeasonPokemon> | undefined {

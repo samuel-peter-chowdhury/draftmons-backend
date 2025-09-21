@@ -1,4 +1,4 @@
-import { Exclude, Expose, Type } from "class-transformer";
+import { Expose, Type } from "class-transformer";
 import { BaseOutputDto } from "./base-output.dto";
 import { IsOptional, IsString } from "class-validator";
 import { BaseInputDto } from "./base-input.dto";
@@ -11,9 +11,6 @@ export class LeagueOutputDto extends BaseOutputDto {
 
   @Expose()
   abbreviation: string;
-
-  @Exclude()
-  password: string;
 
   @Expose({ groups: ['league.full'] })
   @Type(() => LeagueUserOutputDto)
@@ -30,8 +27,4 @@ export class LeagueInputDto extends BaseInputDto {
 
   @IsString()
   abbreviation: string;
-
-  @IsOptional()
-  @IsString()
-  password: string;
 }

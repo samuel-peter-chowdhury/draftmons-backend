@@ -6,10 +6,10 @@ import { TypeEffective } from "./type-effective.entity";
 
 @Entity('pokemon_type')
 export class PokemonType extends BaseApplicationEntity {
-  @Column()
+  @Column({ unique: true })
   name: string;
 
-  @Column()
+  @Column({ unique: true })
   color: string;
 
   @OneToMany(() => Move, move => move.pokemonType)

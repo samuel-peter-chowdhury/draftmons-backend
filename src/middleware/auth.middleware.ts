@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../errors';
+import { UnauthorizedError, ForbiddenError, ValidationError } from '../errors';
+import { LeagueUser } from '../entities/league-user.entity';
 
 // Interface for authenticated request with user
 export interface AuthenticatedRequest extends Request {
@@ -44,7 +45,7 @@ export const isLeagueModerator = (leagueIdParam: string = 'id') => {
 
     // Check if user is a moderator of the league
     const isModerator = req.user?.leagueUsers?.some(
-      (leagueUser: any) => leagueUser.leagueId === leagueId && leagueUser.isModerator
+      (leagueUser: LeagueUser) => leagueUser.leagueId === leagueId && leagueUser.isModerator
     );
 
     if (isModerator) {
@@ -75,7 +76,7 @@ export const isLeagueMember = (leagueIdParam: string = 'id') => {
 
     // Check if user is a member of the league
     const isMember = req.user?.leagueUsers?.some(
-      (leagueUser: any) => leagueUser.leagueId === leagueId
+      (leagueUser: LeagueUser) => leagueUser.leagueId === leagueId
     );
 
     if (isMember) {
@@ -83,39 +84,5 @@ export const isLeagueMember = (leagueIdParam: string = 'id') => {
     }
 
     throw new ForbiddenError('League membership required');
-  };
-};
-
-// Check if user owns the resource
-export const isResourceOwner = (resourceIdParam: string, userIdField: string = 'userId') => {
-  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    if (!req.isAuthenticated()) {
-      throw new UnauthorizedError('Please log in to access this resource');
-    }
-
-    const resourceId = parseInt(req.params[resourceIdParam]);
-
-    if (isNaN(resourceId)) {
-      throw new ValidationError('Invalid resource ID');
-    }
-
-    // If user is admin, allow access
-    if (req.user?.isAdmin) {
-      return next();
-    }
-
-    // Get the resource from request
-    const resource = res.locals.resource;
-
-    if (!resource) {
-      throw new NotFoundError('Resource', resourceId);
-    }
-
-    // Check if user owns the resource
-    if (resource[userIdField] === req.user.id) {
-      return next();
-    }
-
-    throw new ForbiddenError('You do not have permission to access this resource');
   };
 };

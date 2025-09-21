@@ -5,14 +5,11 @@ import { Season } from './season.entity';
 
 @Entity('league')
 export class League extends BaseApplicationEntity {
-  @Column()
+  @Column({ unique: true })
   name: string;
 
-  @Column()
+  @Column({ unique: true })
   abbreviation: string;
-
-  @Column({ nullable: true, select: false })
-  password: string;
 
   @OneToMany(() => LeagueUser, leagueUser => leagueUser.league)
   leagueUsers: LeagueUser[];

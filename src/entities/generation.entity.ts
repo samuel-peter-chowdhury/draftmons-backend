@@ -5,7 +5,7 @@ import { Pokemon } from './pokemon.entity';
 
 @Entity('generation')
 export class Generation extends BaseApplicationEntity {
-  @Column()
+  @Column({ unique: true })
   name: string;
 
   @OneToMany(() => PokemonMove, pokemonMove => pokemonMove.generation)

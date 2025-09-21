@@ -4,9 +4,9 @@ import { IsNumber, IsString } from "class-validator";
 import { BaseInputDto } from "./base-input.dto";
 import { SeasonOutputDto } from "./season.dto";
 import { SeasonPokemonOutputDto } from "./season-pokemon.dto";
-import { MatchTeamOutputDto } from "./match-team.dto";
 import { GameOutputDto } from "./game.dto";
 import { UserOutputDto } from "./user.dto";
+import { MatchOutputDto } from "./match.dto";
 
 export class TeamOutputDto extends BaseOutputDto {
   @Expose()
@@ -31,12 +31,24 @@ export class TeamOutputDto extends BaseOutputDto {
   seasonPokemon: SeasonPokemonOutputDto[];
 
   @Expose({ groups: ['team.full'] })
-  @Type(() => MatchTeamOutputDto)
-  matchTeams: MatchTeamOutputDto[];
+  @Type(() => GameOutputDto)
+  lostGames: GameOutputDto[];
 
   @Expose({ groups: ['team.full'] })
   @Type(() => GameOutputDto)
   wonGames: GameOutputDto[];
+
+  @Expose({ groups: ['team.full'] })
+  @Type(() => MatchOutputDto)
+  matches: MatchOutputDto[];
+
+  @Expose({ groups: ['team.full'] })
+  @Type(() => MatchOutputDto)
+  lostMatches: MatchOutputDto[];
+
+  @Expose({ groups: ['team.full'] })
+  @Type(() => MatchOutputDto)
+  wonMatches: MatchOutputDto[];
 }
 
 export class TeamInputDto extends BaseInputDto {

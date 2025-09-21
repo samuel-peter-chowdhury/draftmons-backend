@@ -3,7 +3,7 @@ import { SeasonService } from '../services/season.service';
 import { BaseController } from './base.controller';
 import { Season } from '../entities/season.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { SeasonInputDto, SeasonOutputDto } from '../dtos/season.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(SeasonInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(SeasonInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(SeasonInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(SeasonInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<Season> | undefined> {
-    return plainToInstance(SeasonInputDto, req.query);
+    return plainToInstance(SeasonInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<Season> | undefined {

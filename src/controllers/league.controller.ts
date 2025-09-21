@@ -1,17 +1,22 @@
-import { Request, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { LeagueService } from '../services/league.service';
 import { BaseController } from './base.controller';
 import { League } from '../entities/league.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated, isLeagueModerator } from '../middleware/auth.middleware';
+import { AuthenticatedRequest, isAuthenticated, isLeagueModerator } from '../middleware/auth.middleware';
 import { LeagueInputDto, LeagueOutputDto } from '../dtos/league.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import { asyncHandler } from '../utils/error.utils';
+import { LeagueUserService } from '../services/league-user.service';
+import { LeagueUserInputDto } from '../dtos/league-user.dto';
+import { LeagueUser } from '@/entities/league-user.entity';
+import { ForbiddenError } from '../errors';
 
 export class LeagueController extends BaseController<League, LeagueInputDto, LeagueOutputDto> {
   public router = Router();
 
-  constructor(private leagueService: LeagueService) {
+  constructor(private leagueService: LeagueService, private leagueUserService: LeagueUserService) {
     super(leagueService, LeagueOutputDto);
     this.initializeRoutes();
   }
@@ -22,19 +27,41 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(LeagueInputDto), this.create);
+    this.router.post('/', isAuthenticated, validateDto(LeagueInputDto), this.createWithModerator);
 
     // League moderator routes
-    this.router.put('/:id', isAuthenticated, isLeagueModerator(), validatePartialDto(LeagueInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, isLeagueModerator(), this.delete);
+    this.router.put('/:id', isLeagueModerator(), validatePartialDto(LeagueInputDto), this.update);
+    this.router.delete('/:id', isLeagueModerator(), this.delete);
   }
+
+  createWithModerator = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const moderatedLeagues = req.user?.leagueUsers?.filter((leagueUser: LeagueUser) => leagueUser.isModerator);
+    const isAdmin = req.user?.isAdmin;
+    if (moderatedLeagues.length <= 3 && !isAdmin) {
+      throw new ForbiddenError('Cannot moderate more than 3 leagues.');
+    }
+    let league = await this.leagueService.create(req.body);
+    const leagueUserInputDto = plainToInstance(LeagueUserInputDto, {
+      leagueId: league.id,
+      userId: req.user.id,
+      isModerator: true
+    });
+    await this.leagueUserService.create(leagueUserInputDto);
+    league = await this.leagueService.findOne({ id: league.id }, this.getFullRelations());
+    
+    res.status(201).json(
+      plainToInstance(LeagueOutputDto, league, {
+        groups: this.getFullTransformGroup()
+      })
+    );
+  });
 
   protected getFullTransformGroup(): string[] {
     return ['league.full', 'leagueUser.full'];
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<League> | undefined> {
-    return plainToInstance(LeagueInputDto, req.query);
+    return plainToInstance(LeagueInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<League> | undefined {
@@ -129,10 +156,6 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *           example: "PML"
    *           minLength: 1
    *           maxLength: 10
-   *         password:
-   *           type: string
-   *           description: Optional password to protect the league (will not be returned in responses)
-   *           example: "secretPassword123"
    *     
    *     LeagueUpdateInput:
    *       type: object
@@ -149,10 +172,6 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *           example: "PMLU"
    *           minLength: 1
    *           maxLength: 10
-   *         password:
-   *           type: string
-   *           description: Optional password to protect the league (will not be returned in responses)
-   *           example: "newSecretPassword456"
    *     
    *     PaginationParams:
    *       type: object
@@ -339,13 +358,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *           schema:
    *             $ref: '#/components/schemas/LeagueInput'
    *           examples:
-   *             withPassword:
-   *               summary: Create league with password protection
-   *               value:
-   *                 name: "Elite Pokemon League"
-   *                 abbreviation: "EPL"
-   *                 password: "secretPassword123"
-   *             withoutPassword:
+   *             createLeague:
    *               summary: Create public league
    *               value:
    *                 name: "Casual Pokemon League"
@@ -422,10 +435,6 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *               summary: Update only the league name
    *               value:
    *                 name: "Pokemon Champions League"
-   *             updatePassword:
-   *               summary: Update the league password
-   *               value:
-   *                 password: "newSecurePassword789"
    *             updateMultiple:
    *               summary: Update multiple fields
    *               value:

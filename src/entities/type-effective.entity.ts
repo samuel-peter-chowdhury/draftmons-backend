@@ -1,9 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, Unique } from "typeorm";
 import { Pokemon } from "./pokemon.entity";
 import { PokemonType } from "./pokemon-type.entity";
 import { BaseApplicationEntity } from "./base-application.entity";
 
 @Entity('type_effective')
+@Unique(['pokemonId', 'pokemonTypeId'])
 export class TypeEffective extends BaseApplicationEntity {
   @Column()
   pokemonId: number;

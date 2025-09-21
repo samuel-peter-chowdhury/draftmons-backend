@@ -3,7 +3,7 @@ import { PokemonMoveService } from '../services/pokemon-move.service';
 import { BaseController } from './base.controller';
 import { PokemonMove } from '../entities/pokemon-move.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { PokemonMoveInputDto, PokemonMoveOutputDto } from '../dtos/pokemon-move.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class PokemonMoveController extends BaseController<PokemonMove, PokemonMo
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(PokemonMoveInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(PokemonMoveInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(PokemonMoveInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(PokemonMoveInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class PokemonMoveController extends BaseController<PokemonMove, PokemonMo
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<PokemonMove> | undefined> {
-    return plainToInstance(PokemonMoveInputDto, req.query);
+    return plainToInstance(PokemonMoveInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<PokemonMove> | undefined {

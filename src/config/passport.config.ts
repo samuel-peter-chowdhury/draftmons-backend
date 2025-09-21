@@ -2,7 +2,7 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { APP_CONFIG } from './app.config';
 import { UserService } from '../services/user.service';
-import { UserInputDto } from '../dtos/user.dto';
+import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
 import { plainToInstance } from 'class-transformer';
 
 export const configurePassport = (userService: UserService): void => {
@@ -30,10 +30,11 @@ export const configurePassport = (userService: UserService): void => {
             firstName,
             lastName
           });
-          const user = await userService.findOrCreate({ googleId }, userInputDto);
+          const user = await userService.findOrCreate({ googleId }, userInputDto, { leagueUsers: true });
+          const userOutputDto = plainToInstance(UserOutputDto, user, { groups: ['user.full'] });
 
           // Return user to passport
-          return done(null, user);
+          return done(null, userOutputDto);
         } catch (error) {
           return done(error as Error);
         }
@@ -49,8 +50,9 @@ export const configurePassport = (userService: UserService): void => {
   // Deserialize user from session
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const user = await userService.findOne({ id });
-      done(null, user);
+      const user = await userService.findOne({ id }, { leagueUsers: true });
+      const userOutputDto = plainToInstance(UserOutputDto, user, { groups: ['user.full'] });
+      done(null, userOutputDto);
     } catch (error) {
       done(error);
     }

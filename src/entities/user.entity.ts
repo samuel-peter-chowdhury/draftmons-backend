@@ -14,9 +14,6 @@ export class User extends BaseApplicationEntity {
   @Column({ unique: true })
   email: string;
 
-  @Column({ nullable: true, select: false })
-  password: string;
-
   @Column({ default: false })
   isAdmin: boolean;
 

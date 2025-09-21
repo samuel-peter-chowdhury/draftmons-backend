@@ -1,10 +1,11 @@
-import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, Unique } from "typeorm";
 import { Pokemon } from "./pokemon.entity";
 import { Move } from "./move.entity";
 import { BaseApplicationEntity } from "./base-application.entity";
 import { Generation } from "./generation.entity";
 
 @Entity('pokemon_move')
+@Unique(['pokemonId', 'moveId', 'generationId'])
 export class PokemonMove extends BaseApplicationEntity {
   @Column()
   pokemonId: number;

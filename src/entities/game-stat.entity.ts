@@ -1,9 +1,10 @@
-import { Column, Entity, JoinColumn, ManyToOne } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, Unique } from "typeorm";
 import { SeasonPokemon } from "./season-pokemon.entity";
 import { Game } from "./game.entity";
 import { BaseApplicationEntity } from "./base-application.entity";
 
 @Entity('game_stat')
+@Unique(['gameId', 'seasonPokemonId'])
 export class GameStat extends BaseApplicationEntity {
   @Column()
   gameId: number;
@@ -11,13 +12,13 @@ export class GameStat extends BaseApplicationEntity {
   @Column()
   seasonPokemonId: number;
 
-  @Column({ default: 0 })
+  @Column()
   directKills: number;
 
-  @Column({ default: 0 })
+  @Column()
   indirectKills: number;
 
-  @Column({ default: 0 })
+  @Column()
   deaths: number;
 
   @ManyToOne(() => Game, game => game.gameStats)

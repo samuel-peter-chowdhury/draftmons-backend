@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, Unique } from "typeorm";
 import { Season } from "./season.entity";
 import { Pokemon } from "./pokemon.entity";
 import { Team } from "./team.entity";
@@ -6,6 +6,7 @@ import { GameStat } from "./game-stat.entity";
 import { BaseApplicationEntity } from "./base-application.entity";
 
 @Entity('season_pokemon')
+@Unique(['seasonId', 'pokemonId'])
 export class SeasonPokemon extends BaseApplicationEntity {
   @Column()
   seasonId: number;

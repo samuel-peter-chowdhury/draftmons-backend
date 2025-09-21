@@ -4,7 +4,7 @@ import { BaseApplicationEntity } from "./base-application.entity";
 
 @Entity('ability')
 export class Ability extends BaseApplicationEntity {
-  @Column()
+  @Column({ unique: true })
   name: string;
 
   @Column()

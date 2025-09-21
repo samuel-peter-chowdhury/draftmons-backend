@@ -11,7 +11,6 @@ import { Ability } from '../entities/ability.entity';
 import { GameStat } from '../entities/game-stat.entity';
 import { Game } from '../entities/game.entity';
 import { Generation } from '../entities/generation.entity';
-import { MatchTeam } from '../entities/match-team.entity';
 import { Match } from '../entities/match.entity';
 import { Move } from '../entities/move.entity';
 import { PokemonType } from '../entities/pokemon-type.entity';
@@ -26,7 +25,6 @@ export function registerRepositories(): void {
   Container.set('GenerationRepository', AppDataSource.getRepository(Generation));
   Container.set('LeagueUserRepository', AppDataSource.getRepository(LeagueUser));
   Container.set('LeagueRepository', AppDataSource.getRepository(League));
-  Container.set('MatchTeamRepository', AppDataSource.getRepository(MatchTeam));
   Container.set('MatchRepository', AppDataSource.getRepository(Match));
   Container.set('MoveRepository', AppDataSource.getRepository(Move));
   Container.set('PokemonMoveRepository', AppDataSource.getRepository(PokemonMove));

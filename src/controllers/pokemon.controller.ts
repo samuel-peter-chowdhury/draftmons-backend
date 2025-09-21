@@ -3,7 +3,7 @@ import { PokemonService } from '../services/pokemon.service';
 import { BaseController } from './base.controller';
 import { Pokemon } from '../entities/pokemon.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { PokemonInputDto, PokemonOutputDto } from '../dtos/pokemon.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(PokemonInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(PokemonInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(PokemonInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(PokemonInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<Pokemon> | undefined> {
-    return plainToInstance(PokemonInputDto, req.query);
+    return plainToInstance(PokemonInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<Pokemon> | undefined {

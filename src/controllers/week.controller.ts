@@ -3,7 +3,7 @@ import { WeekService } from '../services/week.service';
 import { BaseController } from './base.controller';
 import { Week } from '../entities/week.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAdmin } from '../middleware/auth.middleware';
 import { WeekInputDto, WeekOutputDto } from '../dtos/week.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -22,9 +22,9 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
     this.router.get('/:id', this.getById);
 
     // Authenticated routes
-    this.router.post('/', isAuthenticated, validateDto(WeekInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(WeekInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.post('/', isAdmin, validateDto(WeekInputDto), this.create);
+    this.router.put('/:id', isAdmin, validatePartialDto(WeekInputDto), this.update);
+    this.router.delete('/:id', isAdmin, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -32,7 +32,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<Week> | undefined> {
-    return plainToInstance(WeekInputDto, req.query);
+    return plainToInstance(WeekInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<Week> | undefined {

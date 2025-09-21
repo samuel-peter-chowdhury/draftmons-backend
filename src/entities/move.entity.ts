@@ -11,7 +11,7 @@ export enum MoveCategory {
 
 @Entity('move')
 export class Move extends BaseApplicationEntity {
-  @Column()
+  @Column({ unique: true })
   name: string;
 
   @Column()
