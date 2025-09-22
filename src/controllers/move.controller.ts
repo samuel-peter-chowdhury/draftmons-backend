@@ -3,7 +3,6 @@ import { MoveService } from '../services/move.service';
 import { BaseController } from './base.controller';
 import { Move } from '../entities/move.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAdmin } from '../middleware/auth.middleware';
 import { MoveInputDto, MoveOutputDto } from '../dtos/move.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -17,14 +16,11 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
   }
 
   private initializeRoutes(): void {
-    // Public move routes
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
-
-    // Authenticated routes
-    this.router.post('/', isAdmin, validateDto(MoveInputDto), this.create);
-    this.router.put('/:id', isAdmin, validatePartialDto(MoveInputDto), this.update);
-    this.router.delete('/:id', isAdmin, this.delete);
+    this.router.post('/', validateDto(MoveInputDto), this.create);
+    this.router.put('/:id', validatePartialDto(MoveInputDto), this.update);
+    this.router.delete('/:id', this.delete);
   }
 
   protected getFullTransformGroup(): string[] {

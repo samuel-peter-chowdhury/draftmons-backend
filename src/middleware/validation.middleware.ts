@@ -26,7 +26,7 @@ export const validateDto = (dtoClass: any) => {
 
       // If validation errors exist, throw exception
       if (errors.length > 0) {
-        throw new AppValidationError(formatValidationErrors(errors));
+        return next(new AppValidationError(formatValidationErrors(errors)));
       }
 
       // Validation passed, proceed
@@ -34,9 +34,9 @@ export const validateDto = (dtoClass: any) => {
       next();
     } catch (error) {
       if (error instanceof AppValidationError) {
-        throw error;
+        return next(error);
       }
-      throw new AppValidationError('Invalid request body format');
+      return next(new AppValidationError('Invalid request body format'));
     }
   };
 };
@@ -52,9 +52,9 @@ export const validatePartialDto = (dtoClass: any) => {
       next();
     } catch (error) {
       if (error instanceof AppValidationError) {
-        throw error;
+        return next(error);
       }
-      throw new AppValidationError('Invalid request body format');
+      return next(new AppValidationError('Invalid request body format'));
     }
   };
 };
@@ -74,7 +74,7 @@ export const validateQuery = (dtoClass: any) => {
 
       // If validation errors exist, throw exception
       if (errors.length > 0) {
-        throw new AppValidationError(formatValidationErrors(errors));
+        return next(new AppValidationError(formatValidationErrors(errors)));
       }
 
       // Validation passed, proceed
@@ -82,9 +82,9 @@ export const validateQuery = (dtoClass: any) => {
       next();
     } catch (error) {
       if (error instanceof AppValidationError) {
-        throw error;
+        return next(error);
       }
-      throw new AppValidationError('Invalid query parameters format');
+      return next(new AppValidationError('Invalid query parameters format'));
     }
   };
 };
@@ -104,7 +104,7 @@ export const validateParams = (dtoClass: any) => {
 
       // If validation errors exist, throw exception
       if (errors.length > 0) {
-        throw new AppValidationError(formatValidationErrors(errors));
+        return next(new AppValidationError(formatValidationErrors(errors)));
       }
 
       // Validation passed, proceed
@@ -112,9 +112,9 @@ export const validateParams = (dtoClass: any) => {
       next();
     } catch (error) {
       if (error instanceof AppValidationError) {
-        throw error;
+        return next(error);
       }
-      throw new AppValidationError('Invalid path parameters format');
+      return next(new AppValidationError('Invalid path parameters format'));
     }
   };
 };

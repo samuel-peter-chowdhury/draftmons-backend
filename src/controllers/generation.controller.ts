@@ -3,7 +3,6 @@ import { GenerationService } from '../services/generation.service';
 import { BaseController } from './base.controller';
 import { Generation } from '../entities/generation.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAdmin } from '../middleware/auth.middleware';
 import { GenerationInputDto, GenerationOutputDto } from '../dtos/generation.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -17,14 +16,11 @@ export class GenerationController extends BaseController<Generation, GenerationI
   }
 
   private initializeRoutes(): void {
-    // Public generation routes
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
-
-    // Authenticated routes
-    this.router.post('/', isAdmin, validateDto(GenerationInputDto), this.create);
-    this.router.put('/:id', isAdmin, validatePartialDto(GenerationInputDto), this.update);
-    this.router.delete('/:id', isAdmin, this.delete);
+    this.router.post('/', validateDto(GenerationInputDto), this.create);
+    this.router.put('/:id', validatePartialDto(GenerationInputDto), this.update);
+    this.router.delete('/:id', this.delete);
   }
 
   protected getFullTransformGroup(): string[] {

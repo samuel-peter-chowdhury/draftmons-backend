@@ -3,7 +3,6 @@ import { UserService } from '../services/user.service';
 import { BaseController } from './base.controller';
 import { User } from '../entities/user.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAdmin } from '../middleware/auth.middleware';
 import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -17,14 +16,11 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
   }
 
   private initializeRoutes(): void {
-    // Public user routes
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
-
-    // Authenticated routes
-    this.router.post('/', isAdmin, validateDto(UserInputDto), this.create);
-    this.router.put('/:id', isAdmin, validatePartialDto(UserInputDto), this.update);
-    this.router.delete('/:id', isAdmin, this.delete);
+    this.router.post('/', validateDto(UserInputDto), this.create);
+    this.router.put('/:id', validatePartialDto(UserInputDto), this.update);
+    this.router.delete('/:id', this.delete);
   }
 
   protected getFullTransformGroup(): string[] {

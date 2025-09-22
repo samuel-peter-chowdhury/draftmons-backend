@@ -3,7 +3,6 @@ import { PokemonTypeService } from '../services/pokemon-type.service';
 import { BaseController } from './base.controller';
 import { PokemonType } from '../entities/pokemon-type.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAdmin } from '../middleware/auth.middleware';
 import { PokemonTypeInputDto, PokemonTypeOutputDto } from '../dtos/pokemon-type.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -17,14 +16,11 @@ export class PokemonTypeController extends BaseController<PokemonType, PokemonTy
   }
 
   private initializeRoutes(): void {
-    // Public pokemon type routes
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
-
-    // Authenticated routes
-    this.router.post('/', isAdmin, validateDto(PokemonTypeInputDto), this.create);
-    this.router.put('/:id', isAdmin, validatePartialDto(PokemonTypeInputDto), this.update);
-    this.router.delete('/:id', isAdmin, this.delete);
+    this.router.post('/', validateDto(PokemonTypeInputDto), this.create);
+    this.router.put('/:id', validatePartialDto(PokemonTypeInputDto), this.update);
+    this.router.delete('/:id', this.delete);
   }
 
   protected getFullTransformGroup(): string[] {

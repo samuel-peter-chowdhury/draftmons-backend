@@ -3,7 +3,6 @@ import { TypeEffectiveService } from '../services/type-effective.service';
 import { BaseController } from './base.controller';
 import { TypeEffective } from '../entities/type-effective.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAdmin } from '../middleware/auth.middleware';
 import { TypeEffectiveInputDto, TypeEffectiveOutputDto } from '../dtos/type-effective.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -17,14 +16,11 @@ export class TypeEffectiveController extends BaseController<TypeEffective, TypeE
   }
 
   private initializeRoutes(): void {
-    // Public type effectiveness routes
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
-
-    // Authenticated routes
-    this.router.post('/', isAdmin, validateDto(TypeEffectiveInputDto), this.create);
-    this.router.put('/:id', isAdmin, validatePartialDto(TypeEffectiveInputDto), this.update);
-    this.router.delete('/:id', isAdmin, this.delete);
+    this.router.post('/', validateDto(TypeEffectiveInputDto), this.create);
+    this.router.put('/:id', validatePartialDto(TypeEffectiveInputDto), this.update);
+    this.router.delete('/:id', this.delete);
   }
 
   protected getFullTransformGroup(): string[] {

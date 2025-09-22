@@ -3,7 +3,6 @@ import { AbilityService } from '../services/ability.service';
 import { BaseController } from './base.controller';
 import { Ability } from '../entities/ability.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAdmin } from '../middleware/auth.middleware';
 import { AbilityInputDto, AbilityOutputDto } from '../dtos/ability.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -17,14 +16,11 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
   }
 
   private initializeRoutes(): void {
-    // Public ability routes
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
-
-    // Authenticated routes
-    this.router.post('/', isAdmin, validateDto(AbilityInputDto), this.create);
-    this.router.put('/:id', isAdmin, validatePartialDto(AbilityInputDto), this.update);
-    this.router.delete('/:id', isAdmin, this.delete);
+    this.router.post('/', validateDto(AbilityInputDto), this.create);
+    this.router.put('/:id', validatePartialDto(AbilityInputDto), this.update);
+    this.router.delete('/:id', this.delete);
   }
 
   protected getFullTransformGroup(): string[] {

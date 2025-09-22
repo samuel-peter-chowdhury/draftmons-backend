@@ -10,36 +10,27 @@ import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 import { LeagueUserService } from '../services/league-user.service';
 import { LeagueUserInputDto } from '../dtos/league-user.dto';
-import { LeagueUser } from '@/entities/league-user.entity';
-import { ForbiddenError } from '../errors';
 
 export class LeagueController extends BaseController<League, LeagueInputDto, LeagueOutputDto> {
   public router = Router();
 
-  constructor(private leagueService: LeagueService, private leagueUserService: LeagueUserService) {
+  constructor(
+    private leagueService: LeagueService,
+    private leagueUserService: LeagueUserService,
+  ) {
     super(leagueService, LeagueOutputDto);
     this.initializeRoutes();
   }
 
   private initializeRoutes(): void {
-    // Public league routes
-    this.router.get('/', this.getAll);
-    this.router.get('/:id', this.getById);
-
-    // Authenticated routes
+    this.router.get('/', isAuthenticated, this.getAll);
+    this.router.get('/:id', isAuthenticated, this.getById);
     this.router.post('/', isAuthenticated, validateDto(LeagueInputDto), this.createWithModerator);
-
-    // League moderator routes
     this.router.put('/:id', isLeagueModerator(), validatePartialDto(LeagueInputDto), this.update);
     this.router.delete('/:id', isLeagueModerator(), this.delete);
   }
 
   createWithModerator = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    const moderatedLeagues = req.user?.leagueUsers?.filter((leagueUser: LeagueUser) => leagueUser.isModerator);
-    const isAdmin = req.user?.isAdmin;
-    if (moderatedLeagues.length <= 3 && !isAdmin) {
-      throw new ForbiddenError('Cannot moderate more than 3 leagues.');
-    }
     let league = await this.leagueService.create(req.body);
     const leagueUserInputDto = plainToInstance(LeagueUserInputDto, {
       leagueId: league.id,
@@ -48,7 +39,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
     });
     await this.leagueUserService.create(leagueUserInputDto);
     league = await this.leagueService.findOne({ id: league.id }, this.getFullRelations());
-    
+
     res.status(201).json(
       plainToInstance(LeagueOutputDto, league, {
         groups: this.getFullTransformGroup()

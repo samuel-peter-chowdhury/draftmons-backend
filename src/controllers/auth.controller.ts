@@ -5,28 +5,6 @@ import { isAuthenticated, AuthenticatedRequest } from '../middleware/auth.middle
 import { plainToInstance } from 'class-transformer';
 import { UserOutputDto } from '../dtos/user.dto';
 
-/**
- * @swagger
- * tags:
- *   name: Authentication
- *   description: User authentication and session management
- * 
- * components:
- *   schemas:
- *     AuthStatus:
- *       type: object
- *       properties:
- *         isAuthenticated:
- *           type: boolean
- *         user:
- *           $ref: '#/components/schemas/User'
- *     AuthResponse:
- *       type: object
- *       properties:
- *         message:
- *           type: string
- */
-
 export class AuthController {
   public router = Router();
 
@@ -53,6 +31,56 @@ export class AuthController {
     this.router.get('/status', this.getAuthStatus);
     this.router.post('/logout', isAuthenticated, this.logout);
   }
+
+  getAuthStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    if (req.isAuthenticated() && req.user) {
+      res.json({
+        isAuthenticated: true,
+        user: plainToInstance(UserOutputDto, req.user, {
+          excludeExtraneousValues: true,
+          groups: ['user.full']
+        }),
+      });
+    } else {
+      res.json({
+        isAuthenticated: false,
+      });
+    }
+  });
+
+  logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    req.logout((err) => {
+      if (err) {
+        console.error('Logout error:', err);
+      }
+    });
+
+    res.json({
+      message: 'Logged out successfully',
+    });
+  });
+
+  /**
+   * @swagger
+   * tags:
+   *   name: Authentication
+   *   description: User authentication and session management
+   * 
+   * components:
+   *   schemas:
+   *     AuthStatus:
+   *       type: object
+   *       properties:
+   *         isAuthenticated:
+   *           type: boolean
+   *         user:
+   *           $ref: '#/components/schemas/User'
+   *     AuthResponse:
+   *       type: object
+   *       properties:
+   *         message:
+   *           type: string
+   */
 
   /**
    * @swagger
@@ -101,21 +129,6 @@ export class AuthController {
    *             schema:
    *               $ref: '#/components/schemas/AuthStatus'
    */
-  getAuthStatus = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    if (req.isAuthenticated() && req.user) {
-      res.json({
-        isAuthenticated: true,
-        user: plainToInstance(UserOutputDto, req.user, {
-          excludeExtraneousValues: true,
-          groups: ['user.full']
-        }),
-      });
-    } else {
-      res.json({
-        isAuthenticated: false,
-      });
-    }
-  });
 
   /**
    * @swagger
@@ -136,15 +149,4 @@ export class AuthController {
    *       401:
    *         description: Unauthorized
    */
-  logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    req.logout((err) => {
-      if (err) {
-        console.error('Logout error:', err);
-      }
-    });
-
-    res.json({
-      message: 'Logged out successfully',
-    });
-  });
 }

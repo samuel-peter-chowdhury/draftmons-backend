@@ -48,6 +48,7 @@ import { TypeEffectiveController } from './controllers/type-effective.controller
 import { TypeEffectiveService } from './services/type-effective.service';
 import { WeekController } from './controllers/week.controller';
 import { WeekService } from './services/week.service';
+import { isAuthReadAdminWrite, isAuthReadLeagueModWrite } from './middleware/auth.middleware';
 
 export class App {
   public app: Application;
@@ -208,25 +209,37 @@ export class App {
     const userController = new UserController(this.userService);
     const weekController = new WeekController(this.weekService);
 
-    // Set up routes
+    // Set up Auth routes
     this.app.use('/api/auth', authController.router);
-    this.app.use('/api/ability', abilityController.router);
-    this.app.use('/api/game-stat', gameStatController.router);
-    this.app.use('/api/game', gameController.router);
-    this.app.use('/api/generation', generationController.router);
-    this.app.use('/api/league-user', leagueUserController.router);
+
+    // Set up Admin data routes
+    this.app.use('/api/ability', isAuthReadAdminWrite, abilityController.router);
+    this.app.use('/api/game-stat', isAuthReadAdminWrite, gameStatController.router);
+    this.app.use('/api/game', isAuthReadAdminWrite, gameController.router);
+    this.app.use('/api/generation', isAuthReadAdminWrite, generationController.router);
+    this.app.use('/api/league-user', isAuthReadAdminWrite, leagueUserController.router);
+    this.app.use('/api/match', isAuthReadAdminWrite, matchController.router);
+    this.app.use('/api/move', isAuthReadAdminWrite, moveController.router);
+    this.app.use('/api/pokemon-move', isAuthReadAdminWrite, pokemonMoveController.router);
+    this.app.use('/api/pokemon-type', isAuthReadAdminWrite, pokemonTypeController.router);
+    this.app.use('/api/pokemon', isAuthReadAdminWrite, pokemonController.router);
+    this.app.use('/api/season-pokemon', isAuthReadAdminWrite, seasonPokemonController.router);
+    this.app.use('/api/season', isAuthReadAdminWrite, seasonController.router);
+    this.app.use('/api/team', isAuthReadAdminWrite, teamController.router);
+    this.app.use('/api/type-effective', isAuthReadAdminWrite, typeEffectiveController.router);
+    this.app.use('/api/user', isAuthReadAdminWrite, userController.router);
+    this.app.use('/api/week', isAuthReadAdminWrite, weekController.router);
+
+    // Set up League routes
     this.app.use('/api/league', leagueController.router);
-    this.app.use('/api/match', matchController.router);
-    this.app.use('/api/move', moveController.router);
-    this.app.use('/api/pokemon-move', pokemonMoveController.router);
-    this.app.use('/api/pokemon-type', pokemonTypeController.router);
-    this.app.use('/api/pokemon', pokemonController.router);
-    this.app.use('/api/season-pokemon', seasonPokemonController.router);
-    this.app.use('/api/season', seasonController.router);
-    this.app.use('/api/team', teamController.router);
-    this.app.use('/api/type-effective', typeEffectiveController.router);
-    this.app.use('/api/user', userController.router);
-    this.app.use('/api/week', weekController.router);
+    this.app.use('/api/league/:leagueId/game-stat', isAuthReadLeagueModWrite(), gameStatController.router);
+    this.app.use('/api/league/:leagueId/game', isAuthReadLeagueModWrite(), gameController.router);
+    this.app.use('/api/league/:leagueId/league-user', isAuthReadLeagueModWrite(), leagueUserController.router);
+    this.app.use('/api/league/:leagueId/match', isAuthReadLeagueModWrite(), matchController.router);
+    this.app.use('/api/league/:leagueId/season-pokemon', isAuthReadLeagueModWrite(), seasonPokemonController.router);
+    this.app.use('/api/league/:leagueId/season', isAuthReadLeagueModWrite(), seasonController.router);
+    this.app.use('/api/league/:leagueId/team', isAuthReadLeagueModWrite(), teamController.router);
+    this.app.use('/api/league/:leagueId/week', isAuthReadLeagueModWrite(), weekController.router);
 
     // Health check route
     this.app.get('/health', (req, res) => {
