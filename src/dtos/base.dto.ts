@@ -13,3 +13,5 @@ export abstract class BaseOutputDto {
   @Expose()
   updatedAt: Date;
 }
+
+export abstract class BaseInputDto { }

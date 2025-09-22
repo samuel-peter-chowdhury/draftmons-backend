@@ -1,7 +1,6 @@
 import { Expose, Type } from "class-transformer";
-import { BaseOutputDto } from "./base-output.dto";
-import { IsNumber, IsString } from "class-validator";
-import { BaseInputDto } from "./base-input.dto";
+import { BaseOutputDto, BaseInputDto } from "./base.dto";
+import { IsNumber } from "class-validator";
 import { MoveOutputDto } from "./move.dto";
 import { GenerationOutputDto } from "./generation.dto";
 import { PokemonOutputDto } from "./pokemon.dto";

@@ -2,7 +2,7 @@ import { Repository, FindOptionsOrder, FindOptionsWhere, FindOptionsRelations } 
 import { NotFoundError } from '../errors';
 import { BaseApplicationEntity } from '../entities/base-application.entity';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
-import { BaseInputDto } from '../dtos/base-input.dto';
+import { BaseInputDto } from '../dtos/base.dto';
 
 export abstract class BaseService<E extends BaseApplicationEntity, I extends BaseInputDto> {
   protected repository: Repository<E>;

@@ -1,7 +1,6 @@
 import { Expose, Type } from "class-transformer";
-import { BaseOutputDto } from "./base-output.dto";
+import { BaseOutputDto, BaseInputDto } from "./base.dto";
 import { IsEnum, IsNumber, IsString } from "class-validator";
-import { BaseInputDto } from "./base-input.dto";
 import { PokemonTypeOutputDto } from "./pokemon-type.dto";
 import { PokemonMoveOutputDto } from "./pokemon-move.dto";
 import { MoveCategory } from "../entities/move.entity";

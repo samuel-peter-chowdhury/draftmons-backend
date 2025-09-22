@@ -1,7 +1,6 @@
 import { Expose, Type } from "class-transformer";
-import { BaseOutputDto } from "./base-output.dto";
+import { BaseOutputDto, BaseInputDto } from "./base.dto";
 import { IsNumber, IsString } from "class-validator";
-import { BaseInputDto } from "./base-input.dto";
 import { PokemonMoveOutputDto } from "./pokemon-move.dto";
 import { AbilityOutputDto } from "./ability.dto";
 import { GenerationOutputDto } from "./generation.dto";
@@ -46,7 +45,7 @@ export class PokemonOutputDto extends BaseOutputDto {
   @Expose()
   sprite: string;
 
-  @Expose({ groups: ['pokemon.full'] })
+  @Expose()
   @Type(() => PokemonTypeOutputDto)
   pokemonTypes: PokemonTypeOutputDto[];
 
@@ -54,7 +53,7 @@ export class PokemonOutputDto extends BaseOutputDto {
   @Type(() => PokemonMoveOutputDto)
   pokemonMoves: PokemonMoveOutputDto[];
 
-  @Expose({ groups: ['pokemon.full'] })
+  @Expose()
   @Type(() => AbilityOutputDto)
   abilities: AbilityOutputDto[];
 

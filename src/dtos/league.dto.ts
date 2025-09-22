@@ -1,7 +1,6 @@
 import { Expose, Type } from "class-transformer";
-import { BaseOutputDto } from "./base-output.dto";
-import { IsOptional, IsString } from "class-validator";
-import { BaseInputDto } from "./base-input.dto";
+import { BaseOutputDto, BaseInputDto } from "./base.dto";
+import { IsString } from "class-validator";
 import { LeagueUserOutputDto } from "./league-user.dto";
 import { SeasonOutputDto } from "./season.dto";
 

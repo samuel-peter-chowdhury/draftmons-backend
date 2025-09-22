@@ -4,8 +4,7 @@ import { BaseApplicationEntity } from '../entities/base-application.entity';
 import { plainToInstance, ClassConstructor } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 import { ValidationError as AppValidationError } from '../errors';
-import { BaseInputDto } from '../dtos/base-input.dto';
-import { BaseOutputDto } from '../dtos/base-output.dto';
+import { BaseOutputDto, BaseInputDto } from '../dtos/base.dto';
 import { PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import { FindOptionsRelations, FindOptionsWhere } from 'typeorm';
 import { validate, ValidationError } from 'class-validator';
@@ -26,7 +25,7 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
     const group = isFull ? this.getFullTransformGroup() : undefined;
 
     const entities = await this.service.findAll(where, relations, paginationOptions, sortOptions);
-    
+
     res.json(
       plainToInstance(this.outputDtoClass, entities, {
         groups: group,
