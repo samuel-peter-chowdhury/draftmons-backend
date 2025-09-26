@@ -125,6 +125,18 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
     }
   }
 
+  protected async getQueryArray(req: Request, field: string): Promise<[]> {
+    let fieldValues: any = req.query[field];
+
+    if (fieldValues && !Array.isArray(fieldValues)) {
+      fieldValues = [fieldValues];
+    } else if (!fieldValues) {
+      fieldValues = [];
+    }
+
+    return fieldValues;
+  }
+
   protected abstract getWhere(req: Request): Promise<FindOptionsWhere<E> | undefined>;
 
   protected abstract getBaseRelations(): FindOptionsRelations<E> | undefined;

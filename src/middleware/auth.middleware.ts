@@ -25,7 +25,7 @@ export const isAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunc
 
 // Check if user is authenticated for read or is admin for write
 export const isAuthReadAdminWrite = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-  if (req.method == "GET") {
+  if (req.method === "GET") {
     if (req.isAuthenticated()) {
       return next();
     }
@@ -41,7 +41,7 @@ export const isAuthReadAdminWrite = (req: AuthenticatedRequest, res: Response, n
 // Check if user is authenticated for read or is league mod for write
 export const isAuthReadLeagueModWrite = (leagueIdParam: string = 'leagueId') => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    if (req.method == "GET") {
+    if (req.method === "GET") {
       if (req.isAuthenticated()) {
         return next();
       }

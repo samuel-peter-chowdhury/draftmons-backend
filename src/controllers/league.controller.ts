@@ -5,7 +5,7 @@ import { League } from '../entities/league.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { AuthenticatedRequest, isAuthenticated, isLeagueModerator } from '../middleware/auth.middleware';
 import { LeagueInputDto, LeagueOutputDto } from '../dtos/league.dto';
-import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
+import { FindOptionsWhere, FindOptionsRelations, In } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 import { LeagueUserService } from '../services/league-user.service';
@@ -52,7 +52,11 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
   }
 
   protected async getWhere(req: Request): Promise<FindOptionsWhere<League> | undefined> {
-    return plainToInstance(LeagueInputDto, req.query, { excludeExtraneousValues: true });
+    const where: any = { ...plainToInstance(LeagueInputDto, req.query, { excludeExtraneousValues: true }) };
+    if (req.query.ids) {
+      where['id'] = In(await this.getQueryArray(req, 'ids'));
+    }
+    return where;
   }
 
   protected getBaseRelations(): FindOptionsRelations<League> | undefined {
@@ -246,6 +250,13 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *           type: boolean
    *           default: false
    *         description: Include full league details (seasons and league users)
+   *       - in: query
+   *         name: ids
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         description: Find leagues in these IDs
    *     responses:
    *       200:
    *         description: List of leagues retrieved successfully
