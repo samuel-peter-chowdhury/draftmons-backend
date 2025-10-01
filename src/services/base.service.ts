@@ -76,7 +76,8 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
 
   async findOrCreate(where: FindOptionsWhere<E>, data: I, relations?: FindOptionsRelations<E>): Promise<E> {
     try {
-      return this.findOne(where, relations);
+      const entity = await this.findOne(where, relations);
+      return entity;
     } catch (NotFoundError) {
       return this.create(data);
     }
@@ -84,7 +85,8 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
 
   async updateOrCreate(where: FindOptionsWhere<E>, data: I, relations?: FindOptionsRelations<E>): Promise<E> {
     try {
-      return this.update(where, data, relations);
+      const entity = await this.update(where, data, relations);
+      return entity;
     } catch (NotFoundError) {
       return this.create(data);
     }
