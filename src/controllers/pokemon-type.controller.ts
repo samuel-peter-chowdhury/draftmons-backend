@@ -7,7 +7,11 @@ import { PokemonTypeInputDto, PokemonTypeOutputDto } from '../dtos/pokemon-type.
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
-export class PokemonTypeController extends BaseController<PokemonType, PokemonTypeInputDto, PokemonTypeOutputDto> {
+export class PokemonTypeController extends BaseController<
+  PokemonType,
+  PokemonTypeInputDto,
+  PokemonTypeOutputDto
+> {
   public router = Router();
 
   constructor(private pokemonTypeService: PokemonTypeService) {
@@ -27,7 +31,9 @@ export class PokemonTypeController extends BaseController<PokemonType, PokemonTy
     return ['pokemonType.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<PokemonType> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<PokemonType> | FindOptionsWhere<PokemonType>[] | undefined> {
     return plainToInstance(PokemonTypeInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +50,7 @@ export class PokemonTypeController extends BaseController<PokemonType, PokemonTy
    * tags:
    *   name: PokemonType
    *   description: Pokemon type management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     PokemonType:
@@ -83,7 +89,7 @@ export class PokemonTypeController extends BaseController<PokemonType, PokemonTy
    *           format: date-time
    *           description: Timestamp when the Pokemon type was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     PokemonTypeFull:
    *       allOf:
    *         - $ref: '#/components/schemas/PokemonType'
@@ -104,7 +110,7 @@ export class PokemonTypeController extends BaseController<PokemonType, PokemonTy
    *               description: Type effectiveness relationships
    *               items:
    *                 $ref: '#/components/schemas/TypeEffective'
-   *     
+   *
    *     PokemonTypeInput:
    *       type: object
    *       required:
@@ -122,7 +128,7 @@ export class PokemonTypeController extends BaseController<PokemonType, PokemonTy
    *           description: Color associated with this type (hex code)
    *           example: "#F8D030"
    *           pattern: "^#[0-9A-Fa-f]{6}$"
-   *     
+   *
    *     PokemonTypeUpdateInput:
    *       type: object
    *       properties:

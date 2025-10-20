@@ -28,9 +28,11 @@ export const configurePassport = (userService: UserService): void => {
             googleId,
             email,
             firstName,
-            lastName
+            lastName,
           });
-          const user = await userService.findOrCreate({ googleId }, userInputDto, { leagueUsers: true });
+          const user = await userService.findOrCreate({ googleId }, userInputDto, {
+            leagueUsers: true,
+          });
           const userOutputDto = plainToInstance(UserOutputDto, user, { groups: ['user.full'] });
 
           // Return user to passport
@@ -38,8 +40,8 @@ export const configurePassport = (userService: UserService): void => {
         } catch (error) {
           return done(error as Error);
         }
-      }
-    )
+      },
+    ),
   );
 
   // Serialize user to session

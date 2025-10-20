@@ -1,8 +1,8 @@
-import { Expose, Type } from "class-transformer";
-import { BaseOutputDto, BaseInputDto } from "./base.dto";
-import { IsBoolean, IsOptional, IsString } from "class-validator";
-import { LeagueUserOutputDto } from "./league-user.dto";
-import { TeamOutputDto } from "./team.dto";
+import { Expose, Type } from 'class-transformer';
+import { BaseOutputDto, BaseInputDto } from './base.dto';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { LeagueUserOutputDto } from './league-user.dto';
+import { TeamOutputDto } from './team.dto';
 
 export class UserOutputDto extends BaseOutputDto {
   @Expose()

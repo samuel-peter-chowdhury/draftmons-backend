@@ -27,7 +27,9 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
     return ['week.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<Week> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<Week> | FindOptionsWhere<Week>[] | undefined> {
     return plainToInstance(WeekInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +46,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    * tags:
    *   name: Week
    *   description: Week management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     Week:
@@ -83,7 +85,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *           format: date-time
    *           description: Timestamp when the week was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     WeekFull:
    *       allOf:
    *         - $ref: '#/components/schemas/Week'
@@ -97,7 +99,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *               description: List of matches scheduled for this week
    *               items:
    *                 $ref: '#/components/schemas/Match'
-   *     
+   *
    *     WeekInput:
    *       type: object
    *       required:
@@ -115,7 +117,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *           description: ID of the associated season
    *           example: 1
    *           minimum: 1
-   *     
+   *
    *     WeekUpdateInput:
    *       type: object
    *       properties:

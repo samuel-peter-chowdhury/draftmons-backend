@@ -45,54 +45,54 @@ export class Pokemon extends BaseApplicationEntity {
   @Column()
   sprite: string;
 
-  @ManyToMany(() => PokemonType, pokemonType => pokemonType.pokemon)
+  @ManyToMany(() => PokemonType, (pokemonType) => pokemonType.pokemon)
   @JoinTable({
     name: 'pokemon_pokemon_types',
     joinColumn: {
       name: 'pokemon_id',
-      referencedColumnName: 'id'
+      referencedColumnName: 'id',
     },
     inverseJoinColumn: {
       name: 'pokemon_type_id',
-      referencedColumnName: 'id'
-    }
+      referencedColumnName: 'id',
+    },
   })
   pokemonTypes: PokemonType[];
 
-  @OneToMany(() => PokemonMove, pokemonMove => pokemonMove.pokemon)
+  @OneToMany(() => PokemonMove, (pokemonMove) => pokemonMove.pokemon)
   pokemonMoves: PokemonMove[];
 
-  @ManyToMany(() => Ability, ability => ability.pokemon)
+  @ManyToMany(() => Ability, (ability) => ability.pokemon)
   @JoinTable({
     name: 'pokemon_abilities',
     joinColumn: {
       name: 'pokemon_id',
-      referencedColumnName: 'id'
+      referencedColumnName: 'id',
     },
     inverseJoinColumn: {
       name: 'ability_id',
-      referencedColumnName: 'id'
-    }
+      referencedColumnName: 'id',
+    },
   })
   abilities: Ability[];
 
-  @OneToMany(() => TypeEffective, typeEffective => typeEffective.pokemon)
+  @OneToMany(() => TypeEffective, (typeEffective) => typeEffective.pokemon)
   typeEffectiveness: TypeEffective[];
 
-  @OneToMany(() => SeasonPokemon, seasonPokemon => seasonPokemon.pokemon)
+  @OneToMany(() => SeasonPokemon, (seasonPokemon) => seasonPokemon.pokemon)
   seasonPokemon: SeasonPokemon[];
 
-  @ManyToMany(() => Generation, generation => generation.pokemon)
+  @ManyToMany(() => Generation, (generation) => generation.pokemon)
   @JoinTable({
     name: 'pokemon_generations',
     joinColumn: {
       name: 'pokemon_id',
-      referencedColumnName: 'id'
+      referencedColumnName: 'id',
     },
     inverseJoinColumn: {
       name: 'generation_id',
-      referencedColumnName: 'id'
-    }
+      referencedColumnName: 'id',
+    },
   })
   generations: Generation[];
 }

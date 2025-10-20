@@ -88,10 +88,12 @@ export class App {
   private async initializeMiddlewares(): Promise<void> {
     // Security and logging middleware
     this.app.use(helmet());
-    this.app.use(cors({
-      origin: APP_CONFIG.isProduction ? [/\.draftmons\.com$/] : true,
-      credentials: true,
-    }));
+    this.app.use(
+      cors({
+        origin: APP_CONFIG.isProduction ? [/\.draftmons\.com$/] : true,
+        credentials: true,
+      }),
+    );
     this.app.use(morgan(APP_CONFIG.isProduction ? 'combined' : 'dev'));
 
     // Body parsing middleware
@@ -104,16 +106,18 @@ export class App {
       await this.initializeRedis();
     } else {
       // Use MemoryStore for development
-      this.app.use(session({
-        secret: APP_CONFIG.sessionSecret,
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-          secure: false, // Set to false in development
-          httpOnly: true,
-          maxAge: 24 * 60 * 60 * 1000, // 1 day
-        },
-      }));
+      this.app.use(
+        session({
+          secret: APP_CONFIG.sessionSecret,
+          resave: false,
+          saveUninitialized: false,
+          cookie: {
+            secure: false, // Set to false in development
+            httpOnly: true,
+            maxAge: 24 * 60 * 60 * 1000, // 1 day
+          },
+        }),
+      );
     }
 
     // Initialize passport middleware
@@ -142,17 +146,19 @@ export class App {
       prefix: 'draftmons:session:',
     });
 
-    this.app.use(session({
-      store: redisStore,
-      secret: APP_CONFIG.sessionSecret,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: APP_CONFIG.isProduction,
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
-      },
-    }));
+    this.app.use(
+      session({
+        store: redisStore,
+        secret: APP_CONFIG.sessionSecret,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          secure: APP_CONFIG.isProduction,
+          httpOnly: true,
+          maxAge: 24 * 60 * 60 * 1000, // 1 day
+        },
+      }),
+    );
   }
 
   private async initializeServices(): Promise<void> {
@@ -182,10 +188,14 @@ export class App {
   }
 
   private async initializeSwagger(): Promise<void> {
-    this.app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-      customCss: '.swagger-ui .topbar { display: none }',
-      customSiteTitle: 'Draftmons API Documentation',
-    }));
+    this.app.use(
+      '/api-docs',
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerSpec, {
+        customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: 'Draftmons API Documentation',
+      }),
+    );
   }
 
   private async initializeControllers(): Promise<void> {
@@ -232,12 +242,28 @@ export class App {
 
     // Set up League routes
     this.app.use('/api/league', leagueController.router);
-    this.app.use('/api/league/:leagueId/game-stat', isAuthReadLeagueModWrite(), gameStatController.router);
+    this.app.use(
+      '/api/league/:leagueId/game-stat',
+      isAuthReadLeagueModWrite(),
+      gameStatController.router,
+    );
     this.app.use('/api/league/:leagueId/game', isAuthReadLeagueModWrite(), gameController.router);
-    this.app.use('/api/league/:leagueId/league-user', isAuthReadLeagueModWrite(), leagueUserController.router);
+    this.app.use(
+      '/api/league/:leagueId/league-user',
+      isAuthReadLeagueModWrite(),
+      leagueUserController.router,
+    );
     this.app.use('/api/league/:leagueId/match', isAuthReadLeagueModWrite(), matchController.router);
-    this.app.use('/api/league/:leagueId/season-pokemon', isAuthReadLeagueModWrite(), seasonPokemonController.router);
-    this.app.use('/api/league/:leagueId/season', isAuthReadLeagueModWrite(), seasonController.router);
+    this.app.use(
+      '/api/league/:leagueId/season-pokemon',
+      isAuthReadLeagueModWrite(),
+      seasonPokemonController.router,
+    );
+    this.app.use(
+      '/api/league/:leagueId/season',
+      isAuthReadLeagueModWrite(),
+      seasonController.router,
+    );
     this.app.use('/api/league/:leagueId/team', isAuthReadLeagueModWrite(), teamController.router);
     this.app.use('/api/league/:leagueId/week', isAuthReadLeagueModWrite(), weekController.router);
 

@@ -6,7 +6,7 @@ export const errorMiddleware = (
   error: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void => {
   console.error(`[Error] ${error.stack}`);
 
@@ -22,7 +22,7 @@ export const errorMiddleware = (
       errorCode: 'DATABASE_ERROR',
       message: 'Database query failed',
       timestamp: new Date().toISOString(),
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
     return;
   }
@@ -33,6 +33,6 @@ export const errorMiddleware = (
     errorCode: 'INTERNAL_SERVER_ERROR',
     message: 'Internal server error',
     timestamp: new Date().toISOString(),
-    details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    details: process.env.NODE_ENV === 'development' ? error.message : undefined,
   });
 };

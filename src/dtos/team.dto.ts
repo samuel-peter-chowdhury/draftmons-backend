@@ -1,11 +1,11 @@
-import { Expose, Type } from "class-transformer";
-import { BaseOutputDto, BaseInputDto } from "./base.dto";
-import { IsNumber, IsString } from "class-validator";
-import { SeasonOutputDto } from "./season.dto";
-import { SeasonPokemonOutputDto } from "./season-pokemon.dto";
-import { GameOutputDto } from "./game.dto";
-import { UserOutputDto } from "./user.dto";
-import { MatchOutputDto } from "./match.dto";
+import { Expose, Type } from 'class-transformer';
+import { BaseOutputDto, BaseInputDto } from './base.dto';
+import { IsNumber, IsString } from 'class-validator';
+import { SeasonOutputDto } from './season.dto';
+import { SeasonPokemonOutputDto } from './season-pokemon.dto';
+import { GameOutputDto } from './game.dto';
+import { UserOutputDto } from './user.dto';
+import { MatchOutputDto } from './match.dto';
 
 export class TeamOutputDto extends BaseOutputDto {
   @Expose()

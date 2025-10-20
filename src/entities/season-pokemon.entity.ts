@@ -1,9 +1,9 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, Unique } from "typeorm";
-import { Season } from "./season.entity";
-import { Pokemon } from "./pokemon.entity";
-import { Team } from "./team.entity";
-import { GameStat } from "./game-stat.entity";
-import { BaseApplicationEntity } from "./base-application.entity";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, Unique } from 'typeorm';
+import { Season } from './season.entity';
+import { Pokemon } from './pokemon.entity';
+import { Team } from './team.entity';
+import { GameStat } from './game-stat.entity';
+import { BaseApplicationEntity } from './base-application.entity';
 
 @Entity('season_pokemon')
 @Unique(['seasonId', 'pokemonId'])
@@ -23,18 +23,18 @@ export class SeasonPokemon extends BaseApplicationEntity {
   @Column({ nullable: true })
   pointValue: number;
 
-  @ManyToOne(() => Season, season => season.seasonPokemon)
+  @ManyToOne(() => Season, (season) => season.seasonPokemon)
   @JoinColumn({ name: 'season_id' })
   season: Season;
 
-  @ManyToOne(() => Pokemon, pokemon => pokemon.seasonPokemon)
+  @ManyToOne(() => Pokemon, (pokemon) => pokemon.seasonPokemon)
   @JoinColumn({ name: 'pokemon_id' })
   pokemon: Pokemon;
 
-  @ManyToOne(() => Team, team => team.seasonPokemon, { nullable: true })
+  @ManyToOne(() => Team, (team) => team.seasonPokemon, { nullable: true })
   @JoinColumn({ name: 'team_id' })
   team: Team;
 
-  @OneToMany(() => GameStat, gameStat => gameStat.seasonPokemon)
+  @OneToMany(() => GameStat, (gameStat) => gameStat.seasonPokemon)
   gameStats: GameStat[];
 }

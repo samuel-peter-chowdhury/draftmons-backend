@@ -27,7 +27,9 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
     return ['game.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<Game> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<Game> | FindOptionsWhere<Game>[] | undefined> {
     return plainToInstance(GameInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +46,7 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
    * tags:
    *   name: Game
    *   description: Game management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     Game:
@@ -92,7 +94,7 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
    *           format: date-time
    *           description: Timestamp when the game was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     GameFull:
    *       allOf:
    *         - $ref: '#/components/schemas/Game'
@@ -109,7 +111,7 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
    *               description: List of game statistics for all Pokemon in this game
    *               items:
    *                 $ref: '#/components/schemas/GameStat'
-   *     
+   *
    *     GameInput:
    *       type: object
    *       required:
@@ -137,7 +139,7 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
    *           type: string
    *           description: URL link to the game replay
    *           example: "https://replay.pokemonshowdown.com/gen9ou-123456789"
-   *     
+   *
    *     GameUpdateInput:
    *       type: object
    *       properties:

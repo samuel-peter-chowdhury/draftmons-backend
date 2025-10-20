@@ -3,7 +3,11 @@ import { LeagueService } from '../services/league.service';
 import { BaseController } from './base.controller';
 import { League } from '../entities/league.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { AuthenticatedRequest, isAuthenticated, isLeagueModerator } from '../middleware/auth.middleware';
+import {
+  AuthenticatedRequest,
+  isAuthenticated,
+  isLeagueModerator,
+} from '../middleware/auth.middleware';
 import { LeagueInputDto, LeagueOutputDto } from '../dtos/league.dto';
 import { FindOptionsWhere, FindOptionsRelations, In } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -14,10 +18,7 @@ import { LeagueUserInputDto } from '../dtos/league-user.dto';
 export class LeagueController extends BaseController<League, LeagueInputDto, LeagueOutputDto> {
   public router = Router();
 
-  constructor(
-    private leagueService: LeagueService,
-    private leagueUserService: LeagueUserService,
-  ) {
+  constructor(private leagueService: LeagueService, private leagueUserService: LeagueUserService) {
     super(leagueService, LeagueOutputDto);
     this.initializeRoutes();
   }
@@ -30,29 +31,37 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
     this.router.delete('/:id', isLeagueModerator(), this.delete);
   }
 
-  createWithModerator = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    let league = await this.leagueService.create(req.body);
-    const leagueUserInputDto = plainToInstance(LeagueUserInputDto, {
-      leagueId: league.id,
-      userId: req.user.id,
-      isModerator: true
-    });
-    await this.leagueUserService.create(leagueUserInputDto);
-    league = await this.leagueService.findOne({ id: league.id }, this.getFullRelations());
+  createWithModerator = asyncHandler(
+    async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+      let league = await this.leagueService.create(req.body);
+      const leagueUserInputDto = plainToInstance(LeagueUserInputDto, {
+        leagueId: league.id,
+        userId: req.user.id,
+        isModerator: true,
+      });
+      await this.leagueUserService.create(leagueUserInputDto);
+      league = await this.leagueService.findOne({ id: league.id }, this.getFullRelations());
 
-    res.status(201).json(
-      plainToInstance(LeagueOutputDto, league, {
-        groups: this.getFullTransformGroup()
-      })
-    );
-  });
+      res.status(201).json(
+        plainToInstance(LeagueOutputDto, league, {
+          groups: this.getFullTransformGroup(),
+        }),
+      );
+    },
+  );
 
   protected getFullTransformGroup(): string[] {
     return ['league.full', 'leagueUser.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<League> | undefined> {
-    const where: any = { ...plainToInstance(LeagueInputDto, req.query, { excludeExtraneousValues: true }) };
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<League> | FindOptionsWhere<League>[] | undefined> {
+    const where: any = {
+      ...plainToInstance(LeagueInputDto, req.query, {
+        excludeExtraneousValues: true,
+      }),
+    };
     if (req.query.ids) {
       where['id'] = In(await this.getQueryArray(req, 'ids'));
     }
@@ -66,10 +75,10 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
   protected getFullRelations(): FindOptionsRelations<League> | undefined {
     return {
       leagueUsers: {
-        user: true
+        user: true,
       },
-      seasons: true
-    }
+      seasons: true,
+    };
   }
 
   /**
@@ -77,7 +86,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    * tags:
    *   name: League
    *   description: League management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     League:
@@ -116,7 +125,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *           format: date-time
    *           description: Timestamp when the league was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     LeagueFull:
    *       allOf:
    *         - $ref: '#/components/schemas/League'
@@ -132,7 +141,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *               description: List of users in this league with their roles
    *               items:
    *                 $ref: '#/components/schemas/LeagueUser'
-   *     
+   *
    *     LeagueInput:
    *       type: object
    *       required:
@@ -151,7 +160,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *           example: "PML"
    *           minLength: 1
    *           maxLength: 10
-   *     
+   *
    *     LeagueUpdateInput:
    *       type: object
    *       properties:
@@ -167,7 +176,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *           example: "PMLU"
    *           minLength: 1
    *           maxLength: 10
-   *     
+   *
    *     PaginationParams:
    *       type: object
    *       properties:
@@ -190,7 +199,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *           enum: [ASC, DESC]
    *           default: ASC
    *           description: Sort order (ascending or descending)
-   *     
+   *
    *     ErrorResponse:
    *       type: object
    *       properties:

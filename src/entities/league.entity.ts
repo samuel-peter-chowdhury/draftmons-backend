@@ -11,9 +11,9 @@ export class League extends BaseApplicationEntity {
   @Column({ unique: true })
   abbreviation: string;
 
-  @OneToMany(() => LeagueUser, leagueUser => leagueUser.league)
+  @OneToMany(() => LeagueUser, (leagueUser) => leagueUser.league)
   leagueUsers: LeagueUser[];
 
-  @OneToMany(() => Season, season => season.league)
+  @OneToMany(() => Season, (season) => season.league)
   seasons: Season[];
 }

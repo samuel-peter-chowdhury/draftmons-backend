@@ -4,7 +4,7 @@ import { BaseController } from './base.controller';
 import { User } from '../entities/user.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
-import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
+import { FindOptionsWhere, FindOptionsRelations, ILike } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
 export class UserController extends BaseController<User, UserInputDto, UserOutputDto> {
@@ -27,8 +27,21 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
     return ['user.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<User> | undefined> {
-    return plainToInstance(UserInputDto, req.query, { excludeExtraneousValues: true });
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<User> | FindOptionsWhere<User>[] | undefined> {
+    const where: any = {
+      ...plainToInstance(UserInputDto, req.query, {
+        excludeExtraneousValues: true,
+      }),
+    };
+    if (req.query.nameLike) {
+      return [
+        { ...where, firstName: ILike(`%${req.query.nameLike}%`) },
+        { ...where, lastName: ILike(`%${req.query.nameLike}%`) },
+      ];
+    }
+    return where;
   }
 
   protected getBaseRelations(): FindOptionsRelations<User> | undefined {
@@ -44,7 +57,7 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    * tags:
    *   name: User
    *   description: User management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     User:
@@ -118,7 +131,7 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *           format: date-time
    *           description: Timestamp when the user was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     UserFull:
    *       allOf:
    *         - $ref: '#/components/schemas/User'
@@ -134,7 +147,7 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *               description: List of teams owned by the user
    *               items:
    *                 $ref: '#/components/schemas/Team'
-   *     
+   *
    *     UserInput:
    *       type: object
    *       required:
@@ -186,7 +199,7 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *           description: User's timezone
    *           example: "America/New_York"
    *           maxLength: 50
-   *     
+   *
    *     UserUpdateInput:
    *       type: object
    *       properties:
@@ -280,6 +293,11 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *           type: boolean
    *           default: false
    *         description: Include full user details (leagueUsers and teams)
+   *       - in: query
+   *         name: nameLike
+   *         schema:
+   *           type: string
+   *         description: Search for first or last name using LIKE
    *     responses:
    *       200:
    *         description: List of users retrieved successfully

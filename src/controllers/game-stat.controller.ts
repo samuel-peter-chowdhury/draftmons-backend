@@ -7,7 +7,11 @@ import { GameStatInputDto, GameStatOutputDto } from '../dtos/game-stat.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
-export class GameStatController extends BaseController<GameStat, GameStatInputDto, GameStatOutputDto> {
+export class GameStatController extends BaseController<
+  GameStat,
+  GameStatInputDto,
+  GameStatOutputDto
+> {
   public router = Router();
 
   constructor(private gameStatService: GameStatService) {
@@ -27,7 +31,9 @@ export class GameStatController extends BaseController<GameStat, GameStatInputDt
     return ['gameStat.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<GameStat> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<GameStat> | FindOptionsWhere<GameStat>[] | undefined> {
     return plainToInstance(GameStatInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +50,7 @@ export class GameStatController extends BaseController<GameStat, GameStatInputDt
    * tags:
    *   name: GameStat
    *   description: Game statistics management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     GameStat:
@@ -101,7 +107,7 @@ export class GameStatController extends BaseController<GameStat, GameStatInputDt
    *           format: date-time
    *           description: Timestamp when the game stat was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     GameStatFull:
    *       allOf:
    *         - $ref: '#/components/schemas/GameStat'
@@ -113,7 +119,7 @@ export class GameStatController extends BaseController<GameStat, GameStatInputDt
    *             seasonPokemon:
    *               $ref: '#/components/schemas/SeasonPokemon'
    *               description: Full season Pokemon details for this stat entry
-   *     
+   *
    *     GameStatInput:
    *       type: object
    *       required:
@@ -148,7 +154,7 @@ export class GameStatController extends BaseController<GameStat, GameStatInputDt
    *           description: Number of times this Pokemon was knocked out
    *           example: 0
    *           minimum: 0
-   *     
+   *
    *     GameStatUpdateInput:
    *       type: object
    *       properties:

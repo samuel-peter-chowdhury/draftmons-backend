@@ -27,8 +27,12 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
     return ['ability.full', 'pokemon.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<Ability> | undefined> {
-    return plainToInstance(AbilityInputDto, req.query, { excludeExtraneousValues: true });
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<Ability> | FindOptionsWhere<Ability>[] | undefined> {
+    return plainToInstance(AbilityInputDto, req.query, {
+      excludeExtraneousValues: true,
+    });
   }
 
   protected getBaseRelations(): FindOptionsRelations<Ability> | undefined {
@@ -44,7 +48,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    * tags:
    *   name: Ability
    *   description: Pokemon ability management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     Ability:
@@ -83,7 +87,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *           format: date-time
    *           description: Timestamp when the ability was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     AbilityFull:
    *       allOf:
    *         - $ref: '#/components/schemas/Ability'
@@ -94,7 +98,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *               description: List of Pokemon that can have this ability
    *               items:
    *                 $ref: '#/components/schemas/Pokemon'
-   *     
+   *
    *     AbilityInput:
    *       type: object
    *       required:
@@ -113,7 +117,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *           example: "Lowers the opposing team's Attack stat upon entering battle"
    *           minLength: 1
    *           maxLength: 500
-   *     
+   *
    *     AbilityUpdateInput:
    *       type: object
    *       properties:

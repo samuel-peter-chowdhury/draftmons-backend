@@ -7,7 +7,11 @@ import { PokemonMoveInputDto, PokemonMoveOutputDto } from '../dtos/pokemon-move.
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
-export class PokemonMoveController extends BaseController<PokemonMove, PokemonMoveInputDto, PokemonMoveOutputDto> {
+export class PokemonMoveController extends BaseController<
+  PokemonMove,
+  PokemonMoveInputDto,
+  PokemonMoveOutputDto
+> {
   public router = Router();
 
   constructor(private pokemonMoveService: PokemonMoveService) {
@@ -27,7 +31,9 @@ export class PokemonMoveController extends BaseController<PokemonMove, PokemonMo
     return ['pokemonMove.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<PokemonMove> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<PokemonMove> | FindOptionsWhere<PokemonMove>[] | undefined> {
     return plainToInstance(PokemonMoveInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +50,7 @@ export class PokemonMoveController extends BaseController<PokemonMove, PokemonMo
    * tags:
    *   name: PokemonMove
    *   description: Pokemon move relationship management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     PokemonMove:
@@ -88,7 +94,7 @@ export class PokemonMoveController extends BaseController<PokemonMove, PokemonMo
    *           format: date-time
    *           description: Timestamp when the Pokemon move relationship was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     PokemonMoveFull:
    *       allOf:
    *         - $ref: '#/components/schemas/PokemonMove'
@@ -103,7 +109,7 @@ export class PokemonMoveController extends BaseController<PokemonMove, PokemonMo
    *             generation:
    *               $ref: '#/components/schemas/Generation'
    *               description: Full generation details
-   *     
+   *
    *     PokemonMoveInput:
    *       type: object
    *       required:
@@ -126,7 +132,7 @@ export class PokemonMoveController extends BaseController<PokemonMove, PokemonMo
    *           description: ID of the generation
    *           example: 1
    *           minimum: 1
-   *     
+   *
    *     PokemonMoveUpdateInput:
    *       type: object
    *       properties:

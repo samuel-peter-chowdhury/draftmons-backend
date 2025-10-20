@@ -13,14 +13,19 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
     this.entityName = entityName;
   }
 
-  async findAll(where?: FindOptionsWhere<E>, relations?: FindOptionsRelations<E>, pagination?: PaginationOptions, sort?: SortOptions): Promise<PaginatedResponse<E> | E[]> {
-    const order = sort ? { [sort.sortBy]: sort.sortOrder } as FindOptionsOrder<E> : undefined;
+  async findAll(
+    where?: FindOptionsWhere<E> | FindOptionsWhere<E>[],
+    relations?: FindOptionsRelations<E>,
+    pagination?: PaginationOptions,
+    sort?: SortOptions,
+  ): Promise<PaginatedResponse<E> | E[]> {
+    const order = sort ? ({ [sort.sortBy]: sort.sortOrder } as FindOptionsOrder<E>) : undefined;
 
     if (!pagination) {
       return this.repository.find({
         where: where,
         relations: relations,
-        order: order
+        order: order,
       });
     }
 
@@ -32,7 +37,7 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
       relations: relations,
       skip: skip,
       take: pageSize,
-      order: order
+      order: order,
     });
 
     return {
@@ -47,7 +52,7 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
   async findOne(where: FindOptionsWhere<E>, relations?: FindOptionsRelations<E>): Promise<E> {
     const entity = await this.repository.findOne({
       where: where,
-      relations: relations
+      relations: relations,
     });
 
     if (!entity) {
@@ -62,7 +67,11 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
     return this.repository.save(entity as any);
   }
 
-  async update(where: FindOptionsWhere<E>, data: Partial<I>, relations?: FindOptionsRelations<E>): Promise<E> {
+  async update(
+    where: FindOptionsWhere<E>,
+    data: Partial<I>,
+    relations?: FindOptionsRelations<E>,
+  ): Promise<E> {
     await this.findOne(where);
     await this.repository.update(where, data as any);
     return this.findOne(where, relations);
@@ -74,7 +83,11 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
     return true;
   }
 
-  async findOrCreate(where: FindOptionsWhere<E>, data: I, relations?: FindOptionsRelations<E>): Promise<E> {
+  async findOrCreate(
+    where: FindOptionsWhere<E>,
+    data: I,
+    relations?: FindOptionsRelations<E>,
+  ): Promise<E> {
     try {
       const entity = await this.findOne(where, relations);
       return entity;
@@ -83,7 +96,11 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
     }
   }
 
-  async updateOrCreate(where: FindOptionsWhere<E>, data: I, relations?: FindOptionsRelations<E>): Promise<E> {
+  async updateOrCreate(
+    where: FindOptionsWhere<E>,
+    data: I,
+    relations?: FindOptionsRelations<E>,
+  ): Promise<E> {
     try {
       const entity = await this.update(where, data, relations);
       return entity;

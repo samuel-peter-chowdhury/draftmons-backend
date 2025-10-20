@@ -27,7 +27,9 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
     return ['move.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<Move> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<Move> | FindOptionsWhere<Move>[] | undefined> {
     return plainToInstance(MoveInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +46,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    * tags:
    *   name: Move
    *   description: Pokemon move management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     Move:
@@ -114,7 +116,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *           format: date-time
    *           description: Timestamp when the move was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     MoveFull:
    *       allOf:
    *         - $ref: '#/components/schemas/Move'
@@ -128,7 +130,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *               description: List of Pokemon that can learn this move
    *               items:
    *                 $ref: '#/components/schemas/PokemonMove'
-   *     
+   *
    *     MoveInput:
    *       type: object
    *       required:
@@ -186,7 +188,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *           description: Detailed description of the move's effects
    *           example: "A strong electric blast crashes down on the target. This may also leave the target with paralysis."
    *           maxLength: 500
-   *     
+   *
    *     MoveUpdateInput:
    *       type: object
    *       properties:

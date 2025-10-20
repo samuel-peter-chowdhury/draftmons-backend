@@ -36,4 +36,4 @@ export function registerRepositories(): void {
   Container.set('TypeEffectiveRepository', AppDataSource.getRepository(TypeEffective));
   Container.set('UserRepository', AppDataSource.getRepository(User));
   Container.set('WeekRepository', AppDataSource.getRepository(Week));
-} 
+}

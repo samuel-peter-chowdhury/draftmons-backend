@@ -14,7 +14,11 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
     super(pokemonRepository, 'Pokemon');
   }
 
-  async search(search: any, pagination?: PaginationOptions, sort?: SortOptions): Promise<PaginatedResponse<Pokemon> | Pokemon[]> {
+  async search(
+    search: any,
+    pagination?: PaginationOptions,
+    sort?: SortOptions,
+  ): Promise<PaginatedResponse<Pokemon> | Pokemon[]> {
     const where = this.buildWhereClause(search);
     return this.findAll(where, {}, pagination, sort);
   }
@@ -42,7 +46,10 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       where.specialAttack = Between(search.minSpecialAttack || 0, search.maxSpecialAttack || 999);
     }
     if (search.minSpecialDefense || search.maxSpecialDefense) {
-      where.specialDefense = Between(search.minSpecialDefense || 0, search.maxSpecialDefense || 999);
+      where.specialDefense = Between(
+        search.minSpecialDefense || 0,
+        search.maxSpecialDefense || 999,
+      );
     }
     if (search.minSpeed || search.maxSpeed) {
       where.speed = Between(search.minSpeed || 0, search.maxSpeed || 999);

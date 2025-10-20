@@ -37,4 +37,4 @@ const options: swaggerJsdoc.Options = {
   apis: ['./src/controllers/*.ts'], // Path to the API docs
 };
 
-export const swaggerSpec = swaggerJsdoc(options); 
+export const swaggerSpec = swaggerJsdoc(options);

@@ -27,7 +27,9 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
     return ['pokemon.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<Pokemon> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<Pokemon> | FindOptionsWhere<Pokemon>[] | undefined> {
     return plainToInstance(PokemonInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +46,7 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    * tags:
    *   name: Pokemon
    *   description: Pokemon management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     Pokemon:
@@ -135,7 +137,7 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *           format: date-time
    *           description: Timestamp when the Pokemon was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     PokemonFull:
    *       allOf:
    *         - $ref: '#/components/schemas/Pokemon'
@@ -171,7 +173,7 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *               description: Generations this Pokemon appears in
    *               items:
    *                 $ref: '#/components/schemas/Generation'
-   *     
+   *
    *     PokemonInput:
    *       type: object
    *       required:
@@ -261,7 +263,7 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *           description: URL to the Pokemon's sprite image
    *           example: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
    *           maxLength: 500
-   *     
+   *
    *     PokemonUpdateInput:
    *       type: object
    *       properties:

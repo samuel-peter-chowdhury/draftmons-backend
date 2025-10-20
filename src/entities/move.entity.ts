@@ -4,9 +4,9 @@ import { PokemonMove } from './pokemon-move.entity';
 import { PokemonType } from './pokemon-type.entity';
 
 export enum MoveCategory {
-  PHYSICAL = "PHYSICAL",
-  SPECIAL = "SPECIAL",
-  STATUS = "STATUS",
+  PHYSICAL = 'PHYSICAL',
+  SPECIAL = 'SPECIAL',
+  STATUS = 'STATUS',
 }
 
 @Entity('move')
@@ -17,12 +17,12 @@ export class Move extends BaseApplicationEntity {
   @Column()
   pokemonTypeId: number;
 
-  @ManyToOne(() => PokemonType, pokemonType => pokemonType.moves)
+  @ManyToOne(() => PokemonType, (pokemonType) => pokemonType.moves)
   @JoinColumn({ name: 'pokemon_type_id' })
   pokemonType: PokemonType;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: MoveCategory,
   })
   category: MoveCategory;
@@ -42,6 +42,6 @@ export class Move extends BaseApplicationEntity {
   @Column()
   description: string;
 
-  @OneToMany(() => PokemonMove, pokemonMove => pokemonMove.move)
+  @OneToMany(() => PokemonMove, (pokemonMove) => pokemonMove.move)
   pokemonMoves: PokemonMove[];
 }

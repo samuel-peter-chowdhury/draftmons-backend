@@ -1,8 +1,8 @@
-import { Expose, Type } from "class-transformer";
-import { BaseOutputDto, BaseInputDto } from "./base.dto";
-import { IsString } from "class-validator";
-import { PokemonMoveOutputDto } from "./pokemon-move.dto";
-import { PokemonOutputDto } from "./pokemon.dto";
+import { Expose, Type } from 'class-transformer';
+import { BaseOutputDto, BaseInputDto } from './base.dto';
+import { IsString } from 'class-validator';
+import { PokemonMoveOutputDto } from './pokemon-move.dto';
+import { PokemonOutputDto } from './pokemon.dto';
 
 export class GenerationOutputDto extends BaseOutputDto {
   @Expose()

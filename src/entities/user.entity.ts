@@ -29,9 +29,9 @@ export class User extends BaseApplicationEntity {
   @Column({ nullable: true })
   timezone: string;
 
-  @OneToMany(() => LeagueUser, leagueUser => leagueUser.user)
+  @OneToMany(() => LeagueUser, (leagueUser) => leagueUser.user)
   leagueUsers: LeagueUser[];
 
-  @OneToMany(() => Team, team => team.user)
+  @OneToMany(() => Team, (team) => team.user)
   teams: Team[];
 }

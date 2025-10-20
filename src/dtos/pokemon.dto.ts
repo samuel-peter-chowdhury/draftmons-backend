@@ -1,12 +1,12 @@
-import { Expose, Type } from "class-transformer";
-import { BaseOutputDto, BaseInputDto } from "./base.dto";
-import { IsNumber, IsString } from "class-validator";
-import { PokemonMoveOutputDto } from "./pokemon-move.dto";
-import { AbilityOutputDto } from "./ability.dto";
-import { GenerationOutputDto } from "./generation.dto";
-import { PokemonTypeOutputDto } from "./pokemon-type.dto";
-import { TypeEffectiveOutputDto } from "./type-effective.dto";
-import { SeasonPokemonOutputDto } from "./season-pokemon.dto";
+import { Expose, Type } from 'class-transformer';
+import { BaseOutputDto, BaseInputDto } from './base.dto';
+import { IsNumber, IsString } from 'class-validator';
+import { PokemonMoveOutputDto } from './pokemon-move.dto';
+import { AbilityOutputDto } from './ability.dto';
+import { GenerationOutputDto } from './generation.dto';
+import { PokemonTypeOutputDto } from './pokemon-type.dto';
+import { TypeEffectiveOutputDto } from './type-effective.dto';
+import { SeasonPokemonOutputDto } from './season-pokemon.dto';
 
 export class PokemonOutputDto extends BaseOutputDto {
   @Expose()

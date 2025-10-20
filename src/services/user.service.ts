@@ -8,7 +8,7 @@ import { UserInputDto } from '../dtos/user.dto';
 export class UserService extends BaseService<User, UserInputDto> {
   constructor(
     @Inject('UserRepository')
-    private userRepository: Repository<User>
+    private userRepository: Repository<User>,
   ) {
     super(userRepository, 'User');
   }

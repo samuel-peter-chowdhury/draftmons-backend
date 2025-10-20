@@ -7,7 +7,11 @@ import { TypeEffectiveInputDto, TypeEffectiveOutputDto } from '../dtos/type-effe
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
-export class TypeEffectiveController extends BaseController<TypeEffective, TypeEffectiveInputDto, TypeEffectiveOutputDto> {
+export class TypeEffectiveController extends BaseController<
+  TypeEffective,
+  TypeEffectiveInputDto,
+  TypeEffectiveOutputDto
+> {
   public router = Router();
 
   constructor(private typeEffectiveService: TypeEffectiveService) {
@@ -27,7 +31,9 @@ export class TypeEffectiveController extends BaseController<TypeEffective, TypeE
     return ['typeEffective.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<TypeEffective> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<TypeEffective> | FindOptionsWhere<TypeEffective>[] | undefined> {
     return plainToInstance(TypeEffectiveInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +50,7 @@ export class TypeEffectiveController extends BaseController<TypeEffective, TypeE
    * tags:
    *   name: TypeEffective
    *   description: Type effectiveness management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     TypeEffective:
@@ -89,7 +95,7 @@ export class TypeEffectiveController extends BaseController<TypeEffective, TypeE
    *           format: date-time
    *           description: Timestamp when the type effectiveness entry was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     TypeEffectiveFull:
    *       allOf:
    *         - $ref: '#/components/schemas/TypeEffective'
@@ -101,7 +107,7 @@ export class TypeEffectiveController extends BaseController<TypeEffective, TypeE
    *             pokemon:
    *               $ref: '#/components/schemas/Pokemon'
    *               description: Full Pokemon details
-   *     
+   *
    *     TypeEffectiveInput:
    *       type: object
    *       required:
@@ -126,7 +132,7 @@ export class TypeEffectiveController extends BaseController<TypeEffective, TypeE
    *           example: 2.0
    *           minimum: 0
    *           maximum: 4
-   *     
+   *
    *     TypeEffectiveUpdateInput:
    *       type: object
    *       properties:

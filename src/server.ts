@@ -9,7 +9,7 @@ import { registerRepositories } from './config/repository.config';
 async function bootstrap() {
   // Configure TypeORM to use typedi container with fallback options for migrations
   useContainer(Container, { fallbackOnErrors: true, fallback: false });
-  
+
   // Initialize database connection
   try {
     await AppDataSource.initialize();

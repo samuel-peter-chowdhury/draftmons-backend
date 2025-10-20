@@ -1,8 +1,8 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from "typeorm";
-import { Match } from "./match.entity";
-import { Team } from "./team.entity";
-import { GameStat } from "./game-stat.entity";
-import { BaseApplicationEntity } from "./base-application.entity";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Match } from './match.entity';
+import { Team } from './team.entity';
+import { GameStat } from './game-stat.entity';
+import { BaseApplicationEntity } from './base-application.entity';
 
 @Entity('game')
 export class Game extends BaseApplicationEntity {
@@ -21,18 +21,18 @@ export class Game extends BaseApplicationEntity {
   @Column({ nullable: true, unique: true })
   replayLink: string;
 
-  @ManyToOne(() => Match, match => match.games)
+  @ManyToOne(() => Match, (match) => match.games)
   @JoinColumn({ name: 'match_id' })
   match: Match;
 
-  @ManyToOne(() => Team, team => team.lostGames)
+  @ManyToOne(() => Team, (team) => team.lostGames)
   @JoinColumn({ name: 'losing_team_id' })
   losingTeam: Team;
 
-  @ManyToOne(() => Team, team => team.wonGames)
+  @ManyToOne(() => Team, (team) => team.wonGames)
   @JoinColumn({ name: 'winning_team_id' })
   winningTeam: Team;
 
-  @OneToMany(() => GameStat, gameStat => gameStat.game)
+  @OneToMany(() => GameStat, (gameStat) => gameStat.game)
   gameStats: GameStat[];
 }

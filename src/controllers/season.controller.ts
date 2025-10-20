@@ -27,7 +27,9 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
     return ['season.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<Season> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<Season> | FindOptionsWhere<Season>[] | undefined> {
     return plainToInstance(SeasonInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +46,7 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
    * tags:
    *   name: Season
    *   description: Season management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     Season:
@@ -109,7 +111,7 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
    *           format: date-time
    *           description: Timestamp when the season was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     SeasonFull:
    *       allOf:
    *         - $ref: '#/components/schemas/Season'
@@ -133,7 +135,7 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
    *               description: List of Pokemon available in this season
    *               items:
    *                 $ref: '#/components/schemas/SeasonPokemon'
-   *     
+   *
    *     SeasonInput:
    *       type: object
    *       required:
@@ -182,7 +184,7 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
    *           description: ID of the associated league
    *           example: 1
    *           minimum: 1
-   *     
+   *
    *     SeasonUpdateInput:
    *       type: object
    *       properties:

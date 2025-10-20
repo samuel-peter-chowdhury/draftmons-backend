@@ -1,8 +1,8 @@
-import { Expose, Type } from "class-transformer";
-import { BaseOutputDto, BaseInputDto } from "./base.dto";
-import { IsNumber, IsString } from "class-validator";
-import { SeasonOutputDto } from "./season.dto";
-import { MatchOutputDto } from "./match.dto";
+import { Expose, Type } from 'class-transformer';
+import { BaseOutputDto, BaseInputDto } from './base.dto';
+import { IsNumber, IsString } from 'class-validator';
+import { SeasonOutputDto } from './season.dto';
+import { MatchOutputDto } from './match.dto';
 
 export class WeekOutputDto extends BaseOutputDto {
   @Expose()

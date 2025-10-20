@@ -27,7 +27,9 @@ export class MatchController extends BaseController<Match, MatchInputDto, MatchO
     return ['match.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<Match> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<Match> | FindOptionsWhere<Match>[] | undefined> {
     return plainToInstance(MatchInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +46,7 @@ export class MatchController extends BaseController<Match, MatchInputDto, MatchO
    * tags:
    *   name: Match
    *   description: Match management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     Match:
@@ -78,7 +80,7 @@ export class MatchController extends BaseController<Match, MatchInputDto, MatchO
    *           format: date-time
    *           description: Timestamp when the match was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     MatchFull:
    *       allOf:
    *         - $ref: '#/components/schemas/Match'
@@ -97,7 +99,7 @@ export class MatchController extends BaseController<Match, MatchInputDto, MatchO
    *               description: List of games in this match
    *               items:
    *                 $ref: '#/components/schemas/Game'
-   *     
+   *
    *     MatchInput:
    *       type: object
    *       required:
@@ -108,7 +110,7 @@ export class MatchController extends BaseController<Match, MatchInputDto, MatchO
    *           description: ID of the week this match belongs to
    *           example: 5
    *           minimum: 1
-   *     
+   *
    *     MatchUpdateInput:
    *       type: object
    *       properties:

@@ -1,8 +1,8 @@
-import { Column, Entity, JoinColumn, ManyToOne, Unique } from "typeorm";
-import { Pokemon } from "./pokemon.entity";
-import { Move } from "./move.entity";
-import { BaseApplicationEntity } from "./base-application.entity";
-import { Generation } from "./generation.entity";
+import { Column, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
+import { Pokemon } from './pokemon.entity';
+import { Move } from './move.entity';
+import { BaseApplicationEntity } from './base-application.entity';
+import { Generation } from './generation.entity';
 
 @Entity('pokemon_move')
 @Unique(['pokemonId', 'moveId', 'generationId'])
@@ -16,15 +16,15 @@ export class PokemonMove extends BaseApplicationEntity {
   @Column()
   generationId: number;
 
-  @ManyToOne(() => Pokemon, pokemon => pokemon.pokemonMoves)
+  @ManyToOne(() => Pokemon, (pokemon) => pokemon.pokemonMoves)
   @JoinColumn({ name: 'pokemon_id' })
   pokemon: Pokemon;
 
-  @ManyToOne(() => Move, move => move.pokemonMoves)
+  @ManyToOne(() => Move, (move) => move.pokemonMoves)
   @JoinColumn({ name: 'move_id' })
   move: Move;
 
-  @ManyToOne(() => Generation, generation => generation.pokemonMoves)
+  @ManyToOne(() => Generation, (generation) => generation.pokemonMoves)
   @JoinColumn({ name: 'generation_id' })
   generation: Generation;
 }

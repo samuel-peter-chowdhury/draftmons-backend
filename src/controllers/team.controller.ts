@@ -27,7 +27,9 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
     return ['team.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<Team> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<Team> | FindOptionsWhere<Team>[] | undefined> {
     return plainToInstance(TeamInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +46,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    * tags:
    *   name: Team
    *   description: Team management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     Team:
@@ -88,7 +90,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *           format: date-time
    *           description: Timestamp when the team was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     TeamFull:
    *       allOf:
    *         - $ref: '#/components/schemas/Team'
@@ -115,7 +117,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *               description: List of games won by this team
    *               items:
    *                 $ref: '#/components/schemas/Game'
-   *     
+   *
    *     TeamInput:
    *       type: object
    *       required:
@@ -139,7 +141,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *           description: ID of the team owner
    *           example: 5
    *           minimum: 1
-   *     
+   *
    *     TeamUpdateInput:
    *       type: object
    *       properties:

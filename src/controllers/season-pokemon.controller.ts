@@ -7,7 +7,11 @@ import { SeasonPokemonInputDto, SeasonPokemonOutputDto } from '../dtos/season-po
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
-export class SeasonPokemonController extends BaseController<SeasonPokemon, SeasonPokemonInputDto, SeasonPokemonOutputDto> {
+export class SeasonPokemonController extends BaseController<
+  SeasonPokemon,
+  SeasonPokemonInputDto,
+  SeasonPokemonOutputDto
+> {
   public router = Router();
 
   constructor(private seasonPokemonService: SeasonPokemonService) {
@@ -27,7 +31,9 @@ export class SeasonPokemonController extends BaseController<SeasonPokemon, Seaso
     return ['seasonPokemon.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<SeasonPokemon> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<SeasonPokemon> | FindOptionsWhere<SeasonPokemon>[] | undefined> {
     return plainToInstance(SeasonPokemonInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +50,7 @@ export class SeasonPokemonController extends BaseController<SeasonPokemon, Seaso
    * tags:
    *   name: SeasonPokemon
    *   description: Season Pokemon management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     SeasonPokemon:
@@ -98,7 +104,7 @@ export class SeasonPokemonController extends BaseController<SeasonPokemon, Seaso
    *           format: date-time
    *           description: Timestamp when the season pokemon entry was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     SeasonPokemonFull:
    *       allOf:
    *         - $ref: '#/components/schemas/SeasonPokemon'
@@ -118,7 +124,7 @@ export class SeasonPokemonController extends BaseController<SeasonPokemon, Seaso
    *               description: List of game statistics for this pokemon
    *               items:
    *                 $ref: '#/components/schemas/GameStat'
-   *     
+   *
    *     SeasonPokemonInput:
    *       type: object
    *       required:
@@ -153,7 +159,7 @@ export class SeasonPokemonController extends BaseController<SeasonPokemon, Seaso
    *           description: Point value of this pokemon in the season
    *           example: 10
    *           minimum: 0
-   *     
+   *
    *     SeasonPokemonUpdateInput:
    *       type: object
    *       properties:

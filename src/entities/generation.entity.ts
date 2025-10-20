@@ -8,9 +8,9 @@ export class Generation extends BaseApplicationEntity {
   @Column({ unique: true })
   name: string;
 
-  @OneToMany(() => PokemonMove, pokemonMove => pokemonMove.generation)
+  @OneToMany(() => PokemonMove, (pokemonMove) => pokemonMove.generation)
   pokemonMoves: PokemonMove[];
 
-  @ManyToMany(() => Pokemon, pokemon => pokemon.generations)
+  @ManyToMany(() => Pokemon, (pokemon) => pokemon.generations)
   pokemon: Pokemon[];
-} 
+}

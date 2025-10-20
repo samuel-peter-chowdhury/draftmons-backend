@@ -8,7 +8,11 @@ export interface AuthenticatedRequest extends Request {
 }
 
 // Check if user is authenticated
-export const isAuthenticated = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const isAuthenticated = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): void => {
   if (req.isAuthenticated()) {
     return next();
   }
@@ -24,8 +28,12 @@ export const isAdmin = (req: AuthenticatedRequest, res: Response, next: NextFunc
 };
 
 // Check if user is authenticated for read or is admin for write
-export const isAuthReadAdminWrite = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-  if (req.method === "GET") {
+export const isAuthReadAdminWrite = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): void => {
+  if (req.method === 'GET') {
     if (req.isAuthenticated()) {
       return next();
     }
@@ -41,7 +49,7 @@ export const isAuthReadAdminWrite = (req: AuthenticatedRequest, res: Response, n
 // Check if user is authenticated for read or is league mod for write
 export const isAuthReadLeagueModWrite = (leagueIdParam: string = 'leagueId') => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    if (req.method === "GET") {
+    if (req.method === 'GET') {
       if (req.isAuthenticated()) {
         return next();
       }
@@ -64,7 +72,7 @@ export const isAuthReadLeagueModWrite = (leagueIdParam: string = 'leagueId') => 
 
       // Check if user is a moderator of the league
       const isModerator = req.user?.leagueUsers?.some(
-        (leagueUser: LeagueUser) => leagueUser.leagueId === leagueId && leagueUser.isModerator
+        (leagueUser: LeagueUser) => leagueUser.leagueId === leagueId && leagueUser.isModerator,
       );
 
       if (isModerator) {
@@ -96,7 +104,7 @@ export const isLeagueModerator = (leagueIdParam: string = 'id') => {
 
     // Check if user is a moderator of the league
     const isModerator = req.user?.leagueUsers?.some(
-      (leagueUser: LeagueUser) => leagueUser.leagueId === leagueId && leagueUser.isModerator
+      (leagueUser: LeagueUser) => leagueUser.leagueId === leagueId && leagueUser.isModerator,
     );
 
     if (isModerator) {
@@ -127,7 +135,7 @@ export const isLeagueMember = (leagueIdParam: string = 'id') => {
 
     // Check if user is a member of the league
     const isMember = req.user?.leagueUsers?.some(
-      (leagueUser: LeagueUser) => leagueUser.leagueId === leagueId
+      (leagueUser: LeagueUser) => leagueUser.leagueId === leagueId,
     );
 
     if (isMember) {

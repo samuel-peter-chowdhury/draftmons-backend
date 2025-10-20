@@ -1,4 +1,4 @@
-import { IsIn, IsPositive, IsString } from "class-validator";
+import { IsIn, IsPositive, IsString } from 'class-validator';
 
 export class PaginationOptions {
   @IsPositive()

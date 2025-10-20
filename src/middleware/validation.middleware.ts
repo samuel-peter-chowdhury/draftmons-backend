@@ -5,10 +5,14 @@ import { ValidationError as AppValidationError } from '../errors';
 
 // Helper function to format validation errors
 export const formatValidationErrors = (errors: ValidationError[]): string => {
-  return errors.map((error: ValidationError) => {
-    const constraints = error.constraints ? Object.values(error.constraints).join(', ') : 'Invalid value';
-    return `${error.property}: ${constraints}`;
-  }).join('; ');
+  return errors
+    .map((error: ValidationError) => {
+      const constraints = error.constraints
+        ? Object.values(error.constraints).join(', ')
+        : 'Invalid value';
+      return `${error.property}: ${constraints}`;
+    })
+    .join('; ');
 };
 
 // Middleware to validate request body against a DTO class

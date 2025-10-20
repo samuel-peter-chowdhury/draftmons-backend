@@ -10,11 +10,15 @@ import { FindOptionsRelations, FindOptionsWhere } from 'typeorm';
 import { validate, ValidationError } from 'class-validator';
 import { formatValidationErrors } from '../middleware/validation.middleware';
 
-export abstract class BaseController<E extends BaseApplicationEntity, I extends BaseInputDto, O extends BaseOutputDto> {
+export abstract class BaseController<
+  E extends BaseApplicationEntity,
+  I extends BaseInputDto,
+  O extends BaseOutputDto,
+> {
   constructor(
     protected readonly service: BaseService<E, I>,
-    protected readonly outputDtoClass: ClassConstructor<O>
-  ) { }
+    protected readonly outputDtoClass: ClassConstructor<O>,
+  ) {}
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const isFull = req.query.full === 'true';
@@ -29,7 +33,7 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
     res.json(
       plainToInstance(this.outputDtoClass, entities, {
         groups: group,
-      })
+      }),
     );
   });
 
@@ -49,16 +53,14 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
     res.json(
       plainToInstance(this.outputDtoClass, entity, {
         groups: group,
-      })
+      }),
     );
   });
 
   create = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const entity = await this.service.create(req.body);
 
-    res.status(201).json(
-      plainToInstance(this.outputDtoClass, entity)
-    );
+    res.status(201).json(plainToInstance(this.outputDtoClass, entity));
   });
 
   update = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -77,7 +79,7 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
     res.json(
       plainToInstance(this.outputDtoClass, entity, {
         groups: group,
-      })
+      }),
     );
   });
 
@@ -97,10 +99,13 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
   protected async getPaginationOptions(req: Request): Promise<PaginationOptions> {
     const page: number = parseInt(req.query.page as string) || 1;
     const pageSize: number = parseInt(req.query.pageSize as string) || 25;
-    const paginationOptions: PaginationOptions = plainToInstance(PaginationOptions, { page, pageSize });
+    const paginationOptions: PaginationOptions = plainToInstance(PaginationOptions, {
+      page,
+      pageSize,
+    });
     const errors: ValidationError[] = await validate(paginationOptions, {
       whitelist: true,
-      forbidNonWhitelisted: true
+      forbidNonWhitelisted: true,
     });
     if (errors.length > 0) {
       throw new AppValidationError(formatValidationErrors(errors));
@@ -111,11 +116,14 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
   protected async getSortOptions(req: Request): Promise<SortOptions | undefined> {
     if (req.query.sortBy) {
       const sortBy: string = req.query.sortBy as string;
-      const sortOrder: string = req.query.sortOrder as string || 'ASC';
-      const sortOptions: SortOptions = plainToInstance(SortOptions, { sortBy, sortOrder });
+      const sortOrder: string = (req.query.sortOrder as string) || 'ASC';
+      const sortOptions: SortOptions = plainToInstance(SortOptions, {
+        sortBy,
+        sortOrder,
+      });
       const errors: ValidationError[] = await validate(sortOptions, {
         whitelist: true,
-        forbidNonWhitelisted: true
+        forbidNonWhitelisted: true,
       });
       if (errors.length > 0) {
         throw new AppValidationError(formatValidationErrors(errors));
@@ -137,7 +145,9 @@ export abstract class BaseController<E extends BaseApplicationEntity, I extends 
     return fieldValues;
   }
 
-  protected abstract getWhere(req: Request): Promise<FindOptionsWhere<E> | undefined>;
+  protected abstract getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<E> | FindOptionsWhere<E>[] | undefined>;
 
   protected abstract getBaseRelations(): FindOptionsRelations<E> | undefined;
 

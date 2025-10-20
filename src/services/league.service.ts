@@ -8,7 +8,7 @@ import { LeagueInputDto } from '../dtos/league.dto';
 export class LeagueService extends BaseService<League, LeagueInputDto> {
   constructor(
     @Inject('LeagueRepository')
-    private leagueRepository: Repository<League>
+    private leagueRepository: Repository<League>,
   ) {
     super(leagueRepository, 'League');
   }

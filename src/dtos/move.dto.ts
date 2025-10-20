@@ -1,9 +1,9 @@
-import { Expose, Type } from "class-transformer";
-import { BaseOutputDto, BaseInputDto } from "./base.dto";
-import { IsEnum, IsNumber, IsString } from "class-validator";
-import { PokemonTypeOutputDto } from "./pokemon-type.dto";
-import { PokemonMoveOutputDto } from "./pokemon-move.dto";
-import { MoveCategory } from "../entities/move.entity";
+import { Expose, Type } from 'class-transformer';
+import { BaseOutputDto, BaseInputDto } from './base.dto';
+import { IsEnum, IsNumber, IsString } from 'class-validator';
+import { PokemonTypeOutputDto } from './pokemon-type.dto';
+import { PokemonMoveOutputDto } from './pokemon-move.dto';
+import { MoveCategory } from '../entities/move.entity';
 
 export class MoveOutputDto extends BaseOutputDto {
   @Expose()

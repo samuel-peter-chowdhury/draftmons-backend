@@ -1,4 +1,4 @@
-import { Expose } from "class-transformer";
+import { Expose } from 'class-transformer';
 
 export abstract class BaseOutputDto {
   @Expose()
@@ -14,4 +14,4 @@ export abstract class BaseOutputDto {
   updatedAt: Date;
 }
 
-export abstract class BaseInputDto { }
+export abstract class BaseInputDto {}

@@ -7,7 +7,11 @@ import { LeagueUserInputDto, LeagueUserOutputDto } from '../dtos/league-user.dto
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
-export class LeagueUserController extends BaseController<LeagueUser, LeagueUserInputDto, LeagueUserOutputDto> {
+export class LeagueUserController extends BaseController<
+  LeagueUser,
+  LeagueUserInputDto,
+  LeagueUserOutputDto
+> {
   public router = Router();
 
   constructor(private leagueUserService: LeagueUserService) {
@@ -27,7 +31,9 @@ export class LeagueUserController extends BaseController<LeagueUser, LeagueUserI
     return ['leagueUser.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<LeagueUser> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<LeagueUser> | FindOptionsWhere<LeagueUser>[] | undefined> {
     return plainToInstance(LeagueUserInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +50,7 @@ export class LeagueUserController extends BaseController<LeagueUser, LeagueUserI
    * tags:
    *   name: LeagueUser
    *   description: League user membership management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     LeagueUser:
@@ -89,7 +95,7 @@ export class LeagueUserController extends BaseController<LeagueUser, LeagueUserI
    *           format: date-time
    *           description: Timestamp when the league user was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     LeagueUserFull:
    *       allOf:
    *         - $ref: '#/components/schemas/LeagueUser'
@@ -101,7 +107,7 @@ export class LeagueUserController extends BaseController<LeagueUser, LeagueUserI
    *             user:
    *               $ref: '#/components/schemas/User'
    *               description: Full user details
-   *     
+   *
    *     LeagueUserInput:
    *       type: object
    *       required:
@@ -124,7 +130,7 @@ export class LeagueUserController extends BaseController<LeagueUser, LeagueUserI
    *           description: Whether the user should be a moderator of this league
    *           example: false
    *           default: false
-   *     
+   *
    *     LeagueUserUpdateInput:
    *       type: object
    *       properties:

@@ -14,17 +14,14 @@ export class AuthController {
 
   private initializeRoutes(): void {
     // Google OAuth routes
-    this.router.get(
-      '/google',
-      passport.authenticate('google', { scope: ['profile', 'email'] })
-    );
+    this.router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
     this.router.get(
       '/google/callback',
       passport.authenticate('google', {
         failureRedirect: 'http://localhost:3333',
         successRedirect: process.env.CLIENT_URL || 'http://localhost:3333/home',
-      })
+      }),
     );
 
     // Session management routes
@@ -38,7 +35,7 @@ export class AuthController {
         isAuthenticated: true,
         user: plainToInstance(UserOutputDto, req.user, {
           excludeExtraneousValues: true,
-          groups: ['user.full']
+          groups: ['user.full'],
         }),
       });
     } else {
@@ -65,7 +62,7 @@ export class AuthController {
    * tags:
    *   name: Authentication
    *   description: User authentication and session management
-   * 
+   *
    * components:
    *   schemas:
    *     AuthStatus:

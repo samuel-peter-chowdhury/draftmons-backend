@@ -7,7 +7,11 @@ import { GenerationInputDto, GenerationOutputDto } from '../dtos/generation.dto'
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
-export class GenerationController extends BaseController<Generation, GenerationInputDto, GenerationOutputDto> {
+export class GenerationController extends BaseController<
+  Generation,
+  GenerationInputDto,
+  GenerationOutputDto
+> {
   public router = Router();
 
   constructor(private generationService: GenerationService) {
@@ -27,7 +31,9 @@ export class GenerationController extends BaseController<Generation, GenerationI
     return ['generation.full'];
   }
 
-  protected async getWhere(req: Request): Promise<FindOptionsWhere<Generation> | undefined> {
+  protected async getWhere(
+    req: Request,
+  ): Promise<FindOptionsWhere<Generation> | FindOptionsWhere<Generation>[] | undefined> {
     return plainToInstance(GenerationInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -44,7 +50,7 @@ export class GenerationController extends BaseController<Generation, GenerationI
    * tags:
    *   name: Generation
    *   description: Pokemon generation management and operations
-   * 
+   *
    * components:
    *   schemas:
    *     Generation:
@@ -78,7 +84,7 @@ export class GenerationController extends BaseController<Generation, GenerationI
    *           format: date-time
    *           description: Timestamp when the generation was last updated
    *           example: "2024-01-15T12:30:00.000Z"
-   *     
+   *
    *     GenerationFull:
    *       allOf:
    *         - $ref: '#/components/schemas/Generation'
@@ -94,7 +100,7 @@ export class GenerationController extends BaseController<Generation, GenerationI
    *               description: List of Pokemon available in this generation
    *               items:
    *                 $ref: '#/components/schemas/Pokemon'
-   *     
+   *
    *     GenerationInput:
    *       type: object
    *       required:
@@ -106,7 +112,7 @@ export class GenerationController extends BaseController<Generation, GenerationI
    *           example: "Generation IX"
    *           minLength: 1
    *           maxLength: 50
-   *     
+   *
    *     GenerationUpdateInput:
    *       type: object
    *       properties:
