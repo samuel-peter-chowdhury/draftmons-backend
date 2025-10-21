@@ -128,6 +128,7 @@ export abstract class BaseController<
       if (errors.length > 0) {
         throw new AppValidationError(formatValidationErrors(errors));
       }
+      return sortOptions;
     } else {
       return undefined;
     }
