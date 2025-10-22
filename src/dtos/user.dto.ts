@@ -12,11 +12,6 @@ export class UserOutputDto extends BaseOutputDto {
   lastName: string;
 
   @Expose()
-  get fullName(): string {
-    return `${this.firstName} ${this.lastName}`;
-  }
-
-  @Expose()
   email: string;
 
   @Expose()
