@@ -6,13 +6,11 @@ import { SeasonPokemonOutputDto } from './season-pokemon.dto';
 import { TeamOutputDto } from './team.dto';
 import { WeekOutputDto } from './week.dto';
 import { SeasonStatus } from '../entities/season.entity';
+import { GenerationOutputDto } from './generation.dto';
 
 export class SeasonOutputDto extends BaseOutputDto {
   @Expose()
   name: string;
-
-  @Expose()
-  gen: string;
 
   @Expose()
   status: SeasonStatus;
@@ -29,9 +27,16 @@ export class SeasonOutputDto extends BaseOutputDto {
   @Expose()
   leagueId: number;
 
+  @Expose()
+  generationId: number;
+
   @Expose({ groups: ['season.full'] })
   @Type(() => LeagueOutputDto)
   league: LeagueOutputDto;
+
+  @Expose()
+  @Type(() => GenerationOutputDto)
+  generation: GenerationOutputDto;
 
   @Expose({ groups: ['season.full'] })
   @Type(() => TeamOutputDto)
@@ -50,9 +55,6 @@ export class SeasonInputDto extends BaseInputDto {
   @IsString()
   name: string;
 
-  @IsString()
-  gen: string;
-
   @IsEnum(SeasonStatus)
   status: SeasonStatus;
 
@@ -68,4 +70,7 @@ export class SeasonInputDto extends BaseInputDto {
 
   @IsNumber()
   leagueId: number;
+
+  @IsNumber()
+  generationId: number;
 }

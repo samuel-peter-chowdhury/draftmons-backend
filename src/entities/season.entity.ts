@@ -4,6 +4,7 @@ import { SeasonPokemon } from './season-pokemon.entity';
 import { Week } from './week.entity';
 import { Team } from './team.entity';
 import { BaseApplicationEntity } from './base-application.entity';
+import { Generation } from './generation.entity';
 
 export enum SeasonStatus {
   PRE_DRAFT = 'PRE_DRAFT',
@@ -19,9 +20,6 @@ export enum SeasonStatus {
 export class Season extends BaseApplicationEntity {
   @Column()
   name: string;
-
-  @Column()
-  gen: string;
 
   @Column({
     type: 'enum',
@@ -42,9 +40,16 @@ export class Season extends BaseApplicationEntity {
   @Column()
   leagueId: number;
 
+  @Column()
+  generationId: number;
+
   @ManyToOne(() => League, (league) => league.seasons)
   @JoinColumn({ name: 'league_id' })
   league: League;
+
+  @ManyToOne(() => Generation, (generation) => generation.seasons)
+  @JoinColumn({ name: 'generation_id' })
+  generation: Generation;
 
   @OneToMany(() => Team, (team) => team.season)
   teams: Team[];

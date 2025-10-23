@@ -8,7 +8,7 @@
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "typeorm": "typeorm-ts-node-commonjs",
-    "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/%npm_config_name% -d src/config/database.config.ts",
+    "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/$npm_config_name -d src/config/database.config.ts",
     "migration:run": "npm run typeorm -- migration:run -d src/config/database.config.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/config/database.config.ts",
     "lint": "eslint . --ext .ts",

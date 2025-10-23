@@ -77,7 +77,9 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
       leagueUsers: {
         user: true,
       },
-      seasons: true,
+      seasons: {
+        generation: true
+      },
     };
   }
 

@@ -34,7 +34,9 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
   }
 
   protected getBaseRelations(): FindOptionsRelations<Season> | undefined {
-    return undefined;
+    return {
+      generation: true
+    };
   }
 
   protected getFullRelations(): FindOptionsRelations<Season> | undefined {
