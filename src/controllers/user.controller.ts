@@ -1,11 +1,13 @@
-import { Request, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { UserService } from '../services/user.service';
 import { BaseController } from './base.controller';
 import { User } from '../entities/user.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
-import { FindOptionsWhere, FindOptionsRelations, ILike } from 'typeorm';
+import { FindOptionsWhere, FindOptionsRelations, Brackets, Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import { asyncHandler } from '../utils/error.utils';
+import { Container } from 'typedi';
 
 export class UserController extends BaseController<User, UserInputDto, UserOutputDto> {
   public router = Router();
@@ -23,6 +25,86 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
     this.router.delete('/:id', this.delete);
   }
 
+  getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const nameLike = req.query.nameLike as string | undefined;
+
+    // If no nameLike, use the base implementation
+    if (!nameLike) {
+      const baseGetAll = BaseController.prototype.getAll as any;
+      return await baseGetAll.call(this, req, res);
+    }
+
+    // Use QueryBuilder for full name search
+    const isFull = req.query.full === 'true';
+    const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+    const paginationOptions = await this.getPaginationOptions(req);
+    const sortOptions = await this.getSortOptions(req);
+    const group = isFull ? this.getFullTransformGroup() : undefined;
+
+    const repository = Container.get<Repository<User>>('UserRepository');
+    let queryBuilder = repository.createQueryBuilder('user');
+
+    // Add relations if needed
+    if (relations) {
+      Object.keys(relations).forEach((relation) => {
+        queryBuilder = queryBuilder.leftJoinAndSelect(`user.${relation}`, relation);
+      });
+    }
+
+    // Add the name and email search conditions
+    queryBuilder = queryBuilder.where(
+      new Brackets((qb) => {
+        qb.where('user.firstName ILIKE :nameLike', { nameLike: `%${nameLike}%` })
+          .orWhere('user.lastName ILIKE :nameLike', { nameLike: `%${nameLike}%` })
+          .orWhere("CONCAT(user.firstName, ' ', user.lastName) ILIKE :nameLike", {
+            nameLike: `%${nameLike}%`,
+          })
+          .orWhere('user.email ILIKE :nameLike', { nameLike: `%${nameLike}%` });
+      }),
+    );
+
+    // Add sorting if provided
+    if (sortOptions) {
+      queryBuilder = queryBuilder.orderBy(
+        `user.${sortOptions.sortBy}`,
+        sortOptions.sortOrder as 'ASC' | 'DESC',
+      );
+    }
+
+    // Add pagination if provided
+    if (paginationOptions) {
+      const { page, pageSize } = paginationOptions;
+      const skip = (page - 1) * pageSize;
+      queryBuilder = queryBuilder.skip(skip).take(pageSize);
+
+      const [data, total] = await queryBuilder.getManyAndCount();
+
+      const result = {
+        data,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      };
+
+      res.json(
+        plainToInstance(this.outputDtoClass, result, {
+          groups: group,
+        }),
+      );
+      return;
+    } else {
+      const entities = await queryBuilder.getMany();
+
+      res.json(
+        plainToInstance(this.outputDtoClass, entities, {
+          groups: group,
+        }),
+      );
+      return;
+    }
+  });
+
   protected getFullTransformGroup(): string[] {
     return ['user.full'];
   }
@@ -30,18 +112,10 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<User> | FindOptionsWhere<User>[] | undefined> {
-    const where: any = {
-      ...plainToInstance(UserInputDto, req.query, {
-        excludeExtraneousValues: true,
-      }),
-    };
-    if (req.query.nameLike) {
-      return [
-        { ...where, firstName: ILike(`%${req.query.nameLike}%`) },
-        { ...where, lastName: ILike(`%${req.query.nameLike}%`) },
-      ];
-    }
-    return where;
+    // nameLike is now handled in the overridden getAll method
+    return plainToInstance(UserInputDto, req.query, {
+      excludeExtraneousValues: true,
+    });
   }
 
   protected getBaseRelations(): FindOptionsRelations<User> | undefined {
@@ -297,7 +371,7 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *         name: nameLike
    *         schema:
    *           type: string
-   *         description: Search for first or last name using LIKE
+   *         description: Search for first name, last name, full name (first + last), or email using LIKE
    *     responses:
    *       200:
    *         description: List of users retrieved successfully
