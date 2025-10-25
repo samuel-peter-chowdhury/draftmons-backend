@@ -48,7 +48,7 @@ import { TypeEffectiveController } from './controllers/type-effective.controller
 import { TypeEffectiveService } from './services/type-effective.service';
 import { WeekController } from './controllers/week.controller';
 import { WeekService } from './services/week.service';
-import { isAuthReadAdminWrite, isAuthReadLeagueModWrite, isAuthReadUserUpdateAdminWrite } from './middleware/auth.middleware';
+import { isAuthReadAdminWrite, isAuthReadLeagueModWrite } from './middleware/auth.middleware';
 
 export class App {
   public app: Application;
@@ -237,7 +237,7 @@ export class App {
     this.app.use('/api/season', isAuthReadAdminWrite, seasonController.router);
     this.app.use('/api/team', isAuthReadAdminWrite, teamController.router);
     this.app.use('/api/type-effective', isAuthReadAdminWrite, typeEffectiveController.router);
-    this.app.use('/api/user', isAuthReadUserUpdateAdminWrite(), userController.router);
+    this.app.use('/api/user', userController.router);
     this.app.use('/api/week', isAuthReadAdminWrite, weekController.router);
 
     // Set up League routes

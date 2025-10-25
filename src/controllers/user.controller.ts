@@ -3,6 +3,7 @@ import { UserService } from '../services/user.service';
 import { BaseController } from './base.controller';
 import { User } from '../entities/user.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
+import { isAuthenticated, isAdmin, isAdminOrUser } from '../middleware/auth.middleware';
 import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
 import { FindOptionsWhere, FindOptionsRelations, Brackets, Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
@@ -18,11 +19,16 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
   }
 
   private initializeRoutes(): void {
-    this.router.get('/', this.getAll);
-    this.router.get('/:id', this.getById);
-    this.router.post('/', validateDto(UserInputDto), this.create);
-    this.router.put('/:id', validatePartialDto(UserInputDto), this.update);
-    this.router.delete('/:id', this.delete);
+    // GET routes require authentication
+    this.router.get('/', isAuthenticated, this.getAll);
+    this.router.get('/:id', isAuthenticated, this.getById);
+
+    // POST and DELETE require admin
+    this.router.post('/', isAuthenticated, isAdmin, validateDto(UserInputDto), this.create);
+    this.router.delete('/:id', isAuthenticated, isAdmin, this.delete);
+
+    // PUT allows user to update their own profile OR admin to update any
+    this.router.put('/:id', isAuthenticated, isAdminOrUser(), validatePartialDto(UserInputDto), this.update);
   }
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -30,8 +36,21 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
 
     // If no nameLike, use the base implementation
     if (!nameLike) {
-      const baseGetAll = BaseController.prototype.getAll as any;
-      return await baseGetAll.call(this, req, res);
+      const isFull = req.query.full === 'true';
+      const where = await this.getWhere(req);
+      const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+      const paginationOptions = await this.getPaginationOptions(req);
+      const sortOptions = await this.getSortOptions(req);
+      const group = isFull ? this.getFullTransformGroup() : undefined;
+
+      const entities = await this.service.findAll(where, relations, paginationOptions, sortOptions);
+
+      res.json(
+        plainToInstance(this.outputDtoClass, entities, {
+          groups: group,
+        }),
+      );
+      return;
     }
 
     // Use QueryBuilder for full name search
