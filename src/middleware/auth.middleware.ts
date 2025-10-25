@@ -46,6 +46,46 @@ export const isAuthReadAdminWrite = (
   }
 };
 
+// Check if user is authenticated for read, user can update their own resource, or admin for all writes
+export const isAuthReadUserUpdateAdminWrite = (userIdParam: string = 'id') => {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (req.method === 'GET') {
+      if (req.isAuthenticated()) {
+        return next();
+      }
+      return next(new UnauthorizedError('Please log in to access this resource'));
+    } else if (req.method === 'PUT') {
+      if (!req.isAuthenticated()) {
+        return next(new UnauthorizedError('Please log in to access this resource'));
+      }
+
+      const userId = parseInt(req.params[userIdParam]);
+
+      if (isNaN(userId)) {
+        return next(new ValidationError('Invalid user ID'));
+      }
+
+      // If user is admin, allow access
+      if (req.user?.isAdmin) {
+        return next();
+      }
+
+      // If user is updating their own resource, allow access
+      if (req.user?.id === userId) {
+        return next();
+      }
+
+      return next(new ForbiddenError('You can only update your own profile'));
+    } else {
+      // POST and DELETE require admin
+      if (req.isAuthenticated() && req.user?.isAdmin) {
+        return next();
+      }
+      return next(new ForbiddenError('Admin access required'));
+    }
+  };
+};
+
 // Check if user is authenticated for read or is league mod for write
 export const isAuthReadLeagueModWrite = (leagueIdParam: string = 'leagueId') => {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
