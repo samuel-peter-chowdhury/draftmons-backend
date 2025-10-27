@@ -1,4 +1,4 @@
-import { Request, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { PokemonService } from '../services/pokemon.service';
 import { BaseController } from './base.controller';
 import { Pokemon } from '../entities/pokemon.entity';
@@ -6,6 +6,8 @@ import { validateDto, validatePartialDto } from '../middleware/validation.middle
 import { PokemonInputDto, PokemonOutputDto } from '../dtos/pokemon.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import { asyncHandler } from '../utils/error.utils';
+import { Container } from 'typedi';
 
 export class PokemonController extends BaseController<Pokemon, PokemonInputDto, PokemonOutputDto> {
   public router = Router();
@@ -23,6 +25,237 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
     this.router.delete('/:id', this.delete);
   }
 
+  getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const isFull = req.query.full === 'true';
+    const group = isFull ? this.getFullTransformGroup() : undefined;
+
+    // Get pagination and sort options
+    const paginationOptions = await this.getPaginationOptions(req);
+    const sortOptions = await this.getSortOptions(req);
+
+    // Check if advanced filters are present
+    const hasAdvancedFilters = this.hasAdvancedFilters(req);
+
+    if (!hasAdvancedFilters) {
+      // Use base service for simple queries
+      const where = await this.getWhere(req);
+      const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+      const entities = await this.pokemonService.findAll(where, relations, paginationOptions, sortOptions);
+
+      res.json(
+        plainToInstance(this.outputDtoClass, entities, {
+          groups: group,
+        }),
+      );
+      return;
+    }
+
+    // Build query with advanced filters using QueryBuilder
+    const repository = Container.get<any>('PokemonRepository');
+    let query = repository.createQueryBuilder('pokemon');
+
+    // Load base relations
+    const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+    if (relations) {
+      if (relations.pokemonTypes) {
+        query = query.leftJoinAndSelect('pokemon.pokemonTypes', 'pokemonTypes');
+      }
+      if (relations.abilities) {
+        query = query.leftJoinAndSelect('pokemon.abilities', 'abilities');
+      }
+      if (isFull && relations.pokemonMoves) {
+        query = query.leftJoinAndSelect('pokemon.pokemonMoves', 'pokemonMoves');
+      }
+      if (isFull && relations.typeEffectiveness) {
+        query = query.leftJoinAndSelect('pokemon.typeEffectiveness', 'typeEffectiveness');
+      }
+      if (isFull && relations.seasonPokemon) {
+        query = query.leftJoinAndSelect('pokemon.seasonPokemon', 'seasonPokemon');
+      }
+      if (isFull && relations.generations) {
+        query = query.leftJoinAndSelect('pokemon.generations', 'generations');
+      }
+    }
+
+    // Apply filters
+    query = this.applyAdvancedFilters(query, req);
+
+    // Apply sorting
+    if (sortOptions) {
+      query = query.orderBy(`pokemon.${sortOptions.sortBy}`, sortOptions.sortOrder as 'ASC' | 'DESC');
+    }
+
+    // Apply pagination
+    if (paginationOptions) {
+      const { page, pageSize } = paginationOptions;
+      const skip = (page - 1) * pageSize;
+      query = query.skip(skip).take(pageSize);
+
+      const [data, total] = await query.getManyAndCount();
+
+      const response = {
+        data: plainToInstance(this.outputDtoClass, data, { groups: group }),
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      };
+
+      res.json(response);
+    } else {
+      const data = await query.getMany();
+      res.json(plainToInstance(this.outputDtoClass, data, { groups: group }));
+    }
+  });
+
+  private hasAdvancedFilters(req: Request): boolean {
+    const advancedParams = [
+      'nameLike',
+      'minHp', 'maxHp',
+      'minAttack', 'maxAttack',
+      'minDefense', 'maxDefense',
+      'minSpecialAttack', 'maxSpecialAttack',
+      'minSpecialDefense', 'maxSpecialDefense',
+      'minSpeed', 'maxSpeed',
+      'minBaseStatTotal', 'maxBaseStatTotal',
+      'minPhysicalBulk', 'maxPhysicalBulk',
+      'minSpecialBulk', 'maxSpecialBulk',
+      'pokemonTypeIds',
+      'abilityIds',
+    ];
+
+    return advancedParams.some((param) => req.query[param] !== undefined);
+  }
+
+  private applyAdvancedFilters(query: any, req: Request): any {
+    // Name ILIKE filter
+    if (req.query.nameLike) {
+      query = query.andWhere('pokemon.name ILIKE :nameLike', {
+        nameLike: `%${req.query.nameLike}%`,
+      });
+    }
+
+    // Stat range filters - map camelCase to snake_case for database columns
+    const statFieldsMap: { [key: string]: string } = {
+      hp: 'hp',
+      attack: 'attack',
+      defense: 'defense',
+      specialAttack: 'special_attack',
+      specialDefense: 'special_defense',
+      speed: 'speed',
+      baseStatTotal: 'base_stat_total',
+    };
+
+    for (const [field, dbColumn] of Object.entries(statFieldsMap)) {
+      const minParam = `min${field.charAt(0).toUpperCase() + field.slice(1)}`;
+      const maxParam = `max${field.charAt(0).toUpperCase() + field.slice(1)}`;
+
+      if (req.query[minParam]) {
+        const minValue = parseInt(req.query[minParam] as string);
+        if (!isNaN(minValue)) {
+          query = query.andWhere(`pokemon.${dbColumn} >= :${minParam}`, {
+            [minParam]: minValue,
+          });
+        }
+      }
+
+      if (req.query[maxParam]) {
+        const maxValue = parseInt(req.query[maxParam] as string);
+        if (!isNaN(maxValue)) {
+          query = query.andWhere(`pokemon.${dbColumn} <= :${maxParam}`, {
+            [maxParam]: maxValue,
+          });
+        }
+      }
+    }
+
+    // Physical bulk filter (hp + defense)
+    if (req.query.minPhysicalBulk) {
+      const minPhysicalBulk = parseInt(req.query.minPhysicalBulk as string);
+      if (!isNaN(minPhysicalBulk)) {
+        query = query.andWhere('(pokemon.hp + pokemon.defense) >= :minPhysicalBulk', {
+          minPhysicalBulk,
+        });
+      }
+    }
+
+    if (req.query.maxPhysicalBulk) {
+      const maxPhysicalBulk = parseInt(req.query.maxPhysicalBulk as string);
+      if (!isNaN(maxPhysicalBulk)) {
+        query = query.andWhere('(pokemon.hp + pokemon.defense) <= :maxPhysicalBulk', {
+          maxPhysicalBulk,
+        });
+      }
+    }
+
+    // Special bulk filter (hp + specialDefense)
+    if (req.query.minSpecialBulk) {
+      const minSpecialBulk = parseInt(req.query.minSpecialBulk as string);
+      if (!isNaN(minSpecialBulk)) {
+        query = query.andWhere('(pokemon.hp + pokemon.special_defense) >= :minSpecialBulk', {
+          minSpecialBulk,
+        });
+      }
+    }
+
+    if (req.query.maxSpecialBulk) {
+      const maxSpecialBulk = parseInt(req.query.maxSpecialBulk as string);
+      if (!isNaN(maxSpecialBulk)) {
+        query = query.andWhere('(pokemon.hp + pokemon.special_defense) <= :maxSpecialBulk', {
+          maxSpecialBulk,
+        });
+      }
+    }
+
+    // Pokemon type IDs filter (must have ALL specified types)
+    if (req.query.pokemonTypeIds) {
+      let typeIds = req.query.pokemonTypeIds;
+      if (!Array.isArray(typeIds)) {
+        typeIds = [typeIds];
+      }
+      const typeIdNumbers = (typeIds as string[]).map(id => parseInt(id)).filter(id => !isNaN(id));
+
+      if (typeIdNumbers.length > 0) {
+        // For each type ID, add a subquery to ensure the pokemon has that type
+        for (let i = 0; i < typeIdNumbers.length; i++) {
+          query = query.andWhere(
+            `EXISTS (
+              SELECT 1 FROM pokemon_pokemon_types ppt
+              WHERE ppt.pokemon_id = pokemon.id
+              AND ppt.pokemon_type_id = :typeId${i}
+            )`,
+            { [`typeId${i}`]: typeIdNumbers[i] }
+          );
+        }
+      }
+    }
+
+    // Ability IDs filter (must have ALL specified abilities)
+    if (req.query.abilityIds) {
+      let abilityIds = req.query.abilityIds;
+      if (!Array.isArray(abilityIds)) {
+        abilityIds = [abilityIds];
+      }
+      const abilityIdNumbers = (abilityIds as string[]).map(id => parseInt(id)).filter(id => !isNaN(id));
+
+      if (abilityIdNumbers.length > 0) {
+        // For each ability ID, add a subquery to ensure the pokemon has that ability
+        for (let i = 0; i < abilityIdNumbers.length; i++) {
+          query = query.andWhere(
+            `EXISTS (
+              SELECT 1 FROM pokemon_abilities pa
+              WHERE pa.pokemon_id = pokemon.id
+              AND pa.ability_id = :abilityId${i}
+            )`,
+            { [`abilityId${i}`]: abilityIdNumbers[i] }
+          );
+        }
+      }
+    }
+
+    return query;
+  }
+
   protected getFullTransformGroup(): string[] {
     return ['pokemon.full'];
   }
@@ -34,7 +267,10 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
   }
 
   protected getBaseRelations(): FindOptionsRelations<Pokemon> | undefined {
-    return undefined;
+    return {
+      pokemonTypes: true,
+      abilities: true,
+    };
   }
 
   protected getFullRelations(): FindOptionsRelations<Pokemon> | undefined {
@@ -348,8 +584,10 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *   get:
    *     tags:
    *       - Pokemon
-   *     summary: Get all Pokemon
-   *     description: Retrieve a list of all Pokemon with optional pagination, sorting, and full details
+   *     summary: Get all Pokemon with advanced filtering
+   *     description: |
+   *       Retrieve a list of all Pokemon with optional pagination, sorting, advanced filtering, and full details.
+   *       Supports filtering by name pattern, stat ranges, calculated bulk stats, and type/ability requirements.
    *     parameters:
    *       - in: query
    *         name: page
@@ -384,6 +622,158 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *           type: boolean
    *           default: false
    *         description: Include full Pokemon details (types, moves, abilities, etc.)
+   *       - in: query
+   *         name: nameLike
+   *         schema:
+   *           type: string
+   *         description: Filter Pokemon by name (case-insensitive partial match)
+   *         example: char
+   *       - in: query
+   *         name: minHp
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum HP stat
+   *         example: 50
+   *       - in: query
+   *         name: maxHp
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum HP stat
+   *         example: 100
+   *       - in: query
+   *         name: minAttack
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Attack stat
+   *         example: 80
+   *       - in: query
+   *         name: maxAttack
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Attack stat
+   *         example: 150
+   *       - in: query
+   *         name: minDefense
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Defense stat
+   *         example: 60
+   *       - in: query
+   *         name: maxDefense
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Defense stat
+   *         example: 120
+   *       - in: query
+   *         name: minSpecialAttack
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Special Attack stat
+   *         example: 70
+   *       - in: query
+   *         name: maxSpecialAttack
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Special Attack stat
+   *         example: 140
+   *       - in: query
+   *         name: minSpecialDefense
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Special Defense stat
+   *         example: 70
+   *       - in: query
+   *         name: maxSpecialDefense
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Special Defense stat
+   *         example: 130
+   *       - in: query
+   *         name: minSpeed
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Speed stat
+   *         example: 90
+   *       - in: query
+   *         name: maxSpeed
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Speed stat
+   *         example: 150
+   *       - in: query
+   *         name: minBaseStatTotal
+   *         schema:
+   *           type: integer
+   *           minimum: 6
+   *         description: Minimum base stat total (sum of all stats)
+   *         example: 500
+   *       - in: query
+   *         name: maxBaseStatTotal
+   *         schema:
+   *           type: integer
+   *           maximum: 1530
+   *         description: Maximum base stat total (sum of all stats)
+   *         example: 600
+   *       - in: query
+   *         name: minPhysicalBulk
+   *         schema:
+   *           type: integer
+   *           minimum: 2
+   *         description: Minimum physical bulk (HP + Defense)
+   *         example: 150
+   *       - in: query
+   *         name: maxPhysicalBulk
+   *         schema:
+   *           type: integer
+   *           maximum: 510
+   *         description: Maximum physical bulk (HP + Defense)
+   *         example: 200
+   *       - in: query
+   *         name: minSpecialBulk
+   *         schema:
+   *           type: integer
+   *           minimum: 2
+   *         description: Minimum special bulk (HP + Special Defense)
+   *         example: 150
+   *       - in: query
+   *         name: maxSpecialBulk
+   *         schema:
+   *           type: integer
+   *           maximum: 510
+   *         description: Maximum special bulk (HP + Special Defense)
+   *         example: 200
+   *       - in: query
+   *         name: pokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that have ALL specified type IDs (array of integers)
+   *         example: [10, 2]
+   *       - in: query
+   *         name: abilityIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that have ALL specified ability IDs (array of integers)
+   *         example: [1, 5]
    *     responses:
    *       200:
    *         description: List of Pokemon retrieved successfully
@@ -431,37 +821,96 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *                     isActive: true
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
-   *               full:
-   *                 summary: Full Pokemon details
+   *               highSpeed:
+   *                 summary: Filter by speed (minSpeed=100)
+   *                 description: Get all Pokemon with speed >= 100
    *                 value:
-   *                   - id: 1
-   *                     dexId: 25
-   *                     name: "Pikachu"
-   *                     hp: 35
-   *                     attack: 55
-   *                     defense: 40
-   *                     specialAttack: 50
-   *                     specialDefense: 50
-   *                     speed: 90
-   *                     baseStatTotal: 320
-   *                     height: 0.4
-   *                     weight: 6.0
-   *                     sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
+   *                   - id: 2
+   *                     dexId: 6
+   *                     name: "Charizard"
+   *                     hp: 78
+   *                     attack: 84
+   *                     defense: 78
+   *                     specialAttack: 109
+   *                     specialDefense: 85
+   *                     speed: 100
+   *                     baseStatTotal: 534
+   *                     height: 1.7
+   *                     weight: 90.5
+   *                     sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png"
    *                     isActive: true
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
-   *                     pokemonTypes: []
-   *                     pokemonMoves: []
-   *                     abilities: []
-   *                     typeEffectiveness: []
-   *                     seasonPokemon: []
-   *                     generations: []
+   *               legendaries:
+   *                 summary: Filter by base stat total (minBaseStatTotal=600)
+   *                 description: Get all legendary/pseudo-legendary Pokemon
+   *                 value:
+   *                   - id: 3
+   *                     dexId: 149
+   *                     name: "Dragonite"
+   *                     hp: 91
+   *                     attack: 134
+   *                     defense: 95
+   *                     specialAttack: 100
+   *                     specialDefense: 100
+   *                     speed: 80
+   *                     baseStatTotal: 600
+   *                     height: 2.2
+   *                     weight: 210.0
+   *                     sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/149.png"
+   *                     isActive: true
+   *                     createdAt: "2024-01-01T00:00:00.000Z"
+   *                     updatedAt: "2024-01-15T12:30:00.000Z"
+   *               physicalTanks:
+   *                 summary: Filter by physical bulk (minPhysicalBulk=170)
+   *                 description: Get all Pokemon with high physical bulk (HP + Defense >= 170)
+   *                 value:
+   *                   - id: 4
+   *                     dexId: 143
+   *                     name: "Snorlax"
+   *                     hp: 160
+   *                     attack: 110
+   *                     defense: 65
+   *                     specialAttack: 65
+   *                     specialDefense: 110
+   *                     speed: 30
+   *                     baseStatTotal: 540
+   *                     height: 2.1
+   *                     weight: 460.0
+   *                     sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/143.png"
+   *                     isActive: true
+   *                     createdAt: "2024-01-01T00:00:00.000Z"
+   *                     updatedAt: "2024-01-15T12:30:00.000Z"
+   *               nameSearch:
+   *                 summary: Search by name (nameLike=char)
+   *                 description: Find all Pokemon whose name contains "char" (case-insensitive)
+   *                 value:
+   *                   - id: 2
+   *                     dexId: 6
+   *                     name: "Charizard"
+   *                     hp: 78
+   *                     attack: 84
+   *                     defense: 78
+   *                     specialAttack: 109
+   *                     specialDefense: 85
+   *                     speed: 100
+   *                     baseStatTotal: 534
+   *                     height: 1.7
+   *                     weight: 90.5
+   *                     sprite: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png"
+   *                     isActive: true
+   *                     createdAt: "2024-01-01T00:00:00.000Z"
+   *                     updatedAt: "2024-01-15T12:30:00.000Z"
    *       400:
    *         description: Invalid query parameters
    *         content:
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
+   *             example:
+   *               error: "Invalid filter values"
+   *               statusCode: 400
+   *               timestamp: "2024-01-20T10:00:00.000Z"
    */
 
   /**
