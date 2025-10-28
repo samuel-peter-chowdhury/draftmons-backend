@@ -1,4 +1,4 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
 import { IsNumber, IsString } from 'class-validator';
 import { PokemonMoveOutputDto } from './pokemon-move.dto';
@@ -44,6 +44,19 @@ export class PokemonOutputDto extends BaseOutputDto {
 
   @Expose()
   sprite: string;
+
+  @Expose()
+  @Transform(({ obj }) => {
+    if (!obj.name) {
+      return '';
+    }
+    const sanitizedName = obj.name
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9-]/g, '')
+      .toLowerCase();
+    return `https://www.smogon.com/dex/media/sprites/xy/${sanitizedName}.gif`;
+  })
+  spriteUrl: string;
 
   @Expose()
   @Type(() => PokemonTypeOutputDto)

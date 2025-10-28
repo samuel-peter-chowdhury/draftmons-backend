@@ -28,13 +28,24 @@ export abstract class BaseController<
     const sortOptions = await this.getSortOptions(req);
     const group = isFull ? this.getFullTransformGroup() : undefined;
 
-    const entities = await this.service.findAll(where, relations, paginationOptions, sortOptions);
-
-    res.json(
-      plainToInstance(this.outputDtoClass, entities, {
-        groups: group,
-      }),
+    const paginatedEntities = await this.service.findAll(
+      where,
+      relations,
+      paginationOptions,
+      sortOptions,
     );
+
+    const response = {
+      data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
+        groups: group,
+        excludeExtraneousValues: true,
+      }),
+      total: paginatedEntities.total,
+      page: paginatedEntities.page,
+      pageSize: paginatedEntities.pageSize,
+      totalPages: paginatedEntities.totalPages,
+    };
+    res.json(response);
   });
 
   getById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -53,6 +64,7 @@ export abstract class BaseController<
     res.json(
       plainToInstance(this.outputDtoClass, entity, {
         groups: group,
+        excludeExtraneousValues: true,
       }),
     );
   });
@@ -60,7 +72,11 @@ export abstract class BaseController<
   create = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const entity = await this.service.create(req.body);
 
-    res.status(201).json(plainToInstance(this.outputDtoClass, entity));
+    res.status(201).json(
+      plainToInstance(this.outputDtoClass, entity, {
+        excludeExtraneousValues: true,
+      }),
+    );
   });
 
   update = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -79,6 +95,7 @@ export abstract class BaseController<
     res.json(
       plainToInstance(this.outputDtoClass, entity, {
         groups: group,
+        excludeExtraneousValues: true,
       }),
     );
   });

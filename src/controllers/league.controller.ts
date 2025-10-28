@@ -45,6 +45,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
       res.status(201).json(
         plainToInstance(LeagueOutputDto, league, {
           groups: this.getFullTransformGroup(),
+          excludeExtraneousValues: true,
         }),
       );
     },

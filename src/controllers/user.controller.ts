@@ -8,7 +8,6 @@ import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
 import { FindOptionsWhere, FindOptionsRelations, Brackets, Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
-import { Container } from 'typedi';
 
 export class UserController extends BaseController<User, UserInputDto, UserOutputDto> {
   public router = Router();
@@ -28,100 +27,40 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
     this.router.delete('/:id', isAuthenticated, isAdmin, this.delete);
 
     // PUT allows user to update their own profile OR admin to update any
-    this.router.put('/:id', isAuthenticated, isAdminOrUser(), validatePartialDto(UserInputDto), this.update);
+    this.router.put(
+      '/:id',
+      isAuthenticated,
+      isAdminOrUser(),
+      validatePartialDto(UserInputDto),
+      this.update,
+    );
   }
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const nameLike = req.query.nameLike as string | undefined;
-
-    // If no nameLike, use the base implementation
-    if (!nameLike) {
-      const isFull = req.query.full === 'true';
-      const where = await this.getWhere(req);
-      const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
-      const paginationOptions = await this.getPaginationOptions(req);
-      const sortOptions = await this.getSortOptions(req);
-      const group = isFull ? this.getFullTransformGroup() : undefined;
-
-      const entities = await this.service.findAll(where, relations, paginationOptions, sortOptions);
-
-      res.json(
-        plainToInstance(this.outputDtoClass, entities, {
-          groups: group,
-        }),
-      );
-      return;
-    }
-
-    // Use QueryBuilder for full name search
     const isFull = req.query.full === 'true';
     const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
     const paginationOptions = await this.getPaginationOptions(req);
     const sortOptions = await this.getSortOptions(req);
     const group = isFull ? this.getFullTransformGroup() : undefined;
 
-    const repository = Container.get<Repository<User>>('UserRepository');
-    let queryBuilder = repository.createQueryBuilder('user');
-
-    // Add relations if needed
-    if (relations) {
-      Object.keys(relations).forEach((relation) => {
-        queryBuilder = queryBuilder.leftJoinAndSelect(`user.${relation}`, relation);
-      });
-    }
-
-    // Add the name and email search conditions
-    queryBuilder = queryBuilder.where(
-      new Brackets((qb) => {
-        qb.where('user.firstName ILIKE :nameLike', { nameLike: `%${nameLike}%` })
-          .orWhere('user.lastName ILIKE :nameLike', { nameLike: `%${nameLike}%` })
-          .orWhere("CONCAT(user.firstName, ' ', user.lastName) ILIKE :nameLike", {
-            nameLike: `%${nameLike}%`,
-          })
-          .orWhere('user.email ILIKE :nameLike', { nameLike: `%${nameLike}%` });
-      }),
+    const paginatedEntities = await this.userService.search(
+      req,
+      relations,
+      paginationOptions,
+      sortOptions,
     );
 
-    // Add sorting if provided
-    if (sortOptions) {
-      queryBuilder = queryBuilder.orderBy(
-        `user.${sortOptions.sortBy}`,
-        sortOptions.sortOrder as 'ASC' | 'DESC',
-      );
-    }
-
-    // Add pagination if provided
-    if (paginationOptions) {
-      const { page, pageSize } = paginationOptions;
-      const skip = (page - 1) * pageSize;
-      queryBuilder = queryBuilder.skip(skip).take(pageSize);
-
-      const [data, total] = await queryBuilder.getManyAndCount();
-
-      const result = {
-        data,
-        total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize),
-      };
-
-      res.json(
-        plainToInstance(this.outputDtoClass, result, {
-          groups: group,
-        }),
-      );
-      return;
-    } else {
-      const entities = await queryBuilder.getMany();
-
-      res.json(
-        plainToInstance(this.outputDtoClass, entities, {
-          groups: group,
-        }),
-      );
-      return;
-    }
+    const response = {
+      data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
+        groups: group,
+        excludeExtraneousValues: true,
+      }),
+      total: paginatedEntities.total,
+      page: paginatedEntities.page,
+      pageSize: paginatedEntities.pageSize,
+      totalPages: paginatedEntities.totalPages,
+    };
+    res.json(response);
   });
 
   protected getFullTransformGroup(): string[] {
@@ -131,7 +70,6 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<User> | FindOptionsWhere<User>[] | undefined> {
-    // nameLike is now handled in the overridden getAll method
     return plainToInstance(UserInputDto, req.query, {
       excludeExtraneousValues: true,
     });

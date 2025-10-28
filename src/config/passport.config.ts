@@ -33,7 +33,10 @@ export const configurePassport = (userService: UserService): void => {
           const user = await userService.findOrCreate({ googleId }, userInputDto, {
             leagueUsers: true,
           });
-          const userOutputDto = plainToInstance(UserOutputDto, user, { groups: ['user.full'] });
+          const userOutputDto = plainToInstance(UserOutputDto, user, {
+            groups: ['user.full'],
+            excludeExtraneousValues: true,
+          });
 
           // Return user to passport
           return done(null, userOutputDto);
@@ -53,7 +56,10 @@ export const configurePassport = (userService: UserService): void => {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await userService.findOne({ id }, { leagueUsers: true });
-      const userOutputDto = plainToInstance(UserOutputDto, user, { groups: ['user.full'] });
+      const userOutputDto = plainToInstance(UserOutputDto, user, {
+        groups: ['user.full'],
+        excludeExtraneousValues: true,
+      });
       done(null, userOutputDto);
     } catch (error) {
       done(error);

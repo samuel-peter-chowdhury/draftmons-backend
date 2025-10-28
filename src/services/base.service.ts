@@ -16,20 +16,11 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
   async findAll(
     where?: FindOptionsWhere<E> | FindOptionsWhere<E>[],
     relations?: FindOptionsRelations<E>,
-    pagination?: PaginationOptions,
-    sort?: SortOptions,
-  ): Promise<PaginatedResponse<E> | E[]> {
-    const order = sort ? ({ [sort.sortBy]: sort.sortOrder } as FindOptionsOrder<E>) : undefined;
-
-    if (!pagination) {
-      return this.repository.find({
-        where: where,
-        relations: relations,
-        order: order,
-      });
-    }
-
-    const { page, pageSize } = pagination;
+    paginationOptions?: PaginationOptions,
+    sortOptions?: SortOptions,
+  ): Promise<PaginatedResponse<E>> {
+    const order = sortOptions ? ({ [sortOptions.sortBy]: sortOptions.sortOrder } as FindOptionsOrder<E>) : undefined;
+    const { page, pageSize } = paginationOptions ? paginationOptions : { page: 1, pageSize: 25 };
     const skip = (page - 1) * pageSize;
 
     const [data, total] = await this.repository.findAndCount({
