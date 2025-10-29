@@ -70,7 +70,14 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
   }
 
   protected getFullRelations(): FindOptionsRelations<Pokemon> | undefined {
-    return undefined;
+    return {
+      pokemonTypes: true,
+      abilities: true,
+      pokemonMoves: true,
+      typeEffectiveness: true,
+      seasonPokemon: true,
+      generations: true,
+    };
   }
 
   /**

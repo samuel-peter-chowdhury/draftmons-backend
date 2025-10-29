@@ -29,24 +29,9 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
 
     // Add relations to query
     if (relations) {
-      if (relations.pokemonTypes) {
-        queryBuilder = queryBuilder.leftJoinAndSelect('pokemon.pokemonTypes', 'pokemonTypes');
-      }
-      if (relations.abilities) {
-        queryBuilder = queryBuilder.leftJoinAndSelect('pokemon.abilities', 'abilities');
-      }
-      if (isFull && relations.pokemonMoves) {
-        queryBuilder = queryBuilder.leftJoinAndSelect('pokemon.pokemonMoves', 'pokemonMoves');
-      }
-      if (isFull && relations.typeEffectiveness) {
-        queryBuilder = queryBuilder.leftJoinAndSelect('pokemon.typeEffectiveness', 'typeEffectiveness');
-      }
-      if (isFull && relations.seasonPokemon) {
-        queryBuilder = queryBuilder.leftJoinAndSelect('pokemon.seasonPokemon', 'seasonPokemon');
-      }
-      if (isFull && relations.generations) {
-        queryBuilder = queryBuilder.leftJoinAndSelect('pokemon.generations', 'generations');
-      }
+      Object.keys(relations).forEach((relation) => {
+        queryBuilder = queryBuilder.leftJoinAndSelect(`pokemon.${relation}`, relation);
+      });
     }
 
     // Add where clauses
@@ -114,18 +99,24 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
     if (req.query.minSpecialBulk) {
       const minSpecialBulk = parseInt(req.query.minSpecialBulk as string);
       if (!isNaN(minSpecialBulk)) {
-        queryBuilder = queryBuilder.andWhere('(pokemon.hp + pokemon.special_defense) >= :minSpecialBulk', {
-          minSpecialBulk,
-        });
+        queryBuilder = queryBuilder.andWhere(
+          '(pokemon.hp + pokemon.special_defense) >= :minSpecialBulk',
+          {
+            minSpecialBulk,
+          },
+        );
       }
     }
 
     if (req.query.maxSpecialBulk) {
       const maxSpecialBulk = parseInt(req.query.maxSpecialBulk as string);
       if (!isNaN(maxSpecialBulk)) {
-        queryBuilder = queryBuilder.andWhere('(pokemon.hp + pokemon.special_defense) <= :maxSpecialBulk', {
-          maxSpecialBulk,
-        });
+        queryBuilder = queryBuilder.andWhere(
+          '(pokemon.hp + pokemon.special_defense) <= :maxSpecialBulk',
+          {
+            maxSpecialBulk,
+          },
+        );
       }
     }
 
