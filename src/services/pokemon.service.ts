@@ -170,6 +170,56 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       }
     }
 
+    // Pokemon move IDs filter (must have ALL specified moves)
+    if (req.query.moveIds) {
+      let moveIds = req.query.moveIds;
+      if (!Array.isArray(moveIds)) {
+        moveIds = [moveIds];
+      }
+      const moveIdNumbers = (moveIds as string[])
+        .map((id) => parseInt(id))
+        .filter((id) => !isNaN(id));
+
+      if (moveIdNumbers.length > 0) {
+        // For each move ID, add a subquery to ensure the pokemon has that move
+        for (let i = 0; i < moveIdNumbers.length; i++) {
+          queryBuilder = queryBuilder.andWhere(
+            `EXISTS (
+              SELECT 1 FROM pokemon_move pm
+              WHERE pm.pokemon_id = pokemon.id
+              AND pm.move_id = :moveId${i}
+            )`,
+            { [`moveId${i}`]: moveIdNumbers[i] },
+          );
+        }
+      }
+    }
+
+    // Generation IDs filter (must have ALL specified generations)
+    if (req.query.generationIds) {
+      let generationIds = req.query.generationIds;
+      if (!Array.isArray(generationIds)) {
+        generationIds = [generationIds];
+      }
+      const generationIdNumbers = (generationIds as string[])
+        .map((id) => parseInt(id))
+        .filter((id) => !isNaN(id));
+
+      if (generationIdNumbers.length > 0) {
+        // For each generation ID, add a subquery to ensure the pokemon belongs to that generation
+        for (let i = 0; i < generationIdNumbers.length; i++) {
+          queryBuilder = queryBuilder.andWhere(
+            `EXISTS (
+              SELECT 1 FROM pokemon_generations pg
+              WHERE pg.pokemon_id = pokemon.id
+              AND pg.generation_id = :generationId${i}
+            )`,
+            { [`generationId${i}`]: generationIdNumbers[i] },
+          );
+        }
+      }
+    }
+
     // Apply sorting
     if (sortOptions) {
       queryBuilder = queryBuilder.orderBy(
