@@ -49,6 +49,8 @@ import { TypeEffectiveService } from './services/type-effective.service';
 import { WeekController } from './controllers/week.controller';
 import { WeekService } from './services/week.service';
 import { isAuthReadAdminWrite, isAuthReadLeagueModWrite } from './middleware/auth.middleware';
+import { SpecialMoveCategoryService } from './services/special-move-category.service';
+import { SpecialMoveCategoryController } from './controllers/special-move-category.controller';
 
 export class App {
   public app: Application;
@@ -66,6 +68,7 @@ export class App {
   private pokemonService: PokemonService;
   private seasonPokemonService: SeasonPokemonService;
   private seasonService: SeasonService;
+  private specialMoveCategoryService: SpecialMoveCategoryService;
   private teamService: TeamService;
   private typeEffectiveService: TypeEffectiveService;
   private userService: UserService;
@@ -176,6 +179,7 @@ export class App {
     this.pokemonService = Container.get(PokemonService);
     this.seasonPokemonService = Container.get(SeasonPokemonService);
     this.seasonService = Container.get(SeasonService);
+    this.specialMoveCategoryService = Container.get(SpecialMoveCategoryService);
     this.teamService = Container.get(TeamService);
     this.typeEffectiveService = Container.get(TypeEffectiveService);
     this.userService = Container.get(UserService);
@@ -214,6 +218,7 @@ export class App {
     const pokemonController = new PokemonController(this.pokemonService);
     const seasonPokemonController = new SeasonPokemonController(this.seasonPokemonService);
     const seasonController = new SeasonController(this.seasonService);
+    const specialMoveCategoryController = new SpecialMoveCategoryController(this.specialMoveCategoryService);
     const teamController = new TeamController(this.teamService);
     const typeEffectiveController = new TypeEffectiveController(this.typeEffectiveService);
     const userController = new UserController(this.userService);
@@ -235,6 +240,7 @@ export class App {
     this.app.use('/api/pokemon', isAuthReadAdminWrite, pokemonController.router);
     this.app.use('/api/season-pokemon', isAuthReadAdminWrite, seasonPokemonController.router);
     this.app.use('/api/season', isAuthReadAdminWrite, seasonController.router);
+    this.app.use('/api/special-move-category', isAuthReadAdminWrite, specialMoveCategoryController.router);
     this.app.use('/api/team', isAuthReadAdminWrite, teamController.router);
     this.app.use('/api/type-effective', isAuthReadAdminWrite, typeEffectiveController.router);
     this.app.use('/api/user', userController.router);

@@ -1,7 +1,8 @@
-import { Entity, Column, OneToMany, JoinColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, OneToMany, JoinColumn, ManyToOne, ManyToMany, JoinTable } from 'typeorm';
 import { BaseApplicationEntity } from './base-application.entity';
 import { PokemonMove } from './pokemon-move.entity';
 import { PokemonType } from './pokemon-type.entity';
+import { SpecialMoveCategory } from './special-move-category.entity';
 
 export enum MoveCategory {
   PHYSICAL = 'PHYSICAL',
@@ -44,4 +45,18 @@ export class Move extends BaseApplicationEntity {
 
   @OneToMany(() => PokemonMove, (pokemonMove) => pokemonMove.move)
   pokemonMoves: PokemonMove[];
+
+  @ManyToMany(() => SpecialMoveCategory, (specialMoveCategory) => specialMoveCategory.moves)
+  @JoinTable({
+    name: 'move_special_move_categories',
+    joinColumn: {
+      name: 'move_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'special_move_category_id',
+      referencedColumnName: 'id',
+    },
+  })
+  specialMoveCategories: SpecialMoveCategory[];
 }

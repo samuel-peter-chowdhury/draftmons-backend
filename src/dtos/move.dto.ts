@@ -4,6 +4,7 @@ import { IsEnum, IsNumber, IsString } from 'class-validator';
 import { PokemonTypeOutputDto } from './pokemon-type.dto';
 import { PokemonMoveOutputDto } from './pokemon-move.dto';
 import { MoveCategory } from '../entities/move.entity';
+import { SpecialMoveCategoryOutputDto } from './special-move-category.dto';
 
 export class MoveOutputDto extends BaseOutputDto {
   @Expose()
@@ -12,7 +13,7 @@ export class MoveOutputDto extends BaseOutputDto {
   @Expose()
   pokemonTypeId: number;
 
-  @Expose({ groups: ['move.full'] })
+  @Expose()
   @Type(() => PokemonTypeOutputDto)
   pokemonType: PokemonTypeOutputDto;
 
@@ -37,6 +38,10 @@ export class MoveOutputDto extends BaseOutputDto {
   @Expose({ groups: ['move.full'] })
   @Type(() => PokemonMoveOutputDto)
   pokemonMoves: PokemonMoveOutputDto[];
+
+  @Expose({ groups: ['move.full'] })
+  @Type(() => SpecialMoveCategoryOutputDto)
+  specialMoveCategories: SpecialMoveCategoryOutputDto[];
 }
 
 export class MoveInputDto extends BaseInputDto {
