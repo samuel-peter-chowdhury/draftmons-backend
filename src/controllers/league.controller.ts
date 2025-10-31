@@ -12,6 +12,7 @@ import { LeagueInputDto, LeagueOutputDto } from '../dtos/league.dto';
 import { FindOptionsWhere, FindOptionsRelations, In } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
+import { getQueryIntArray } from '../utils/request.utils';
 import { LeagueUserService } from '../services/league-user.service';
 import { LeagueUserInputDto } from '../dtos/league-user.dto';
 
@@ -64,7 +65,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
       }),
     };
     if (req.query.ids) {
-      where['id'] = In(await this.getQueryArray(req, 'ids'));
+      where['id'] = In([getQueryIntArray(req, 'ids')]);
     }
     return where;
   }

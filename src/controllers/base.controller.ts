@@ -151,18 +151,6 @@ export abstract class BaseController<
     }
   }
 
-  protected async getQueryArray(req: Request, field: string): Promise<[]> {
-    let fieldValues: any = req.query[field];
-
-    if (fieldValues && !Array.isArray(fieldValues)) {
-      fieldValues = [fieldValues];
-    } else if (!fieldValues) {
-      fieldValues = [];
-    }
-
-    return fieldValues;
-  }
-
   protected abstract getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<E> | FindOptionsWhere<E>[] | undefined>;

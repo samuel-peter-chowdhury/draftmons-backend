@@ -4,6 +4,7 @@ import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
 import { PokemonInputDto } from '../dtos/pokemon.dto';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
+import { getQueryIntArray } from '../utils/request.utils';
 import { Request } from 'express';
 
 @Service()
@@ -122,13 +123,7 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
 
     // Pokemon type IDs filter (must have ALL specified types)
     if (req.query.pokemonTypeIds) {
-      let typeIds = req.query.pokemonTypeIds;
-      if (!Array.isArray(typeIds)) {
-        typeIds = [typeIds];
-      }
-      const typeIdNumbers = (typeIds as string[])
-        .map((id) => parseInt(id))
-        .filter((id) => !isNaN(id));
+      const typeIdNumbers = getQueryIntArray(req, 'pokemonTypeIds');
 
       if (typeIdNumbers.length > 0) {
         // For each type ID, add a subquery to ensure the pokemon has that type
@@ -147,13 +142,7 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
 
     // Ability IDs filter (must have ALL specified abilities)
     if (req.query.abilityIds) {
-      let abilityIds = req.query.abilityIds;
-      if (!Array.isArray(abilityIds)) {
-        abilityIds = [abilityIds];
-      }
-      const abilityIdNumbers = (abilityIds as string[])
-        .map((id) => parseInt(id))
-        .filter((id) => !isNaN(id));
+      const abilityIdNumbers = getQueryIntArray(req, 'abilityIds');
 
       if (abilityIdNumbers.length > 0) {
         // For each ability ID, add a subquery to ensure the pokemon has that ability
@@ -172,13 +161,7 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
 
     // Pokemon move IDs filter (must have ALL specified moves)
     if (req.query.moveIds) {
-      let moveIds = req.query.moveIds;
-      if (!Array.isArray(moveIds)) {
-        moveIds = [moveIds];
-      }
-      const moveIdNumbers = (moveIds as string[])
-        .map((id) => parseInt(id))
-        .filter((id) => !isNaN(id));
+      const moveIdNumbers = getQueryIntArray(req, 'moveIds');
 
       if (moveIdNumbers.length > 0) {
         // For each move ID, add a subquery to ensure the pokemon has that move
@@ -197,13 +180,7 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
 
     // Generation IDs filter (must have ALL specified generations)
     if (req.query.generationIds) {
-      let generationIds = req.query.generationIds;
-      if (!Array.isArray(generationIds)) {
-        generationIds = [generationIds];
-      }
-      const generationIdNumbers = (generationIds as string[])
-        .map((id) => parseInt(id))
-        .filter((id) => !isNaN(id));
+      const generationIdNumbers = getQueryIntArray(req, 'generationIds');
 
       if (generationIdNumbers.length > 0) {
         // For each generation ID, add a subquery to ensure the pokemon belongs to that generation
@@ -215,6 +192,26 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
               AND pg.generation_id = :generationId${i}
             )`,
             { [`generationId${i}`]: generationIdNumbers[i] },
+          );
+        }
+      }
+    }
+
+    // Special Move Category IDs filter (must have ALL specified special move categories)
+    if (req.query.specialMoveCategoryIds) {
+      const specialMoveCategoryIdNumbers = getQueryIntArray(req, 'specialMoveCategoryIds');
+
+      if (specialMoveCategoryIdNumbers.length > 0) {
+        // For each special move category ID, add a subquery to ensure the pokemon has at least one move with that category
+        for (let i = 0; i < specialMoveCategoryIdNumbers.length; i++) {
+          queryBuilder = queryBuilder.andWhere(
+            `EXISTS (
+              SELECT 1 FROM pokemon_move pm
+              INNER JOIN move_special_move_categories msmc ON pm.move_id = msmc.move_id
+              WHERE pm.pokemon_id = pokemon.id
+              AND msmc.special_move_category_id = :specialMoveCategoryId${i}
+            )`,
+            { [`specialMoveCategoryId${i}`]: specialMoveCategoryIdNumbers[i] },
           );
         }
       }
