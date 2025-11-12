@@ -3,7 +3,7 @@ import { User } from '../entities/user.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
 import { UserInputDto } from '../dtos/user.dto';
-import { PaginatedResponse, PaginationOptions, SortOptions } from '@/utils/pagination.utils';
+import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import { Request } from 'express';
 
 @Service()
