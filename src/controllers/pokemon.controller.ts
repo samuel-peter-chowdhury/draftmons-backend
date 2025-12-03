@@ -557,6 +557,69 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *         style: form
    *         explode: true
    *         description: Filter Pokemon that have ALL specified ability IDs (array of integers)
+   *       - in: query
+   *         name: moveIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that have ALL specified move IDs (array of integers)
+   *       - in: query
+   *         name: generationIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that belong to ALL specified generation IDs (array of integers)
+   *       - in: query
+   *         name: specialMoveCategoryIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that have moves with ALL specified special move category IDs (array of integers)
+   *       - in: query
+   *         name: weakPokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that are weak to ALL specified type IDs (type effectiveness > 1, array of integers)
+   *       - in: query
+   *         name: resistedPokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that resist ALL specified type IDs (type effectiveness < 1, array of integers)
+   *       - in: query
+   *         name: immunePokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that are immune to ALL specified type IDs (type effectiveness = 0, array of integers)
+   *       - in: query
+   *         name: notWeakPokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that are not weak to ALL specified type IDs (type effectiveness <= 1, includes neutral and resistant, array of integers)
    *     responses:
    *       200:
    *         description: List of Pokemon retrieved successfully

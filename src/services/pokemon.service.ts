@@ -1,4 +1,4 @@
-import { Repository, FindOptionsRelations } from 'typeorm';
+import { Repository, FindOptionsRelations, SelectQueryBuilder } from 'typeorm';
 import { Pokemon } from '../entities/pokemon.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
@@ -24,26 +24,74 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
     sortOptions?: SortOptions,
   ): Promise<PaginatedResponse<Pokemon>> {
     const { page, pageSize } = paginationOptions ? paginationOptions : { page: 1, pageSize: 25 };
-    const skip = (page - 1) * pageSize;
 
     let queryBuilder = this.repository.createQueryBuilder('pokemon');
 
-    // Add relations to query
+    // Apply all filters in a logical order
+    queryBuilder = this.applyRelations(queryBuilder, relations);
+    queryBuilder = this.applyNameFilter(queryBuilder, req);
+    queryBuilder = this.applyStatRangeFilters(queryBuilder, req);
+    queryBuilder = this.applyBulkFilters(queryBuilder, req);
+    queryBuilder = this.applyPokemonTypeFilter(queryBuilder, req);
+    queryBuilder = this.applyAbilityFilter(queryBuilder, req);
+    queryBuilder = this.applyMoveFilter(queryBuilder, req);
+    queryBuilder = this.applyGenerationFilter(queryBuilder, req);
+    queryBuilder = this.applySpecialMoveCategoryFilter(queryBuilder, req);
+    queryBuilder = this.applyWeaknessFilter(queryBuilder, req);
+    queryBuilder = this.applyResistanceFilter(queryBuilder, req);
+    queryBuilder = this.applyImmunityFilter(queryBuilder, req);
+    queryBuilder = this.applyNotWeakFilter(queryBuilder, req);
+    queryBuilder = this.applySorting(queryBuilder, sortOptions);
+    queryBuilder = this.applyPagination(queryBuilder, page, pageSize);
+
+    const [data, total] = await queryBuilder.getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
+
+  /**
+   * Apply relations (joins) to the query builder
+   */
+  private applyRelations(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    relations?: FindOptionsRelations<Pokemon>,
+  ): SelectQueryBuilder<Pokemon> {
     if (relations) {
       Object.keys(relations).forEach((relation) => {
         queryBuilder = queryBuilder.leftJoinAndSelect(`pokemon.${relation}`, relation);
       });
     }
+    return queryBuilder;
+  }
 
-    // Add where clauses
-    // Name ILIKE filter
+  /**
+   * Apply name ILIKE filter
+   */
+  private applyNameFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
     if (req.query.nameLike) {
       queryBuilder = queryBuilder.andWhere('pokemon.name ILIKE :nameLike', {
         nameLike: `%${req.query.nameLike}%`,
       });
     }
+    return queryBuilder;
+  }
 
-    // Stat range filters - map camelCase to snake_case for database columns
+  /**
+   * Apply stat range filters (hp, attack, defense, etc.)
+   */
+  private applyStatRangeFilters(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
     const statFieldsMap: { [key: string]: string } = {
       hp: 'hp',
       attack: 'attack',
@@ -77,6 +125,16 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       }
     }
 
+    return queryBuilder;
+  }
+
+  /**
+   * Apply bulk filters (physical and special bulk calculations)
+   */
+  private applyBulkFilters(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
     // Physical bulk filter (hp + defense)
     if (req.query.minPhysicalBulk) {
       const minPhysicalBulk = parseInt(req.query.minPhysicalBulk as string);
@@ -121,12 +179,20 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       }
     }
 
-    // Pokemon type IDs filter (must have ALL specified types)
+    return queryBuilder;
+  }
+
+  /**
+   * Apply Pokemon type IDs filter (must have ALL specified types)
+   */
+  private applyPokemonTypeFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
     if (req.query.pokemonTypeIds) {
       const typeIdNumbers = getQueryIntArray(req, 'pokemonTypeIds');
 
       if (typeIdNumbers.length > 0) {
-        // For each type ID, add a subquery to ensure the pokemon has that type
         for (let i = 0; i < typeIdNumbers.length; i++) {
           queryBuilder = queryBuilder.andWhere(
             `EXISTS (
@@ -140,12 +206,20 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       }
     }
 
-    // Ability IDs filter (must have ALL specified abilities)
+    return queryBuilder;
+  }
+
+  /**
+   * Apply ability IDs filter (must have ALL specified abilities)
+   */
+  private applyAbilityFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
     if (req.query.abilityIds) {
       const abilityIdNumbers = getQueryIntArray(req, 'abilityIds');
 
       if (abilityIdNumbers.length > 0) {
-        // For each ability ID, add a subquery to ensure the pokemon has that ability
         for (let i = 0; i < abilityIdNumbers.length; i++) {
           queryBuilder = queryBuilder.andWhere(
             `EXISTS (
@@ -159,12 +233,20 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       }
     }
 
-    // Pokemon move IDs filter (must have ALL specified moves)
+    return queryBuilder;
+  }
+
+  /**
+   * Apply move IDs filter (must have ALL specified moves)
+   */
+  private applyMoveFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
     if (req.query.moveIds) {
       const moveIdNumbers = getQueryIntArray(req, 'moveIds');
 
       if (moveIdNumbers.length > 0) {
-        // For each move ID, add a subquery to ensure the pokemon has that move
         for (let i = 0; i < moveIdNumbers.length; i++) {
           queryBuilder = queryBuilder.andWhere(
             `EXISTS (
@@ -178,12 +260,20 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       }
     }
 
-    // Generation IDs filter (must have ALL specified generations)
+    return queryBuilder;
+  }
+
+  /**
+   * Apply generation IDs filter (must have ALL specified generations)
+   */
+  private applyGenerationFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
     if (req.query.generationIds) {
       const generationIdNumbers = getQueryIntArray(req, 'generationIds');
 
       if (generationIdNumbers.length > 0) {
-        // For each generation ID, add a subquery to ensure the pokemon belongs to that generation
         for (let i = 0; i < generationIdNumbers.length; i++) {
           queryBuilder = queryBuilder.andWhere(
             `EXISTS (
@@ -197,12 +287,20 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       }
     }
 
-    // Special Move Category IDs filter (must have ALL specified special move categories)
+    return queryBuilder;
+  }
+
+  /**
+   * Apply special move category IDs filter (must have ALL specified categories)
+   */
+  private applySpecialMoveCategoryFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
     if (req.query.specialMoveCategoryIds) {
       const specialMoveCategoryIdNumbers = getQueryIntArray(req, 'specialMoveCategoryIds');
 
       if (specialMoveCategoryIdNumbers.length > 0) {
-        // For each special move category ID, add a subquery to ensure the pokemon has at least one move with that category
         for (let i = 0; i < specialMoveCategoryIdNumbers.length; i++) {
           queryBuilder = queryBuilder.andWhere(
             `EXISTS (
@@ -217,7 +315,128 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       }
     }
 
-    // Apply sorting
+    return queryBuilder;
+  }
+
+  /**
+   * Apply weakness filter (must be weak to ALL specified types - value > 1)
+   */
+  private applyWeaknessFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
+    if (req.query.weakPokemonTypeIds) {
+      const weakTypeIdNumbers = getQueryIntArray(req, 'weakPokemonTypeIds');
+
+      if (weakTypeIdNumbers.length > 0) {
+        for (let i = 0; i < weakTypeIdNumbers.length; i++) {
+          queryBuilder = queryBuilder.andWhere(
+            `EXISTS (
+              SELECT 1 FROM type_effective te
+              WHERE te.pokemon_id = pokemon.id
+              AND te.pokemon_type_id = :weakTypeId${i}
+              AND te.value > 1
+            )`,
+            { [`weakTypeId${i}`]: weakTypeIdNumbers[i] },
+          );
+        }
+      }
+    }
+
+    return queryBuilder;
+  }
+
+  /**
+   * Apply resistance filter (must resist ALL specified types - value < 1)
+   */
+  private applyResistanceFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
+    if (req.query.resistedPokemonTypeIds) {
+      const resistedTypeIdNumbers = getQueryIntArray(req, 'resistedPokemonTypeIds');
+
+      if (resistedTypeIdNumbers.length > 0) {
+        for (let i = 0; i < resistedTypeIdNumbers.length; i++) {
+          queryBuilder = queryBuilder.andWhere(
+            `EXISTS (
+              SELECT 1 FROM type_effective te
+              WHERE te.pokemon_id = pokemon.id
+              AND te.pokemon_type_id = :resistedTypeId${i}
+              AND te.value < 1
+            )`,
+            { [`resistedTypeId${i}`]: resistedTypeIdNumbers[i] },
+          );
+        }
+      }
+    }
+
+    return queryBuilder;
+  }
+
+  /**
+   * Apply immunity filter (must be immune to ALL specified types - value = 0)
+   */
+  private applyImmunityFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
+    if (req.query.immunePokemonTypeIds) {
+      const immuneTypeIdNumbers = getQueryIntArray(req, 'immunePokemonTypeIds');
+
+      if (immuneTypeIdNumbers.length > 0) {
+        for (let i = 0; i < immuneTypeIdNumbers.length; i++) {
+          queryBuilder = queryBuilder.andWhere(
+            `EXISTS (
+              SELECT 1 FROM type_effective te
+              WHERE te.pokemon_id = pokemon.id
+              AND te.pokemon_type_id = :immuneTypeId${i}
+              AND te.value = 0
+            )`,
+            { [`immuneTypeId${i}`]: immuneTypeIdNumbers[i] },
+          );
+        }
+      }
+    }
+
+    return queryBuilder;
+  }
+
+  /**
+   * Apply not weak filter (must not be weak to ALL specified types - value <= 1)
+   */
+  private applyNotWeakFilter(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    req: Request,
+  ): SelectQueryBuilder<Pokemon> {
+    if (req.query.notWeakPokemonTypeIds) {
+      const notWeakTypeIdNumbers = getQueryIntArray(req, 'notWeakPokemonTypeIds');
+
+      if (notWeakTypeIdNumbers.length > 0) {
+        for (let i = 0; i < notWeakTypeIdNumbers.length; i++) {
+          queryBuilder = queryBuilder.andWhere(
+            `EXISTS (
+              SELECT 1 FROM type_effective te
+              WHERE te.pokemon_id = pokemon.id
+              AND te.pokemon_type_id = :notWeakTypeId${i}
+              AND te.value <= 1
+            )`,
+            { [`notWeakTypeId${i}`]: notWeakTypeIdNumbers[i] },
+          );
+        }
+      }
+    }
+
+    return queryBuilder;
+  }
+
+  /**
+   * Apply sorting to the query
+   */
+  private applySorting(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    sortOptions?: SortOptions,
+  ): SelectQueryBuilder<Pokemon> {
     if (sortOptions) {
       queryBuilder = queryBuilder.orderBy(
         `pokemon.${sortOptions.sortBy}`,
@@ -225,16 +444,18 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       );
     }
 
-    queryBuilder = queryBuilder.skip(skip).take(pageSize);
+    return queryBuilder;
+  }
 
-    const [data, total] = await queryBuilder.getManyAndCount();
-
-    return {
-      data,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    };
+  /**
+   * Apply pagination (skip and take)
+   */
+  private applyPagination(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    page: number,
+    pageSize: number,
+  ): SelectQueryBuilder<Pokemon> {
+    const skip = (page - 1) * pageSize;
+    return queryBuilder.skip(skip).take(pageSize);
   }
 }
