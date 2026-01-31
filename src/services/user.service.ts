@@ -35,17 +35,19 @@ export class UserService extends BaseService<User, UserInputDto> {
       });
     }
 
-    // Add the name and email search conditions
-    queryBuilder = queryBuilder.where(
-      new Brackets((qb) => {
-        qb.where('user.firstName ILIKE :nameLike', { nameLike: `%${nameLike}%` })
-          .orWhere('user.lastName ILIKE :nameLike', { nameLike: `%${nameLike}%` })
-          .orWhere("CONCAT(user.firstName, ' ', user.lastName) ILIKE :nameLike", {
-            nameLike: `%${nameLike}%`,
-          })
-          .orWhere('user.email ILIKE :nameLike', { nameLike: `%${nameLike}%` });
-      }),
-    );
+    // Add the name and email search conditions only if nameLike is provided
+    if (nameLike) {
+      queryBuilder = queryBuilder.where(
+        new Brackets((qb) => {
+          qb.where('user.firstName ILIKE :nameLike', { nameLike: `%${nameLike}%` })
+            .orWhere('user.lastName ILIKE :nameLike', { nameLike: `%${nameLike}%` })
+            .orWhere("CONCAT(user.firstName, ' ', user.lastName) ILIKE :nameLike", {
+              nameLike: `%${nameLike}%`,
+            })
+            .orWhere('user.email ILIKE :nameLike', { nameLike: `%${nameLike}%` });
+        }),
+      );
+    }
 
     // Add sorting if provided
     if (sortOptions) {
