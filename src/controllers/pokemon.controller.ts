@@ -73,7 +73,6 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
     return {
       pokemonTypes: true,
       abilities: true,
-      pokemonMoves: true,
       typeEffectiveness: true,
       seasonPokemon: true,
       generations: true,
