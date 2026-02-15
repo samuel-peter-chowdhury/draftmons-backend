@@ -29,12 +29,15 @@ export class PokemonMoveOutputDto extends BaseOutputDto {
 }
 
 export class PokemonMoveInputDto extends BaseInputDto {
+  @Expose()
   @IsNumber()
   pokemonId: number;
 
+  @Expose()
   @IsNumber()
   moveId: number;
 
+  @Expose()
   @IsNumber()
   generationId: number;
 }

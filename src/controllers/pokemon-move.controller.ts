@@ -28,7 +28,7 @@ export class PokemonMoveController extends BaseController<
   }
 
   protected getFullTransformGroup(): string[] {
-    return ['pokemonMove.full'];
+    return ['pokemonMove.full', 'move.full'];
   }
 
   protected async getWhere(
@@ -42,7 +42,12 @@ export class PokemonMoveController extends BaseController<
   }
 
   protected getFullRelations(): FindOptionsRelations<PokemonMove> | undefined {
-    return undefined;
+    return {
+      move: {
+        pokemonType: true,
+        specialMoveCategories: true,
+      },
+    };
   }
 
   /**

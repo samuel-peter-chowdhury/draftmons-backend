@@ -11,7 +11,7 @@ export class TypeEffectiveOutputDto extends BaseOutputDto {
   @Expose()
   pokemonTypeId: number;
 
-  @Expose({ groups: ['typeEffective.full'] })
+  @Expose()
   @Type(() => PokemonTypeOutputDto)
   pokemonType: PokemonTypeOutputDto;
 
