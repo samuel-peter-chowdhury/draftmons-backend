@@ -4,7 +4,7 @@ import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { PokemonOutputDto } from './pokemon.dto';
 import { GameStatOutputDto } from './game-stat.dto';
 import { SeasonOutputDto } from './season.dto';
-import { TeamOutputDto } from './team.dto';
+import { SeasonPokemonTeamOutputDto } from './season-pokemon-team.dto';
 
 export class SeasonPokemonOutputDto extends BaseOutputDto {
   @Expose()
@@ -12,9 +12,6 @@ export class SeasonPokemonOutputDto extends BaseOutputDto {
 
   @Expose()
   pokemonId: number;
-
-  @Expose()
-  teamId: number;
 
   @Expose()
   condition: string;
@@ -31,8 +28,8 @@ export class SeasonPokemonOutputDto extends BaseOutputDto {
   pokemon: PokemonOutputDto;
 
   @Expose({ groups: ['seasonPokemon.full'] })
-  @Type(() => TeamOutputDto)
-  team: TeamOutputDto;
+  @Type(() => SeasonPokemonTeamOutputDto)
+  seasonPokemonTeams: SeasonPokemonTeamOutputDto[];
 
   @Expose({ groups: ['seasonPokemon.full'] })
   @Type(() => GameStatOutputDto)
@@ -45,10 +42,6 @@ export class SeasonPokemonInputDto extends BaseInputDto {
 
   @IsNumber()
   pokemonId: number;
-
-  @IsOptional()
-  @IsNumber()
-  teamId: number;
 
   @IsOptional()
   @IsString()

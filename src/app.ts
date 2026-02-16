@@ -34,8 +34,8 @@ import { MatchController } from './controllers/match.controller';
 import { MatchService } from './services/match.service';
 import { MoveController } from './controllers/move.controller';
 import { MoveService } from './services/move.service';
-import { PokemonMoveController } from './controllers/pokemon-move.controller';
-import { PokemonMoveService } from './services/pokemon-move.service';
+import { SeasonPokemonTeamController } from './controllers/season-pokemon-team.controller';
+import { SeasonPokemonTeamService } from './services/season-pokemon-team.service';
 import { PokemonTypeController } from './controllers/pokemon-type.controller';
 import { PokemonTypeService } from './services/pokemon-type.service';
 import { SeasonPokemonController } from './controllers/season-pokemon.controller';
@@ -63,7 +63,7 @@ export class App {
   private leagueService: LeagueService;
   private matchService: MatchService;
   private moveService: MoveService;
-  private pokemonMoveService: PokemonMoveService;
+  private seasonPokemonTeamService: SeasonPokemonTeamService;
   private pokemonTypeService: PokemonTypeService;
   private pokemonService: PokemonService;
   private seasonPokemonService: SeasonPokemonService;
@@ -174,7 +174,7 @@ export class App {
     this.leagueService = Container.get(LeagueService);
     this.matchService = Container.get(MatchService);
     this.moveService = Container.get(MoveService);
-    this.pokemonMoveService = Container.get(PokemonMoveService);
+    this.seasonPokemonTeamService = Container.get(SeasonPokemonTeamService);
     this.pokemonTypeService = Container.get(PokemonTypeService);
     this.pokemonService = Container.get(PokemonService);
     this.seasonPokemonService = Container.get(SeasonPokemonService);
@@ -213,7 +213,7 @@ export class App {
     const leagueController = new LeagueController(this.leagueService, this.leagueUserService);
     const matchController = new MatchController(this.matchService);
     const moveController = new MoveController(this.moveService);
-    const pokemonMoveController = new PokemonMoveController(this.pokemonMoveService);
+    const seasonPokemonTeamController = new SeasonPokemonTeamController(this.seasonPokemonTeamService);
     const pokemonTypeController = new PokemonTypeController(this.pokemonTypeService);
     const pokemonController = new PokemonController(this.pokemonService);
     const seasonPokemonController = new SeasonPokemonController(this.seasonPokemonService);
@@ -235,7 +235,7 @@ export class App {
     this.app.use('/api/league-user', isAuthReadAdminWrite, leagueUserController.router);
     this.app.use('/api/match', isAuthReadAdminWrite, matchController.router);
     this.app.use('/api/move', isAuthReadAdminWrite, moveController.router);
-    this.app.use('/api/pokemon-move', isAuthReadAdminWrite, pokemonMoveController.router);
+    this.app.use('/api/season-pokemon-team', isAuthReadAdminWrite, seasonPokemonTeamController.router);
     this.app.use('/api/pokemon-type', isAuthReadAdminWrite, pokemonTypeController.router);
     this.app.use('/api/pokemon', isAuthReadAdminWrite, pokemonController.router);
     this.app.use('/api/season-pokemon', isAuthReadAdminWrite, seasonPokemonController.router);
@@ -271,6 +271,11 @@ export class App {
       seasonController.router,
     );
     this.app.use('/api/league/:leagueId/team', isAuthReadLeagueModWrite(), teamController.router);
+    this.app.use(
+      '/api/league/:leagueId/season-pokemon-team',
+      isAuthReadLeagueModWrite(),
+      seasonPokemonTeamController.router,
+    );
     this.app.use('/api/league/:leagueId/week', isAuthReadLeagueModWrite(), weekController.router);
 
     // Health check route

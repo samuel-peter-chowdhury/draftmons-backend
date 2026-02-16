@@ -34,11 +34,16 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
   }
 
   protected getBaseRelations(): FindOptionsRelations<Move> | undefined {
-    return undefined;
+    return {
+      generation: true,
+    };
   }
 
   protected getFullRelations(): FindOptionsRelations<Move> | undefined {
-    return undefined;
+    return {
+      generation: true,
+      pokemon: true,
+    };
   }
 
   /**
@@ -55,6 +60,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *         - id
    *         - name
    *         - pokemonTypeId
+   *         - generationId
    *         - category
    *         - power
    *         - accuracy
@@ -77,6 +83,10 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *           type: integer
    *           description: ID of the Pokemon type for this move
    *           example: 4
+   *         generationId:
+   *           type: integer
+   *           description: ID of the generation this move belongs to
+   *           example: 1
    *         category:
    *           type: string
    *           description: Category of the move
@@ -125,17 +135,21 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *             pokemonType:
    *               $ref: '#/components/schemas/PokemonType'
    *               description: Full type details for this move
-   *             pokemonMoves:
+   *             generation:
+   *               $ref: '#/components/schemas/Generation'
+   *               description: Generation this move belongs to
+   *             pokemon:
    *               type: array
    *               description: List of Pokemon that can learn this move
    *               items:
-   *                 $ref: '#/components/schemas/PokemonMove'
+   *                 $ref: '#/components/schemas/Pokemon'
    *
    *     MoveInput:
    *       type: object
    *       required:
    *         - name
    *         - pokemonTypeId
+   *         - generationId
    *         - category
    *         - power
    *         - accuracy
@@ -153,6 +167,11 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *           type: integer
    *           description: ID of the Pokemon type for this move
    *           example: 4
+   *           minimum: 1
+   *         generationId:
+   *           type: integer
+   *           description: ID of the generation this move belongs to
+   *           example: 1
    *           minimum: 1
    *         category:
    *           type: string
@@ -202,6 +221,11 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *           type: integer
    *           description: ID of the Pokemon type for this move
    *           example: 4
+   *           minimum: 1
+   *         generationId:
+   *           type: integer
+   *           description: ID of the generation this move belongs to
+   *           example: 1
    *           minimum: 1
    *         category:
    *           type: string
@@ -280,7 +304,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full move details (type and Pokemon that can learn it)
+   *         description: Include full move details (type, generation, and Pokemon that can learn it)
    *     responses:
    *       200:
    *         description: List of moves retrieved successfully
@@ -336,7 +360,8 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
    *                     pokemonType: {}
-   *                     pokemonMoves: []
+   *                     generation: {}
+   *                     pokemon: []
    *       400:
    *         description: Invalid query parameters
    *         content:
@@ -367,7 +392,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full move details (type and Pokemon that can learn it)
+   *         description: Include full move details (type, generation, and Pokemon that can learn it)
    *     responses:
    *       200:
    *         description: Move details retrieved successfully
@@ -409,7 +434,8 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *                   createdAt: "2024-01-01T00:00:00.000Z"
    *                   updatedAt: "2024-01-15T12:30:00.000Z"
    *                   pokemonType: {}
-   *                   pokemonMoves: []
+   *                   generation: {}
+   *                   pokemon: []
    *       400:
    *         description: Invalid move ID format
    *         content:
@@ -540,7 +566,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full move details in the response (type and Pokemon that can learn it)
+   *         description: Include full move details in the response (type, generation, and Pokemon that can learn it)
    *     requestBody:
    *       required: true
    *       content:

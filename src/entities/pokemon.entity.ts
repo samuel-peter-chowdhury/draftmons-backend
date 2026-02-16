@@ -1,6 +1,6 @@
-import { Entity, Column, OneToMany, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, Column, OneToMany, ManyToMany, ManyToOne, JoinTable, JoinColumn, Unique } from 'typeorm';
 import { BaseApplicationEntity } from './base-application.entity';
-import { PokemonMove } from './pokemon-move.entity';
+import { Move } from './move.entity';
 import { TypeEffective } from './type-effective.entity';
 import { SeasonPokemon } from './season-pokemon.entity';
 import { PokemonType } from './pokemon-type.entity';
@@ -8,11 +8,12 @@ import { Ability } from './ability.entity';
 import { Generation } from './generation.entity';
 
 @Entity('pokemon')
+@Unique(['name', 'generationId'])
 export class Pokemon extends BaseApplicationEntity {
   @Column()
   dexId: number;
 
-  @Column({ unique: true })
+  @Column()
   name: string;
 
   @Column()
@@ -45,6 +46,13 @@ export class Pokemon extends BaseApplicationEntity {
   @Column()
   sprite: string;
 
+  @Column()
+  generationId: number;
+
+  @ManyToOne(() => Generation, (generation) => generation.pokemon)
+  @JoinColumn({ name: 'generation_id' })
+  generation: Generation;
+
   @ManyToMany(() => PokemonType, (pokemonType) => pokemonType.pokemon)
   @JoinTable({
     name: 'pokemon_pokemon_types',
@@ -59,8 +67,19 @@ export class Pokemon extends BaseApplicationEntity {
   })
   pokemonTypes: PokemonType[];
 
-  @OneToMany(() => PokemonMove, (pokemonMove) => pokemonMove.pokemon)
-  pokemonMoves: PokemonMove[];
+  @ManyToMany(() => Move, (move) => move.pokemon)
+  @JoinTable({
+    name: 'pokemon_moves',
+    joinColumn: {
+      name: 'pokemon_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'move_id',
+      referencedColumnName: 'id',
+    },
+  })
+  moves: Move[];
 
   @ManyToMany(() => Ability, (ability) => ability.pokemon)
   @JoinTable({
@@ -81,18 +100,4 @@ export class Pokemon extends BaseApplicationEntity {
 
   @OneToMany(() => SeasonPokemon, (seasonPokemon) => seasonPokemon.pokemon)
   seasonPokemon: SeasonPokemon[];
-
-  @ManyToMany(() => Generation, (generation) => generation.pokemon)
-  @JoinTable({
-    name: 'pokemon_generations',
-    joinColumn: {
-      name: 'pokemon_id',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'generation_id',
-      referencedColumnName: 'id',
-    },
-  })
-  generations: Generation[];
 }

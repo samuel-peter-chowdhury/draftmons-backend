@@ -66,6 +66,7 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
     return {
       pokemonTypes: true,
       abilities: true,
+      generation: true,
     };
   }
 
@@ -73,11 +74,12 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
     return {
       pokemonTypes: true,
       abilities: true,
+      generation: true,
       typeEffectiveness: {
         pokemonType: true,
       },
       seasonPokemon: true,
-      generations: true,
+      moves: true,
     };
   }
 
@@ -188,11 +190,11 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *               description: Types of this Pokemon
    *               items:
    *                 $ref: '#/components/schemas/PokemonType'
-   *             pokemonMoves:
+   *             moves:
    *               type: array
    *               description: Moves this Pokemon can learn
    *               items:
-   *                 $ref: '#/components/schemas/PokemonMove'
+   *                 $ref: '#/components/schemas/Move'
    *             abilities:
    *               type: array
    *               description: Abilities this Pokemon can have
@@ -208,11 +210,9 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *               description: Season entries for this Pokemon
    *               items:
    *                 $ref: '#/components/schemas/SeasonPokemon'
-   *             generations:
-   *               type: array
-   *               description: Generations this Pokemon appears in
-   *               items:
-   *                 $ref: '#/components/schemas/Generation'
+   *             generation:
+   *               $ref: '#/components/schemas/Generation'
+   *               description: Generation this Pokemon belongs to
    *
    *     PokemonInput:
    *       type: object
@@ -832,11 +832,11 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
    *                   createdAt: "2024-01-01T00:00:00.000Z"
    *                   updatedAt: "2024-01-15T12:30:00.000Z"
    *                   pokemonTypes: []
-   *                   pokemonMoves: []
+   *                   moves: []
    *                   abilities: []
    *                   typeEffectiveness: []
    *                   seasonPokemon: []
-   *                   generations: []
+   *                   generation: {}
    *       400:
    *         description: Invalid Pokemon ID format
    *         content:

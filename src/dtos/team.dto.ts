@@ -2,7 +2,7 @@ import { Expose, Type } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
 import { IsNumber, IsString } from 'class-validator';
 import { SeasonOutputDto } from './season.dto';
-import { SeasonPokemonOutputDto } from './season-pokemon.dto';
+import { SeasonPokemonTeamOutputDto } from './season-pokemon-team.dto';
 import { GameOutputDto } from './game.dto';
 import { UserOutputDto } from './user.dto';
 import { MatchOutputDto } from './match.dto';
@@ -26,8 +26,8 @@ export class TeamOutputDto extends BaseOutputDto {
   user: UserOutputDto;
 
   @Expose({ groups: ['team.full'] })
-  @Type(() => SeasonPokemonOutputDto)
-  seasonPokemon: SeasonPokemonOutputDto[];
+  @Type(() => SeasonPokemonTeamOutputDto)
+  seasonPokemonTeams: SeasonPokemonTeamOutputDto[];
 
   @Expose({ groups: ['team.full'] })
   @Type(() => GameOutputDto)

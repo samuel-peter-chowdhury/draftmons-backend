@@ -38,7 +38,9 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
   }
 
   protected getFullRelations(): FindOptionsRelations<Team> | undefined {
-    return undefined;
+    return {
+      seasonPokemonTeams: true,
+    };
   }
 
   /**
@@ -102,11 +104,11 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *             user:
    *               $ref: '#/components/schemas/User'
    *               description: Full user details
-   *             seasonPokemon:
+   *             seasonPokemonTeams:
    *               type: array
-   *               description: List of Pokemon on this team
+   *               description: List of season Pokemon team assignments for this team
    *               items:
-   *                 $ref: '#/components/schemas/SeasonPokemon'
+   *                 $ref: '#/components/schemas/SeasonPokemonTeam'
    *             matchTeams:
    *               type: array
    *               description: List of match participations
@@ -204,7 +206,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full team details (season, user, seasonPokemon, matchTeams, wonGames)
+   *         description: Include full team details (season, user, seasonPokemonTeams, matchTeams, wonGames)
    *     responses:
    *       200:
    *         description: List of teams retrieved successfully
@@ -264,7 +266,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full team details (season, user, seasonPokemon, matchTeams, wonGames)
+   *         description: Include full team details (season, user, seasonPokemonTeams, matchTeams, wonGames)
    *     responses:
    *       200:
    *         description: Team details retrieved successfully
@@ -557,7 +559,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full team details (season, user, seasonPokemon, matchTeams, wonGames)
+   *         description: Include full team details (season, user, seasonPokemonTeams, matchTeams, wonGames)
    *     responses:
    *       200:
    *         description: List of teams retrieved successfully
@@ -625,7 +627,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full team details (season, user, seasonPokemon, matchTeams, wonGames)
+   *         description: Include full team details (season, user, seasonPokemonTeams, matchTeams, wonGames)
    *     responses:
    *       200:
    *         description: Team details retrieved successfully

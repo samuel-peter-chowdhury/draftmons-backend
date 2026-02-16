@@ -42,7 +42,12 @@ export class GenerationController extends BaseController<
   }
 
   protected getFullRelations(): FindOptionsRelations<Generation> | undefined {
-    return undefined;
+    return {
+      pokemon: true,
+      moves: true,
+      abilities: true,
+      seasons: true,
+    };
   }
 
   /**
@@ -90,16 +95,26 @@ export class GenerationController extends BaseController<
    *         - $ref: '#/components/schemas/Generation'
    *         - type: object
    *           properties:
-   *             pokemonMoves:
-   *               type: array
-   *               description: List of Pokemon moves available in this generation
-   *               items:
-   *                 $ref: '#/components/schemas/PokemonMove'
    *             pokemon:
    *               type: array
-   *               description: List of Pokemon available in this generation
+   *               description: List of Pokemon belonging to this generation
    *               items:
    *                 $ref: '#/components/schemas/Pokemon'
+   *             moves:
+   *               type: array
+   *               description: List of moves belonging to this generation
+   *               items:
+   *                 $ref: '#/components/schemas/Move'
+   *             abilities:
+   *               type: array
+   *               description: List of abilities belonging to this generation
+   *               items:
+   *                 $ref: '#/components/schemas/Ability'
+   *             seasons:
+   *               type: array
+   *               description: List of seasons associated with this generation
+   *               items:
+   *                 $ref: '#/components/schemas/Season'
    *
    *     GenerationInput:
    *       type: object
@@ -165,7 +180,7 @@ export class GenerationController extends BaseController<
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full generation details (Pokemon and moves)
+   *         description: Include full generation details (Pokemon, moves, abilities, seasons)
    *     responses:
    *       200:
    *         description: List of generations retrieved successfully
@@ -204,8 +219,10 @@ export class GenerationController extends BaseController<
    *                     isActive: true
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
-   *                     pokemonMoves: []
    *                     pokemon: []
+   *                     moves: []
+   *                     abilities: []
+   *                     seasons: []
    *       400:
    *         description: Invalid query parameters
    *         content:
@@ -236,7 +253,7 @@ export class GenerationController extends BaseController<
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full generation details (Pokemon and moves)
+   *         description: Include full generation details (Pokemon, moves, abilities, seasons)
    *     responses:
    *       200:
    *         description: Generation details retrieved successfully
@@ -256,15 +273,17 @@ export class GenerationController extends BaseController<
    *                   createdAt: "2024-01-01T00:00:00.000Z"
    *                   updatedAt: "2024-01-15T12:30:00.000Z"
    *               full:
-   *                 summary: Full generation details with Pokemon and moves
+   *                 summary: Full generation details with Pokemon, moves, abilities, and seasons
    *                 value:
    *                   id: 9
    *                   name: "Generation IX"
    *                   isActive: true
    *                   createdAt: "2024-01-01T00:00:00.000Z"
    *                   updatedAt: "2024-01-15T12:30:00.000Z"
-   *                   pokemonMoves: []
    *                   pokemon: []
+   *                   moves: []
+   *                   abilities: []
+   *                   seasons: []
    *       400:
    *         description: Invalid generation ID format
    *         content:

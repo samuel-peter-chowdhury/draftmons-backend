@@ -1,7 +1,7 @@
 import { Expose, Type, Transform } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
 import { IsNumber, IsString } from 'class-validator';
-import { PokemonMoveOutputDto } from './pokemon-move.dto';
+import { MoveOutputDto } from './move.dto';
 import { AbilityOutputDto } from './ability.dto';
 import { GenerationOutputDto } from './generation.dto';
 import { PokemonTypeOutputDto } from './pokemon-type.dto';
@@ -59,12 +59,19 @@ export class PokemonOutputDto extends BaseOutputDto {
   spriteUrl: string;
 
   @Expose()
+  generationId: number;
+
+  @Expose()
+  @Type(() => GenerationOutputDto)
+  generation: GenerationOutputDto;
+
+  @Expose()
   @Type(() => PokemonTypeOutputDto)
   pokemonTypes: PokemonTypeOutputDto[];
 
   @Expose({ groups: ['pokemon.full'] })
-  @Type(() => PokemonMoveOutputDto)
-  pokemonMoves: PokemonMoveOutputDto[];
+  @Type(() => MoveOutputDto)
+  moves: MoveOutputDto[];
 
   @Expose()
   @Type(() => AbilityOutputDto)
@@ -77,10 +84,6 @@ export class PokemonOutputDto extends BaseOutputDto {
   @Expose({ groups: ['pokemon.full'] })
   @Type(() => SeasonPokemonOutputDto)
   seasonPokemon: SeasonPokemonOutputDto[];
-
-  @Expose({ groups: ['pokemon.full'] })
-  @Type(() => GenerationOutputDto)
-  generations: GenerationOutputDto[];
 }
 
 export class PokemonInputDto extends BaseInputDto {
@@ -119,4 +122,7 @@ export class PokemonInputDto extends BaseInputDto {
 
   @IsString()
   sprite: string;
+
+  @IsNumber()
+  generationId: number;
 }

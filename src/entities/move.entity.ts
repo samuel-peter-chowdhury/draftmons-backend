@@ -1,8 +1,9 @@
-import { Entity, Column, OneToMany, JoinColumn, ManyToOne, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, Column, ManyToOne, ManyToMany, JoinColumn, JoinTable, Unique } from 'typeorm';
 import { BaseApplicationEntity } from './base-application.entity';
-import { PokemonMove } from './pokemon-move.entity';
+import { Pokemon } from './pokemon.entity';
 import { PokemonType } from './pokemon-type.entity';
 import { SpecialMoveCategory } from './special-move-category.entity';
+import { Generation } from './generation.entity';
 
 export enum MoveCategory {
   PHYSICAL = 'PHYSICAL',
@@ -11,16 +12,24 @@ export enum MoveCategory {
 }
 
 @Entity('move')
+@Unique(['name', 'generationId'])
 export class Move extends BaseApplicationEntity {
-  @Column({ unique: true })
+  @Column()
   name: string;
 
   @Column()
   pokemonTypeId: number;
 
+  @Column()
+  generationId: number;
+
   @ManyToOne(() => PokemonType, (pokemonType) => pokemonType.moves)
   @JoinColumn({ name: 'pokemon_type_id' })
   pokemonType: PokemonType;
+
+  @ManyToOne(() => Generation, (generation) => generation.moves)
+  @JoinColumn({ name: 'generation_id' })
+  generation: Generation;
 
   @Column({
     type: 'enum',
@@ -43,8 +52,8 @@ export class Move extends BaseApplicationEntity {
   @Column()
   description: string;
 
-  @OneToMany(() => PokemonMove, (pokemonMove) => pokemonMove.move)
-  pokemonMoves: PokemonMove[];
+  @ManyToMany(() => Pokemon, (pokemon) => pokemon.moves)
+  pokemon: Pokemon[];
 
   @ManyToMany(() => SpecialMoveCategory, (specialMoveCategory) => specialMoveCategory.moves)
   @JoinTable({

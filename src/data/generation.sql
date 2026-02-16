@@ -1,0 +1,10 @@
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (1, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'rb');
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (2, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'gs');
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (3, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'rs');
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (4, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'dp');
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (5, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'bw');
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (6, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'xy');
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (7, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'sm');
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (8, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'ss');
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (9, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'sv');
+INSERT INTO public.generation (id, is_active, created_at, updated_at, name) VALUES (10, true, '2025-06-12 23:10:46.000000', '2025-06-12 23:10:46.000000', 'nat_dex');

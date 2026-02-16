@@ -9,11 +9,11 @@ import {
   Unique,
 } from 'typeorm';
 import { Season } from './season.entity';
-import { SeasonPokemon } from './season-pokemon.entity';
 import { User } from './user.entity';
 import { Game } from './game.entity';
 import { BaseApplicationEntity } from './base-application.entity';
 import { Match } from './match.entity';
+import { SeasonPokemonTeam } from './season-pokemon-team.entity';
 
 @Entity('team')
 @Unique(['name', 'seasonId'])
@@ -35,8 +35,8 @@ export class Team extends BaseApplicationEntity {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @OneToMany(() => SeasonPokemon, (seasonPokemon) => seasonPokemon.team)
-  seasonPokemon: SeasonPokemon[];
+  @OneToMany(() => SeasonPokemonTeam, (seasonPokemonTeam) => seasonPokemonTeam.team)
+  seasonPokemonTeams: SeasonPokemonTeam[];
 
   @OneToMany(() => Game, (game) => game.losingTeam)
   lostGames: Game[];
@@ -61,6 +61,6 @@ export class Team extends BaseApplicationEntity {
   @OneToMany(() => Match, (match) => match.losingTeam)
   lostMatches: Match[];
 
-  @OneToMany(() => Game, (match) => match.winningTeam)
+  @OneToMany(() => Match, (match) => match.winningTeam)
   wonMatches: Match[];
 }

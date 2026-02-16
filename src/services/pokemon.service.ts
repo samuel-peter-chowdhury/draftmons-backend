@@ -250,7 +250,7 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
         for (let i = 0; i < moveIdNumbers.length; i++) {
           queryBuilder = queryBuilder.andWhere(
             `EXISTS (
-              SELECT 1 FROM pokemon_move pm
+              SELECT 1 FROM pokemon_moves pm
               WHERE pm.pokemon_id = pokemon.id
               AND pm.move_id = :moveId${i}
             )`,
@@ -264,7 +264,7 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
   }
 
   /**
-   * Apply generation IDs filter (must have ALL specified generations)
+   * Apply generation IDs filter (must belong to one of the specified generations)
    */
   private applyGenerationFilter(
     queryBuilder: SelectQueryBuilder<Pokemon>,
@@ -274,16 +274,9 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       const generationIdNumbers = getQueryIntArray(req, 'generationIds');
 
       if (generationIdNumbers.length > 0) {
-        for (let i = 0; i < generationIdNumbers.length; i++) {
-          queryBuilder = queryBuilder.andWhere(
-            `EXISTS (
-              SELECT 1 FROM pokemon_generations pg
-              WHERE pg.pokemon_id = pokemon.id
-              AND pg.generation_id = :generationId${i}
-            )`,
-            { [`generationId${i}`]: generationIdNumbers[i] },
-          );
-        }
+        queryBuilder = queryBuilder.andWhere('pokemon.generation_id IN (:...generationIds)', {
+          generationIds: generationIdNumbers,
+        });
       }
     }
 
@@ -304,7 +297,7 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
         for (let i = 0; i < specialMoveCategoryIdNumbers.length; i++) {
           queryBuilder = queryBuilder.andWhere(
             `EXISTS (
-              SELECT 1 FROM pokemon_move pm
+              SELECT 1 FROM pokemon_moves pm
               INNER JOIN move_special_move_categories msmc ON pm.move_id = msmc.move_id
               WHERE pm.pokemon_id = pokemon.id
               AND msmc.special_move_category_id = :specialMoveCategoryId${i}

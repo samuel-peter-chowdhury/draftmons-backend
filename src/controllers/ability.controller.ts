@@ -36,11 +36,16 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
   }
 
   protected getBaseRelations(): FindOptionsRelations<Ability> | undefined {
-    return undefined;
+    return {
+      generation: true,
+    };
   }
 
   protected getFullRelations(): FindOptionsRelations<Ability> | undefined {
-    return { pokemon: true };
+    return {
+      pokemon: true,
+      generation: true,
+    };
   }
 
   /**
@@ -57,6 +62,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *         - id
    *         - name
    *         - description
+   *         - generationId
    *         - isActive
    *         - createdAt
    *         - updatedAt
@@ -73,6 +79,10 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *           type: string
    *           description: Detailed description of what the ability does
    *           example: "Lowers the opposing team's Attack stat upon entering battle"
+   *         generationId:
+   *           type: integer
+   *           description: ID of the generation this ability belongs to
+   *           example: 3
    *         isActive:
    *           type: boolean
    *           description: Whether the ability is currently active
@@ -98,12 +108,16 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *               description: List of Pokemon that can have this ability
    *               items:
    *                 $ref: '#/components/schemas/Pokemon'
+   *             generation:
+   *               $ref: '#/components/schemas/Generation'
+   *               description: Generation this ability belongs to
    *
    *     AbilityInput:
    *       type: object
    *       required:
    *         - name
    *         - description
+   *         - generationId
    *       properties:
    *         name:
    *           type: string
@@ -117,6 +131,11 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *           example: "Lowers the opposing team's Attack stat upon entering battle"
    *           minLength: 1
    *           maxLength: 500
+   *         generationId:
+   *           type: integer
+   *           description: ID of the generation this ability belongs to
+   *           example: 3
+   *           minimum: 1
    *
    *     AbilityUpdateInput:
    *       type: object
@@ -133,6 +152,11 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *           example: "Lowers the opposing team's Attack stat by one stage upon entering battle"
    *           minLength: 1
    *           maxLength: 500
+   *         generationId:
+   *           type: integer
+   *           description: ID of the generation this ability belongs to
+   *           example: 3
+   *           minimum: 1
    */
 
   /**
@@ -176,7 +200,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full ability details (list of Pokemon with this ability)
+   *         description: Include full ability details (list of Pokemon with this ability, generation)
    *     responses:
    *       200:
    *         description: List of abilities retrieved successfully
@@ -214,6 +238,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
    *                     pokemon: []
+   *                     generation: {}
    *       400:
    *         description: Invalid query parameters
    *         content:
@@ -244,7 +269,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full ability details (list of Pokemon with this ability)
+   *         description: Include full ability details (list of Pokemon with this ability, generation)
    *     responses:
    *       200:
    *         description: Ability details retrieved successfully
@@ -265,7 +290,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *                   createdAt: "2024-01-01T00:00:00.000Z"
    *                   updatedAt: "2024-01-15T12:30:00.000Z"
    *               full:
-   *                 summary: Full ability details with Pokemon
+   *                 summary: Full ability details with Pokemon and generation
    *                 value:
    *                   id: 1
    *                   name: "Intimidate"
@@ -274,6 +299,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *                   createdAt: "2024-01-01T00:00:00.000Z"
    *                   updatedAt: "2024-01-15T12:30:00.000Z"
    *                   pokemon: []
+   *                   generation: {}
    *       400:
    *         description: Invalid ability ID format
    *         content:
@@ -375,7 +401,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full ability details in the response (list of Pokemon with this ability)
+   *         description: Include full ability details in the response (list of Pokemon with this ability, generation)
    *     requestBody:
    *       required: true
    *       content:

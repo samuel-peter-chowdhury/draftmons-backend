@@ -42,7 +42,9 @@ export class SeasonPokemonController extends BaseController<
   }
 
   protected getFullRelations(): FindOptionsRelations<SeasonPokemon> | undefined {
-    return undefined;
+    return {
+      seasonPokemonTeams: true,
+    };
   }
 
   /**
@@ -75,11 +77,6 @@ export class SeasonPokemonController extends BaseController<
    *           type: integer
    *           description: ID of the associated pokemon
    *           example: 25
-   *         teamId:
-   *           type: integer
-   *           nullable: true
-   *           description: ID of the team that owns this pokemon in the season
-   *           example: 3
    *         condition:
    *           type: string
    *           nullable: true
@@ -116,9 +113,11 @@ export class SeasonPokemonController extends BaseController<
    *             pokemon:
    *               $ref: '#/components/schemas/Pokemon'
    *               description: Full pokemon details
-   *             team:
-   *               $ref: '#/components/schemas/Team'
-   *               description: Full team details
+   *             seasonPokemonTeams:
+   *               type: array
+   *               description: List of team assignments for this pokemon
+   *               items:
+   *                 $ref: '#/components/schemas/SeasonPokemonTeam'
    *             gameStats:
    *               type: array
    *               description: List of game statistics for this pokemon
@@ -140,12 +139,6 @@ export class SeasonPokemonController extends BaseController<
    *           type: integer
    *           description: ID of the associated pokemon
    *           example: 25
-   *           minimum: 1
-   *         teamId:
-   *           type: integer
-   *           nullable: true
-   *           description: ID of the team that owns this pokemon
-   *           example: 3
    *           minimum: 1
    *         condition:
    *           type: string
@@ -172,12 +165,6 @@ export class SeasonPokemonController extends BaseController<
    *           type: integer
    *           description: ID of the associated pokemon
    *           example: 25
-   *           minimum: 1
-   *         teamId:
-   *           type: integer
-   *           nullable: true
-   *           description: ID of the team that owns this pokemon
-   *           example: 3
    *           minimum: 1
    *         condition:
    *           type: string
@@ -234,7 +221,7 @@ export class SeasonPokemonController extends BaseController<
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full season pokemon details (season, pokemon, team, game stats)
+   *         description: Include full season pokemon details (season, pokemon, team assignments, game stats)
    *     responses:
    *       200:
    *         description: List of season pokemon entries retrieved successfully
@@ -253,7 +240,6 @@ export class SeasonPokemonController extends BaseController<
    *                   - id: 1
    *                     seasonId: 1
    *                     pokemonId: 25
-   *                     teamId: 3
    *                     condition: "Mega Evolution allowed"
    *                     pointValue: 10
    *                     isActive: true
@@ -262,7 +248,6 @@ export class SeasonPokemonController extends BaseController<
    *                   - id: 2
    *                     seasonId: 1
    *                     pokemonId: 6
-   *                     teamId: 3
    *                     condition: null
    *                     pointValue: 15
    *                     isActive: true
@@ -298,7 +283,7 @@ export class SeasonPokemonController extends BaseController<
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full season pokemon details (season, pokemon, team, game stats)
+   *         description: Include full season pokemon details (season, pokemon, team assignments, game stats)
    *     responses:
    *       200:
    *         description: Season pokemon entry details retrieved successfully
@@ -315,7 +300,6 @@ export class SeasonPokemonController extends BaseController<
    *                   id: 1
    *                   seasonId: 1
    *                   pokemonId: 25
-   *                   teamId: 3
    *                   condition: "Mega Evolution allowed"
    *                   pointValue: 10
    *                   isActive: true
@@ -357,7 +341,6 @@ export class SeasonPokemonController extends BaseController<
    *               value:
    *                 seasonId: 1
    *                 pokemonId: 25
-   *                 teamId: 3
    *                 condition: "Mega Evolution allowed"
    *                 pointValue: 10
    *             minimal:
@@ -376,7 +359,6 @@ export class SeasonPokemonController extends BaseController<
    *               id: 3
    *               seasonId: 1
    *               pokemonId: 25
-   *               teamId: 3
    *               condition: "Mega Evolution allowed"
    *               pointValue: 10
    *               isActive: true
@@ -436,18 +418,17 @@ export class SeasonPokemonController extends BaseController<
    *           schema:
    *             $ref: '#/components/schemas/SeasonPokemonUpdateInput'
    *           examples:
-   *             updateTeam:
-   *               summary: Update only the team assignment
-   *               value:
-   *                 teamId: 5
    *             updateCondition:
    *               summary: Update only the condition
    *               value:
    *                 condition: "Z-Move allowed"
+   *             updatePointValue:
+   *               summary: Update only the point value
+   *               value:
+   *                 pointValue: 12
    *             updateMultiple:
    *               summary: Update multiple fields
    *               value:
-   *                 teamId: 5
    *                 condition: "Z-Move allowed"
    *                 pointValue: 12
    *     responses:
@@ -463,7 +444,6 @@ export class SeasonPokemonController extends BaseController<
    *               id: 1
    *               seasonId: 1
    *               pokemonId: 25
-   *               teamId: 5
    *               condition: "Z-Move allowed"
    *               pointValue: 12
    *               isActive: true
@@ -599,7 +579,7 @@ export class SeasonPokemonController extends BaseController<
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full season pokemon details (season, pokemon, team, game stats)
+   *         description: Include full season pokemon details (season, pokemon, team assignments, game stats)
    *     responses:
    *       200:
    *         description: List of season pokemon entries retrieved successfully
@@ -618,7 +598,6 @@ export class SeasonPokemonController extends BaseController<
    *                   - id: 1
    *                     seasonId: 1
    *                     pokemonId: 25
-   *                     teamId: 3
    *                     condition: "Mega Evolution allowed"
    *                     pointValue: 10
    *                     isActive: true
@@ -627,7 +606,6 @@ export class SeasonPokemonController extends BaseController<
    *                   - id: 2
    *                     seasonId: 1
    *                     pokemonId: 6
-   *                     teamId: 3
    *                     condition: null
    *                     pointValue: 15
    *                     isActive: true
@@ -671,7 +649,7 @@ export class SeasonPokemonController extends BaseController<
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full season pokemon details (season, pokemon, team, game stats)
+   *         description: Include full season pokemon details (season, pokemon, team assignments, game stats)
    *     responses:
    *       200:
    *         description: Season pokemon entry details retrieved successfully
@@ -688,7 +666,6 @@ export class SeasonPokemonController extends BaseController<
    *                   id: 1
    *                   seasonId: 1
    *                   pokemonId: 25
-   *                   teamId: 3
    *                   condition: "Mega Evolution allowed"
    *                   pointValue: 10
    *                   isActive: true
@@ -739,7 +716,6 @@ export class SeasonPokemonController extends BaseController<
    *               value:
    *                 seasonId: 1
    *                 pokemonId: 25
-   *                 teamId: 3
    *                 condition: "Mega Evolution allowed"
    *                 pointValue: 10
    *             minimal:
@@ -758,7 +734,6 @@ export class SeasonPokemonController extends BaseController<
    *               id: 3
    *               seasonId: 1
    *               pokemonId: 25
-   *               teamId: 3
    *               condition: "Mega Evolution allowed"
    *               pointValue: 10
    *               isActive: true
@@ -826,18 +801,17 @@ export class SeasonPokemonController extends BaseController<
    *           schema:
    *             $ref: '#/components/schemas/SeasonPokemonUpdateInput'
    *           examples:
-   *             updateTeam:
-   *               summary: Update only the team assignment
-   *               value:
-   *                 teamId: 5
    *             updateCondition:
    *               summary: Update only the condition
    *               value:
    *                 condition: "Z-Move allowed"
+   *             updatePointValue:
+   *               summary: Update only the point value
+   *               value:
+   *                 pointValue: 12
    *             updateMultiple:
    *               summary: Update multiple fields
    *               value:
-   *                 teamId: 5
    *                 condition: "Z-Move allowed"
    *                 pointValue: 12
    *     responses:
@@ -853,7 +827,6 @@ export class SeasonPokemonController extends BaseController<
    *               id: 1
    *               seasonId: 1
    *               pokemonId: 25
-   *               teamId: 5
    *               condition: "Z-Move allowed"
    *               pointValue: 12
    *               isActive: true

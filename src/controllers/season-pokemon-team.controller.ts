@@ -1,171 +1,151 @@
 import { Request, Router } from 'express';
-import { PokemonMoveService } from '../services/pokemon-move.service';
+import { SeasonPokemonTeamService } from '../services/season-pokemon-team.service';
 import { BaseController } from './base.controller';
-import { PokemonMove } from '../entities/pokemon-move.entity';
+import { SeasonPokemonTeam } from '../entities/season-pokemon-team.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { PokemonMoveInputDto, PokemonMoveOutputDto } from '../dtos/pokemon-move.dto';
+import { isAuthenticated } from '../middleware/auth.middleware';
+import { SeasonPokemonTeamInputDto, SeasonPokemonTeamOutputDto } from '../dtos/season-pokemon-team.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
-export class PokemonMoveController extends BaseController<
-  PokemonMove,
-  PokemonMoveInputDto,
-  PokemonMoveOutputDto
+export class SeasonPokemonTeamController extends BaseController<
+  SeasonPokemonTeam,
+  SeasonPokemonTeamInputDto,
+  SeasonPokemonTeamOutputDto
 > {
   public router = Router();
 
-  constructor(private pokemonMoveService: PokemonMoveService) {
-    super(pokemonMoveService, PokemonMoveOutputDto);
+  constructor(private seasonPokemonTeamService: SeasonPokemonTeamService) {
+    super(seasonPokemonTeamService, SeasonPokemonTeamOutputDto);
     this.initializeRoutes();
   }
 
   private initializeRoutes(): void {
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
-    this.router.post('/', validateDto(PokemonMoveInputDto), this.create);
-    this.router.put('/:id', validatePartialDto(PokemonMoveInputDto), this.update);
-    this.router.delete('/:id', this.delete);
+    this.router.post('/', isAuthenticated, validateDto(SeasonPokemonTeamInputDto), this.create);
+    this.router.put('/:id', isAuthenticated, validatePartialDto(SeasonPokemonTeamInputDto), this.update);
+    this.router.delete('/:id', isAuthenticated, this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
-    return ['pokemonMove.full', 'move.full'];
+    return ['seasonPokemonTeam.full'];
   }
 
   protected async getWhere(
     req: Request,
-  ): Promise<FindOptionsWhere<PokemonMove> | FindOptionsWhere<PokemonMove>[] | undefined> {
-    return plainToInstance(PokemonMoveInputDto, req.query, { excludeExtraneousValues: true });
+  ): Promise<FindOptionsWhere<SeasonPokemonTeam> | FindOptionsWhere<SeasonPokemonTeam>[] | undefined> {
+    return plainToInstance(SeasonPokemonTeamInputDto, req.query, { excludeExtraneousValues: true });
   }
 
-  protected getBaseRelations(): FindOptionsRelations<PokemonMove> | undefined {
+  protected getBaseRelations(): FindOptionsRelations<SeasonPokemonTeam> | undefined {
     return undefined;
   }
 
-  protected getFullRelations(): FindOptionsRelations<PokemonMove> | undefined {
+  protected getFullRelations(): FindOptionsRelations<SeasonPokemonTeam> | undefined {
     return {
-      move: {
-        pokemonType: true,
-        specialMoveCategories: true,
-      },
+      seasonPokemon: true,
+      team: true,
     };
   }
 
   /**
    * @swagger
    * tags:
-   *   name: PokemonMove
-   *   description: Pokemon move relationship management and operations
+   *   name: SeasonPokemonTeam
+   *   description: Season Pokemon team assignment management and operations
    *
    * components:
    *   schemas:
-   *     PokemonMove:
+   *     SeasonPokemonTeam:
    *       type: object
    *       required:
    *         - id
-   *         - pokemonId
-   *         - moveId
-   *         - generationId
+   *         - seasonPokemonId
+   *         - teamId
    *         - isActive
    *         - createdAt
    *         - updatedAt
    *       properties:
    *         id:
    *           type: integer
-   *           description: Unique identifier of the Pokemon move relationship
+   *           description: Unique identifier of the season pokemon team assignment
    *           example: 1
-   *         pokemonId:
+   *         seasonPokemonId:
    *           type: integer
-   *           description: ID of the Pokemon
-   *           example: 25
-   *         moveId:
+   *           description: ID of the associated season pokemon entry
+   *           example: 10
+   *         teamId:
    *           type: integer
-   *           description: ID of the move
-   *           example: 85
-   *         generationId:
-   *           type: integer
-   *           description: ID of the generation when this Pokemon could learn this move
-   *           example: 1
+   *           description: ID of the associated team
+   *           example: 3
    *         isActive:
    *           type: boolean
-   *           description: Whether the Pokemon move relationship is currently active
+   *           description: Whether the assignment is currently active
    *           example: true
    *         createdAt:
    *           type: string
    *           format: date-time
-   *           description: Timestamp when the Pokemon move relationship was created
+   *           description: Timestamp when the assignment was created
    *           example: "2024-01-01T00:00:00.000Z"
    *         updatedAt:
    *           type: string
    *           format: date-time
-   *           description: Timestamp when the Pokemon move relationship was last updated
+   *           description: Timestamp when the assignment was last updated
    *           example: "2024-01-15T12:30:00.000Z"
    *
-   *     PokemonMoveFull:
+   *     SeasonPokemonTeamFull:
    *       allOf:
-   *         - $ref: '#/components/schemas/PokemonMove'
+   *         - $ref: '#/components/schemas/SeasonPokemonTeam'
    *         - type: object
    *           properties:
-   *             pokemon:
-   *               $ref: '#/components/schemas/Pokemon'
-   *               description: Full Pokemon details
-   *             move:
-   *               $ref: '#/components/schemas/Move'
-   *               description: Full move details
-   *             generation:
-   *               $ref: '#/components/schemas/Generation'
-   *               description: Full generation details
+   *             seasonPokemon:
+   *               $ref: '#/components/schemas/SeasonPokemon'
+   *               description: Full season pokemon details
+   *             team:
+   *               $ref: '#/components/schemas/Team'
+   *               description: Full team details
    *
-   *     PokemonMoveInput:
+   *     SeasonPokemonTeamInput:
    *       type: object
    *       required:
-   *         - pokemonId
-   *         - moveId
-   *         - generationId
+   *         - seasonPokemonId
+   *         - teamId
    *       properties:
-   *         pokemonId:
+   *         seasonPokemonId:
    *           type: integer
-   *           description: ID of the Pokemon
-   *           example: 25
+   *           description: ID of the associated season pokemon entry
+   *           example: 10
    *           minimum: 1
-   *         moveId:
+   *         teamId:
    *           type: integer
-   *           description: ID of the move
-   *           example: 85
-   *           minimum: 1
-   *         generationId:
-   *           type: integer
-   *           description: ID of the generation
-   *           example: 1
+   *           description: ID of the associated team
+   *           example: 3
    *           minimum: 1
    *
-   *     PokemonMoveUpdateInput:
+   *     SeasonPokemonTeamUpdateInput:
    *       type: object
    *       properties:
-   *         pokemonId:
+   *         seasonPokemonId:
    *           type: integer
-   *           description: ID of the Pokemon
-   *           example: 25
+   *           description: ID of the associated season pokemon entry
+   *           example: 10
    *           minimum: 1
-   *         moveId:
+   *         teamId:
    *           type: integer
-   *           description: ID of the move
-   *           example: 85
-   *           minimum: 1
-   *         generationId:
-   *           type: integer
-   *           description: ID of the generation
-   *           example: 2
+   *           description: ID of the associated team
+   *           example: 3
    *           minimum: 1
    */
 
   /**
    * @swagger
-   * /api/pokemon-move:
+   * /api/season-pokemon-team:
    *   get:
    *     tags:
-   *       - PokemonMove
-   *     summary: Get all Pokemon moves
-   *     description: Retrieve a list of all Pokemon move relationships with optional pagination, sorting, and full details
+   *       - SeasonPokemonTeam
+   *     summary: Get all season pokemon team assignments
+   *     description: Retrieve a list of all season pokemon team assignments with optional pagination, sorting, and full details
    *     parameters:
    *       - in: query
    *         name: page
@@ -185,8 +165,8 @@ export class PokemonMoveController extends BaseController<
    *         name: sortBy
    *         schema:
    *           type: string
-   *         description: Field name to sort by (e.g., pokemonId, moveId, generationId)
-   *         example: pokemonId
+   *         description: Field name to sort by (e.g., seasonPokemonId, teamId, createdAt)
+   *         example: createdAt
    *       - in: query
    *         name: sortOrder
    *         schema:
@@ -199,49 +179,45 @@ export class PokemonMoveController extends BaseController<
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full Pokemon move details (Pokemon, move, and generation information)
+   *         description: Include full details (season pokemon and team information)
    *     responses:
    *       200:
-   *         description: List of Pokemon moves retrieved successfully
+   *         description: List of season pokemon team assignments retrieved successfully
    *         content:
    *           application/json:
    *             schema:
    *               type: array
    *               items:
    *                 oneOf:
-   *                   - $ref: '#/components/schemas/PokemonMove'
-   *                   - $ref: '#/components/schemas/PokemonMoveFull'
+   *                   - $ref: '#/components/schemas/SeasonPokemonTeam'
+   *                   - $ref: '#/components/schemas/SeasonPokemonTeamFull'
    *             examples:
    *               basic:
-   *                 summary: Basic Pokemon move list
+   *                 summary: Basic season pokemon team list
    *                 value:
    *                   - id: 1
-   *                     pokemonId: 25
-   *                     moveId: 85
-   *                     generationId: 1
+   *                     seasonPokemonId: 10
+   *                     teamId: 3
    *                     isActive: true
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
    *                   - id: 2
-   *                     pokemonId: 25
-   *                     moveId: 21
-   *                     generationId: 1
+   *                     seasonPokemonId: 15
+   *                     teamId: 3
    *                     isActive: true
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
    *               full:
-   *                 summary: Full Pokemon move details
+   *                 summary: Full season pokemon team details
    *                 value:
    *                   - id: 1
-   *                     pokemonId: 25
-   *                     moveId: 85
-   *                     generationId: 1
+   *                     seasonPokemonId: 10
+   *                     teamId: 3
    *                     isActive: true
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
-   *                     pokemon: {}
-   *                     move: {}
-   *                     generation: {}
+   *                     seasonPokemon: {}
+   *                     team: {}
    *       400:
    *         description: Invalid query parameters
    *         content:
@@ -252,12 +228,12 @@ export class PokemonMoveController extends BaseController<
 
   /**
    * @swagger
-   * /api/pokemon-move/{id}:
+   * /api/season-pokemon-team/{id}:
    *   get:
    *     tags:
-   *       - PokemonMove
-   *     summary: Get a Pokemon move by ID
-   *     description: Retrieve detailed information about a specific Pokemon move relationship
+   *       - SeasonPokemonTeam
+   *     summary: Get a season pokemon team assignment by ID
+   *     description: Retrieve detailed information about a specific season pokemon team assignment
    *     parameters:
    *       - in: path
    *         name: id
@@ -265,55 +241,52 @@ export class PokemonMoveController extends BaseController<
    *         schema:
    *           type: integer
    *           minimum: 1
-   *         description: Unique identifier of the Pokemon move
+   *         description: Unique identifier of the season pokemon team assignment
    *         example: 1
    *       - in: query
    *         name: full
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full Pokemon move details (Pokemon, move, and generation information)
+   *         description: Include full details (season pokemon and team information)
    *     responses:
    *       200:
-   *         description: Pokemon move details retrieved successfully
+   *         description: Season pokemon team assignment details retrieved successfully
    *         content:
    *           application/json:
    *             schema:
    *               oneOf:
-   *                 - $ref: '#/components/schemas/PokemonMove'
-   *                 - $ref: '#/components/schemas/PokemonMoveFull'
+   *                 - $ref: '#/components/schemas/SeasonPokemonTeam'
+   *                 - $ref: '#/components/schemas/SeasonPokemonTeamFull'
    *             examples:
    *               basic:
-   *                 summary: Basic Pokemon move details
+   *                 summary: Basic season pokemon team details
    *                 value:
    *                   id: 1
-   *                   pokemonId: 25
-   *                   moveId: 85
-   *                   generationId: 1
+   *                   seasonPokemonId: 10
+   *                   teamId: 3
    *                   isActive: true
    *                   createdAt: "2024-01-01T00:00:00.000Z"
    *                   updatedAt: "2024-01-15T12:30:00.000Z"
    *               full:
-   *                 summary: Full Pokemon move details with relations
+   *                 summary: Full season pokemon team details with relations
    *                 value:
    *                   id: 1
-   *                   pokemonId: 25
-   *                   moveId: 85
-   *                   generationId: 1
+   *                   seasonPokemonId: 10
+   *                   teamId: 3
    *                   isActive: true
    *                   createdAt: "2024-01-01T00:00:00.000Z"
    *                   updatedAt: "2024-01-15T12:30:00.000Z"
-   *                   pokemon: {}
-   *                   move: {}
-   *                   generation: {}
+   *                   seasonPokemon: {}
+   *                   team: {}
    *       400:
-   *         description: Invalid Pokemon move ID format
+   *         description: Invalid season pokemon team ID format
    *         content:
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    *       404:
-   *         description: Pokemon move not found
+   *         description: Season pokemon team assignment not found
    *         content:
    *           application/json:
    *             schema:
@@ -322,12 +295,12 @@ export class PokemonMoveController extends BaseController<
 
   /**
    * @swagger
-   * /api/pokemon-move:
+   * /api/season-pokemon-team:
    *   post:
    *     tags:
-   *       - PokemonMove
-   *     summary: Create a new Pokemon move
-   *     description: Create a new relationship between a Pokemon and a move for a specific generation
+   *       - SeasonPokemonTeam
+   *     summary: Create a new season pokemon team assignment
+   *     description: Assign a season pokemon entry to a team
    *     security:
    *       - sessionAuth: []
    *     requestBody:
@@ -335,38 +308,29 @@ export class PokemonMoveController extends BaseController<
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/PokemonMoveInput'
+   *             $ref: '#/components/schemas/SeasonPokemonTeamInput'
    *           examples:
-   *             pikachuThunderbolt:
-   *               summary: Pikachu learns Thunderbolt
+   *             assignPikachu:
+   *               summary: Assign Pikachu to Thunder Bolts
    *               value:
-   *                 pokemonId: 25
-   *                 moveId: 85
-   *                 generationId: 1
-   *             charizardFlamethrower:
-   *               summary: Charizard learns Flamethrower
+   *                 seasonPokemonId: 10
+   *                 teamId: 3
+   *             assignCharizard:
+   *               summary: Assign Charizard to Fire Blazers
    *               value:
-   *                 pokemonId: 6
-   *                 moveId: 53
-   *                 generationId: 1
-   *             newGenMove:
-   *               summary: Pokemon learns move in new generation
-   *               value:
-   *                 pokemonId: 150
-   *                 moveId: 396
-   *                 generationId: 9
+   *                 seasonPokemonId: 15
+   *                 teamId: 5
    *     responses:
    *       201:
-   *         description: Pokemon move created successfully
+   *         description: Season pokemon team assignment created successfully
    *         content:
    *           application/json:
    *             schema:
-   *               $ref: '#/components/schemas/PokemonMove'
+   *               $ref: '#/components/schemas/SeasonPokemonTeam'
    *             example:
    *               id: 3
-   *               pokemonId: 25
-   *               moveId: 85
-   *               generationId: 1
+   *               seasonPokemonId: 10
+   *               teamId: 3
    *               isActive: true
    *               createdAt: "2024-01-20T10:00:00.000Z"
    *               updatedAt: "2024-01-20T10:00:00.000Z"
@@ -377,7 +341,7 @@ export class PokemonMoveController extends BaseController<
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    *             example:
-   *               error: "pokemonId: must be a number; moveId: must be a number"
+   *               error: "seasonPokemonId: must be a number; teamId: must be a number"
    *               statusCode: 400
    *               timestamp: "2024-01-20T10:00:00.000Z"
    *       401:
@@ -394,12 +358,12 @@ export class PokemonMoveController extends BaseController<
 
   /**
    * @swagger
-   * /api/pokemon-move/{id}:
+   * /api/season-pokemon-team/{id}:
    *   put:
    *     tags:
-   *       - PokemonMove
-   *     summary: Update a Pokemon move
-   *     description: Update an existing Pokemon move relationship. All fields are optional for partial updates.
+   *       - SeasonPokemonTeam
+   *     summary: Update a season pokemon team assignment
+   *     description: Update an existing season pokemon team assignment. All fields are optional for partial updates.
    *     security:
    *       - sessionAuth: []
    *     parameters:
@@ -409,52 +373,52 @@ export class PokemonMoveController extends BaseController<
    *         schema:
    *           type: integer
    *           minimum: 1
-   *         description: Unique identifier of the Pokemon move
+   *         description: Unique identifier of the season pokemon team assignment
    *         example: 1
    *       - in: query
    *         name: full
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full Pokemon move details in the response (Pokemon, move, and generation information)
+   *         description: Include full details in the response (season pokemon and team information)
    *     requestBody:
    *       required: true
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/PokemonMoveUpdateInput'
+   *             $ref: '#/components/schemas/SeasonPokemonTeamUpdateInput'
    *           examples:
-   *             updateGeneration:
-   *               summary: Update generation
+   *             updateTeam:
+   *               summary: Reassign to a different team
    *               value:
-   *                 generationId: 2
-   *             updateMove:
-   *               summary: Change to different move
+   *                 teamId: 5
+   *             updateSeasonPokemon:
+   *               summary: Change the season pokemon entry
    *               value:
-   *                 moveId: 87
-   *             updatePokemon:
-   *               summary: Change to different Pokemon
+   *                 seasonPokemonId: 20
+   *             updateBoth:
+   *               summary: Update both fields
    *               value:
-   *                 pokemonId: 26
+   *                 seasonPokemonId: 20
+   *                 teamId: 5
    *     responses:
    *       200:
-   *         description: Pokemon move updated successfully
+   *         description: Season pokemon team assignment updated successfully
    *         content:
    *           application/json:
    *             schema:
    *               oneOf:
-   *                 - $ref: '#/components/schemas/PokemonMove'
-   *                 - $ref: '#/components/schemas/PokemonMoveFull'
+   *                 - $ref: '#/components/schemas/SeasonPokemonTeam'
+   *                 - $ref: '#/components/schemas/SeasonPokemonTeamFull'
    *             example:
    *               id: 1
-   *               pokemonId: 25
-   *               moveId: 85
-   *               generationId: 2
+   *               seasonPokemonId: 20
+   *               teamId: 5
    *               isActive: true
    *               createdAt: "2024-01-01T00:00:00.000Z"
    *               updatedAt: "2024-01-20T15:00:00.000Z"
    *       400:
-   *         description: Invalid Pokemon move ID format or invalid input data
+   *         description: Invalid season pokemon team ID format or invalid input data
    *         content:
    *           application/json:
    *             schema:
@@ -470,7 +434,7 @@ export class PokemonMoveController extends BaseController<
    *               statusCode: 401
    *               timestamp: "2024-01-20T15:00:00.000Z"
    *       404:
-   *         description: Pokemon move not found
+   *         description: Season pokemon team assignment not found
    *         content:
    *           application/json:
    *             schema:
@@ -479,15 +443,15 @@ export class PokemonMoveController extends BaseController<
 
   /**
    * @swagger
-   * /api/pokemon-move/{id}:
+   * /api/season-pokemon-team/{id}:
    *   delete:
    *     tags:
-   *       - PokemonMove
-   *     summary: Delete a Pokemon move
+   *       - SeasonPokemonTeam
+   *     summary: Delete a season pokemon team assignment
    *     description: |
-   *       Permanently delete a Pokemon move relationship.
+   *       Permanently delete a season pokemon team assignment.
    *       This action cannot be undone.
-   *       This will remove the ability for a Pokemon to use a specific move.
+   *       This removes the association between a season pokemon and a team.
    *     security:
    *       - sessionAuth: []
    *     parameters:
@@ -497,13 +461,13 @@ export class PokemonMoveController extends BaseController<
    *         schema:
    *           type: integer
    *           minimum: 1
-   *         description: Unique identifier of the Pokemon move to delete
+   *         description: Unique identifier of the season pokemon team assignment to delete
    *         example: 1
    *     responses:
    *       204:
-   *         description: Pokemon move deleted successfully (no content returned)
+   *         description: Season pokemon team assignment deleted successfully (no content returned)
    *       400:
-   *         description: Invalid Pokemon move ID format
+   *         description: Invalid season pokemon team ID format
    *         content:
    *           application/json:
    *             schema:
@@ -523,13 +487,13 @@ export class PokemonMoveController extends BaseController<
    *               statusCode: 401
    *               timestamp: "2024-01-20T16:00:00.000Z"
    *       404:
-   *         description: Pokemon move not found
+   *         description: Season pokemon team assignment not found
    *         content:
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/ErrorResponse'
    *             example:
-   *               error: "Pokemon move not found"
+   *               error: "Season pokemon team assignment not found"
    *               statusCode: 404
    *               timestamp: "2024-01-20T16:00:00.000Z"
    */
