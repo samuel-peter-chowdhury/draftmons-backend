@@ -48,13 +48,16 @@ import { TypeEffectiveController } from './controllers/type-effective.controller
 import { TypeEffectiveService } from './services/type-effective.service';
 import { WeekController } from './controllers/week.controller';
 import { WeekService } from './services/week.service';
-import { isAuthReadAdminWrite, isAuthReadLeagueModWrite } from './middleware/auth.middleware';
+import { isAdmin, isAuthReadAdminWrite, isAuthReadLeagueModWrite } from './middleware/auth.middleware';
 import { SpecialMoveCategoryService } from './services/special-move-category.service';
 import { SpecialMoveCategoryController } from './controllers/special-move-category.controller';
+import { AdminService } from './services/admin.service';
+import { AdminController } from './controllers/admin.controller';
 
 export class App {
   public app: Application;
   private redisClient: ReturnType<typeof createClient>;
+  private adminService: AdminService;
   private abilityService: AbilityService;
   private gameStatService: GameStatService;
   private gameService: GameService;
@@ -166,6 +169,7 @@ export class App {
 
   private async initializeServices(): Promise<void> {
     // Initialize services
+    this.adminService = Container.get(AdminService);
     this.abilityService = Container.get(AbilityService);
     this.gameStatService = Container.get(GameStatService);
     this.gameService = Container.get(GameService);
@@ -204,6 +208,7 @@ export class App {
 
   private async initializeControllers(): Promise<void> {
     // Create and set up controllers
+    const adminController = new AdminController(this.adminService);
     const authController = new AuthController();
     const abilityController = new AbilityController(this.abilityService);
     const gameStatController = new GameStatController(this.gameStatService);
@@ -223,6 +228,9 @@ export class App {
     const typeEffectiveController = new TypeEffectiveController(this.typeEffectiveService);
     const userController = new UserController(this.userService);
     const weekController = new WeekController(this.weekService);
+
+    // Set up Admin routes
+    this.app.use('/api/admin', isAdmin, adminController.router);
 
     // Set up Auth routes
     this.app.use('/api/auth', authController.router);
