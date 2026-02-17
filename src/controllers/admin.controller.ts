@@ -17,7 +17,7 @@ export class AdminController {
 
   wipeAllData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     await this.adminService.wipeAllData();
-    res.status(200).json({ message: 'All data has been wiped successfully (users preserved)' });
+    res.status(200).json({ message: 'All data has been wiped successfully (admin users preserved)' });
   });
 
   initializePokemonData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -46,7 +46,7 @@ export class AdminController {
    *         message:
    *           type: string
    *           description: Status message describing the result of the operation
-   *           example: "All data has been wiped successfully (users preserved)"
+   *           example: "All data has been wiped successfully (admin users preserved)"
    */
 
   /**
@@ -55,12 +55,13 @@ export class AdminController {
    *   delete:
    *     tags:
    *       - Admin
-   *     summary: Wipe all data from the database (except users)
+   *     summary: Wipe all data from the database (except admin users)
    *     description: |
    *       Truncates all tables in the database except the user table, removing all data and
-   *       resetting auto-increment sequences. User accounts are preserved.
+   *       resetting auto-increment sequences. Then deletes all non-admin users.
+   *       Only admin user accounts are preserved.
    *       Uses CASCADE to handle foreign key constraints automatically.
-   *       **WARNING: This action is irreversible and will destroy all non-user data.**
+   *       **WARNING: This action is irreversible and will destroy all non-admin data.**
    *     security:
    *       - sessionAuth: []
    *     responses:
@@ -71,7 +72,7 @@ export class AdminController {
    *             schema:
    *               $ref: '#/components/schemas/AdminResponse'
    *             example:
-   *               message: "All data has been wiped successfully (users preserved)"
+   *               message: "All data has been wiped successfully (admin users preserved)"
    *       401:
    *         description: User not authenticated
    *         content:
@@ -148,10 +149,12 @@ export class AdminController {
    *       - Admin
    *     summary: Create mock data
    *     description: |
-   *       Populates the database with mock data for non-Pokemon related tables including
-   *       users, leagues, seasons, teams, matches, and games.
+   *       Populates the database with deterministic mock data (seeded via @faker-js/faker) for
+   *       non-Pokemon related tables. Creates 8 Pokemon trainer users, 2 leagues, 3 seasons
+   *       (playoffs, regular season, pre-draft) across Gen 9 and Nat Dex, 8 teams with drafted
+   *       rosters of 10 Pokemon each, round-robin match schedules, best-of-3 games with results,
+   *       and per-Pokemon game stats with kill/death distributions.
    *       Requires Pokemon data to be initialized first via the `/api/admin/initialize-pokemon` endpoint.
-   *       **Note: This endpoint is not yet implemented.**
    *     security:
    *       - sessionAuth: []
    *     responses:
