@@ -17,7 +17,7 @@ export class AdminController {
 
   wipeAllData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     await this.adminService.wipeAllData();
-    res.status(200).json({ message: 'All data has been wiped successfully' });
+    res.status(200).json({ message: 'All data has been wiped successfully (users preserved)' });
   });
 
   initializePokemonData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -46,7 +46,7 @@ export class AdminController {
    *         message:
    *           type: string
    *           description: Status message describing the result of the operation
-   *           example: "All data has been wiped successfully"
+   *           example: "All data has been wiped successfully (users preserved)"
    */
 
   /**
@@ -55,11 +55,12 @@ export class AdminController {
    *   delete:
    *     tags:
    *       - Admin
-   *     summary: Wipe all data from the database
+   *     summary: Wipe all data from the database (except users)
    *     description: |
-   *       Truncates all tables in the database, removing all data and resetting auto-increment sequences.
+   *       Truncates all tables in the database except the user table, removing all data and
+   *       resetting auto-increment sequences. User accounts are preserved.
    *       Uses CASCADE to handle foreign key constraints automatically.
-   *       **WARNING: This action is irreversible and will destroy all data.**
+   *       **WARNING: This action is irreversible and will destroy all non-user data.**
    *     security:
    *       - sessionAuth: []
    *     responses:
@@ -70,7 +71,7 @@ export class AdminController {
    *             schema:
    *               $ref: '#/components/schemas/AdminResponse'
    *             example:
-   *               message: "All data has been wiped successfully"
+   *               message: "All data has been wiped successfully (users preserved)"
    *       401:
    *         description: User not authenticated
    *         content:
@@ -101,9 +102,11 @@ export class AdminController {
    *       - Admin
    *     summary: Initialize Pokemon data
    *     description: |
-   *       Populates the database with all Pokemon-related data including types, generations,
-   *       abilities, moves, Pokemon, and type effectiveness data from a third-party data source.
-   *       **Note: This endpoint is not yet implemented.**
+   *       Populates the database with all Pokemon-related data using fixture data and the
+   *       @pkmn/dex package. Initializes the following tables in order: generations, Pokemon types,
+   *       special move categories, abilities (gen 1-9 + nat dex), moves with special move category
+   *       links (gen 1-9 + nat dex), Pokemon with type/ability/move links and type effectiveness
+   *       calculations (gen 1-9 + nat dex). This operation may take several minutes to complete.
    *     security:
    *       - sessionAuth: []
    *     responses:

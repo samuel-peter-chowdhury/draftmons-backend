@@ -37,10 +37,10 @@ export class Pokemon extends BaseApplicationEntity {
   @Column()
   baseStatTotal: number;
 
-  @Column()
+  @Column({ type: 'double precision' })
   height: number;
 
-  @Column()
+  @Column({ type: 'double precision' })
   weight: number;
 
   @Column()
