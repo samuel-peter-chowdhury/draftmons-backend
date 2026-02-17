@@ -336,6 +336,25 @@ export class AdminService {
       }
     }
 
+    // Overwrite mega Pokemon nat dex moves with their base form's nat dex moves.
+    // Megas (e.g., "Charizard-Mega-X") often only exist in earlier gens, so their
+    // learnset may be outdated. The base form (e.g., "Charizard") typically exists
+    // in later gens with an updated learnset that the mega should inherit.
+    const natDexMoveLookup = new Map<string, string[]>();
+    for (const [name, data] of natDexMap) {
+      natDexMoveLookup.set(name.toLowerCase(), data.moveNames);
+    }
+    for (const [name, data] of natDexMap) {
+      const megaIndex = name.toLowerCase().indexOf('-mega');
+      if (megaIndex === -1) continue;
+
+      const baseName = name.substring(0, megaIndex).toLowerCase();
+      const baseMoves = natDexMoveLookup.get(baseName);
+      if (baseMoves) {
+        data.moveNames = baseMoves;
+      }
+    }
+
     // Add nat dex pokemon (all unique pokemon from any generation, using latest data)
     for (const [name, data] of natDexMap) {
       allPokemonInserts.push({ ...data.insert, generationId: NAT_DEX_GENERATION_ID });
