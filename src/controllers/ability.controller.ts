@@ -1,4 +1,4 @@
-import { Request, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { AbilityService } from '../services/ability.service';
 import { BaseController } from './base.controller';
 import { Ability } from '../entities/ability.entity';
@@ -6,6 +6,7 @@ import { validateDto, validatePartialDto } from '../middleware/validation.middle
 import { AbilityInputDto, AbilityOutputDto } from '../dtos/ability.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import { asyncHandler } from '../utils/error.utils';
 
 export class AbilityController extends BaseController<Ability, AbilityInputDto, AbilityOutputDto> {
   public router = Router();
@@ -22,6 +23,33 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
     this.router.put('/:id', validatePartialDto(AbilityInputDto), this.update);
     this.router.delete('/:id', this.delete);
   }
+
+  getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const isFull = req.query.full === 'true';
+    const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+    const paginationOptions = await this.getPaginationOptions(req);
+    const sortOptions = await this.getSortOptions(req);
+    const group = isFull ? this.getFullTransformGroup() : undefined;
+
+    const paginatedEntities = await this.abilityService.search(
+      req,
+      relations,
+      paginationOptions,
+      sortOptions,
+    );
+
+    const response = {
+      data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
+        groups: group,
+        excludeExtraneousValues: true,
+      }),
+      total: paginatedEntities.total,
+      page: paginatedEntities.page,
+      pageSize: paginatedEntities.pageSize,
+      totalPages: paginatedEntities.totalPages,
+    };
+    res.json(response);
+  });
 
   protected getFullTransformGroup(): string[] {
     return ['ability.full', 'pokemon.full'];
@@ -170,7 +198,7 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *     tags:
    *       - Ability
    *     summary: Get all abilities
-   *     description: Retrieve a list of all Pokemon abilities with optional pagination, sorting, and full details
+   *     description: Retrieve a list of all Pokemon abilities with optional pagination, sorting, filtering, and full details
    *     parameters:
    *       - in: query
    *         name: page
@@ -205,6 +233,21 @@ export class AbilityController extends BaseController<Ability, AbilityInputDto, 
    *           type: boolean
    *           default: false
    *         description: Include full ability details (list of Pokemon with this ability, generation)
+   *       - in: query
+   *         name: nameLike
+   *         schema:
+   *           type: string
+   *         description: Filter abilities by name (case-insensitive partial match)
+   *         example: intim
+   *       - in: query
+   *         name: generationIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter abilities by generation IDs (array of integers)
    *     responses:
    *       200:
    *         description: List of abilities retrieved successfully

@@ -1,4 +1,4 @@
-import { Request, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { MoveService } from '../services/move.service';
 import { BaseController } from './base.controller';
 import { Move } from '../entities/move.entity';
@@ -6,6 +6,7 @@ import { validateDto, validatePartialDto } from '../middleware/validation.middle
 import { MoveInputDto, MoveOutputDto } from '../dtos/move.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import { asyncHandler } from '../utils/error.utils';
 
 export class MoveController extends BaseController<Move, MoveInputDto, MoveOutputDto> {
   public router = Router();
@@ -22,6 +23,33 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
     this.router.put('/:id', validatePartialDto(MoveInputDto), this.update);
     this.router.delete('/:id', this.delete);
   }
+
+  getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const isFull = req.query.full === 'true';
+    const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+    const paginationOptions = await this.getPaginationOptions(req);
+    const sortOptions = await this.getSortOptions(req);
+    const group = isFull ? this.getFullTransformGroup() : undefined;
+
+    const paginatedEntities = await this.moveService.search(
+      req,
+      relations,
+      paginationOptions,
+      sortOptions,
+    );
+
+    const response = {
+      data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
+        groups: group,
+        excludeExtraneousValues: true,
+      }),
+      total: paginatedEntities.total,
+      page: paginatedEntities.page,
+      pageSize: paginatedEntities.pageSize,
+      totalPages: paginatedEntities.totalPages,
+    };
+    res.json(response);
+  });
 
   protected getFullTransformGroup(): string[] {
     return ['move.full'];
@@ -276,7 +304,7 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *     tags:
    *       - Move
    *     summary: Get all moves
-   *     description: Retrieve a list of all Pokemon moves with optional pagination, sorting, and full details
+   *     description: Retrieve a list of all Pokemon moves with optional pagination, sorting, filtering, and full details
    *     parameters:
    *       - in: query
    *         name: page
@@ -311,6 +339,21 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
    *           type: boolean
    *           default: false
    *         description: Include full move details (type, generation, and Pokemon that can learn it)
+   *       - in: query
+   *         name: nameLike
+   *         schema:
+   *           type: string
+   *         description: Filter moves by name (case-insensitive partial match)
+   *         example: thunder
+   *       - in: query
+   *         name: generationIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter moves by generation IDs (array of integers)
    *     responses:
    *       200:
    *         description: List of moves retrieved successfully
