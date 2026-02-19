@@ -47,22 +47,13 @@ export const configurePassport = (userService: UserService): void => {
     ),
   );
 
-  // Serialize user to session
+  // Serialize full user DTO to session (avoids per-request DB queries)
   passport.serializeUser((user: any, done) => {
-    done(null, user.id);
+    done(null, user);
   });
 
-  // Deserialize user from session
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await userService.findOne({ id }, { leagueUsers: true });
-      const userOutputDto = plainToInstance(UserOutputDto, user, {
-        groups: ['user.full'],
-        excludeExtraneousValues: true,
-      });
-      done(null, userOutputDto);
-    } catch (error) {
-      done(error);
-    }
+  // Deserialize user directly from session (no DB hit)
+  passport.deserializeUser((user: Express.User, done) => {
+    done(null, user);
   });
 };

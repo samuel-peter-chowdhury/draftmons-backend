@@ -8,7 +8,12 @@ export const errorMiddleware = (
   res: Response,
   next: NextFunction,
 ): void => {
-  console.error(`[Error] ${error.stack}`);
+  // Only log full stack traces for unexpected errors (500s)
+  if (error instanceof BaseError && error.statusCode < 500) {
+    console.warn(`[${error.statusCode}] ${error.message}`);
+  } else {
+    console.error(`[Error] ${error.stack}`);
+  }
 
   if (error instanceof BaseError) {
     res.status(error.statusCode).json(error.toJSON());

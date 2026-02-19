@@ -10,7 +10,7 @@ import swaggerUi from 'swagger-ui-express';
 import { errorMiddleware } from './middleware/error.middleware';
 import { APP_CONFIG } from './config/app.config';
 import { swaggerSpec } from './config/swagger.config';
-import { apiLimiter } from './middleware/rate-limit.middleware';
+import { readLimiter, writeLimiter } from './middleware/rate-limit.middleware';
 import { configurePassport } from './config/passport.config';
 import { AuthController } from './controllers/auth.controller';
 import { LeagueController } from './controllers/league.controller';
@@ -93,18 +93,26 @@ export class App {
   }
 
   private async initializeMiddlewares(): Promise<void> {
+    // Trust reverse proxy (Nginx, Vercel, AWS ALB, etc.)
+    if (APP_CONFIG.isProduction) {
+      this.app.set('trust proxy', 1);
+    }
+
     // Security and logging middleware
     this.app.use(helmet());
-    this.app.use(apiLimiter);
     this.app.use(
       cors({
         origin: APP_CONFIG.isProduction
-          ? [/\.draftmons\.com$/]
+          ? (APP_CONFIG.clientUrl ? [APP_CONFIG.clientUrl] : [])
           : ['http://localhost:3333', 'http://localhost:3000'],
         credentials: true,
       }),
     );
     this.app.use(morgan(APP_CONFIG.isProduction ? 'combined' : 'dev'));
+
+    // Rate limiting (tiered: higher for reads, lower for writes)
+    this.app.use(readLimiter);
+    this.app.use(writeLimiter);
 
     // Body parsing middleware
     this.app.use(express.json({ limit: '1mb' }));

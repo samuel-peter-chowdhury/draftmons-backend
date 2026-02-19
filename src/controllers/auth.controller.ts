@@ -49,14 +49,15 @@ export class AuthController {
   logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     await new Promise<void>((resolve, reject) => {
       req.logout((err) => {
-        if (err) {
-          reject(err);
-        } else {
+        if (err) return reject(err);
+        req.session.destroy((err) => {
+          if (err) return reject(err);
           resolve();
-        }
+        });
       });
     });
 
+    res.clearCookie('connect.sid');
     res.json({
       message: 'Logged out successfully',
     });
