@@ -1097,7 +1097,15 @@ export class AdminService {
    * Required after inserting rows with explicit IDs to prevent conflicts
    * on subsequent inserts without explicit IDs.
    */
+  private static readonly ALLOWED_RESET_TABLES = new Set([
+    'generation', 'pokemon_type', 'special_move_category', 'ability',
+    'move', 'pokemon', 'type_effective',
+  ]);
+
   private async resetSequence(tableName: string): Promise<void> {
+    if (!AdminService.ALLOWED_RESET_TABLES.has(tableName)) {
+      throw new Error(`resetSequence called with disallowed table name: ${tableName}`);
+    }
     await AppDataSource.query(
       `SELECT setval(pg_get_serial_sequence('${tableName}', 'id'), (SELECT MAX(id) FROM "${tableName}"))`,
     );

@@ -3,13 +3,12 @@ import { App } from './app';
 import { APP_CONFIG } from './config/app.config';
 import { useContainer } from 'typeorm';
 import { Container } from 'typedi';
-import AppDataSource from './config/database.config';
+import AppDataSource, { dataSourceOptions } from './config/database.config';
 import { registerRepositories } from './config/repository.config';
 
 function validateProductionEnv(): void {
   if (APP_CONFIG.isProduction) {
     const required = [
-      'SESSION_SECRET',
       'GOOGLE_CLIENT_ID',
       'GOOGLE_CLIENT_SECRET',
       'GOOGLE_CALLBACK_URL',
@@ -19,6 +18,14 @@ function validateProductionEnv(): void {
     if (missing.length > 0) {
       throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
     }
+  }
+
+  // Prevent synchronize: true outside of development
+  if (dataSourceOptions.synchronize && process.env.NODE_ENV !== 'development') {
+    throw new Error(
+      'TypeORM synchronize must not be enabled outside of development. ' +
+      'Use migrations for schema changes in production/staging.',
+    );
   }
 }
 

@@ -1,11 +1,11 @@
-import { NextFunction, Request, Response, Router } from 'express';
+import { Request, Response, Router } from 'express';
 import { UserService } from '../services/user.service';
 import { BaseController } from './base.controller';
 import { User } from '../entities/user.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
-import { isAuthenticated, isAdmin, isAdminOrUser, AuthenticatedRequest } from '../middleware/auth.middleware';
+import { isAuthenticated, isAdmin, isAdminOrUser } from '../middleware/auth.middleware';
 import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
-import { FindOptionsWhere, FindOptionsRelations, Brackets, Repository } from 'typeorm';
+import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 
@@ -32,21 +32,9 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
       isAuthenticated,
       isAdminOrUser(),
       validatePartialDto(UserInputDto),
-      this.stripAdminField,
       this.update,
     );
   }
-
-  private stripAdminField = (
-    req: AuthenticatedRequest,
-    res: Response,
-    next: NextFunction,
-  ): void => {
-    if (!req.user?.isAdmin) {
-      delete req.body.isAdmin;
-    }
-    next();
-  };
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const isFull = req.query.full === 'true';
@@ -197,8 +185,6 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *
    *     UserInput:
    *       type: object
-   *       required:
-   *         - isAdmin
    *       properties:
    *         firstName:
    *           type: string
@@ -218,10 +204,6 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *           description: User's email address (must be unique)
    *           example: "john.doe@example.com"
    *           maxLength: 255
-   *         isAdmin:
-   *           type: boolean
-   *           description: Whether the user has admin privileges
-   *           example: false
    *         googleId:
    *           type: string
    *           nullable: true
@@ -268,10 +250,6 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
    *           description: User's email address (must be unique)
    *           example: "john.doe@example.com"
    *           maxLength: 255
-   *         isAdmin:
-   *           type: boolean
-   *           description: Whether the user has admin privileges
-   *           example: false
    *         googleId:
    *           type: string
    *           nullable: true

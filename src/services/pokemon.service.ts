@@ -423,6 +423,12 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
     return queryBuilder;
   }
 
+  private static readonly ALLOWED_SORT_FIELDS = new Set([
+    'id', 'name', 'dexId', 'baseStatTotal', 'hp', 'attack', 'defense',
+    'specialAttack', 'specialDefense', 'speed', 'height', 'weight',
+    'createdAt', 'updatedAt',
+  ]);
+
   /**
    * Apply sorting to the query
    */
@@ -431,6 +437,9 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
     sortOptions?: SortOptions,
   ): SelectQueryBuilder<Pokemon> {
     if (sortOptions) {
+      if (!PokemonService.ALLOWED_SORT_FIELDS.has(sortOptions.sortBy)) {
+        throw new Error(`Invalid sort field: ${sortOptions.sortBy}`);
+      }
       queryBuilder = queryBuilder.orderBy(
         `pokemon.${sortOptions.sortBy}`,
         sortOptions.sortOrder as 'ASC' | 'DESC',

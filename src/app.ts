@@ -2,6 +2,7 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import passport from 'passport';
 import { createClient } from 'redis';
@@ -10,7 +11,8 @@ import swaggerUi from 'swagger-ui-express';
 import { errorMiddleware } from './middleware/error.middleware';
 import { APP_CONFIG } from './config/app.config';
 import { swaggerSpec } from './config/swagger.config';
-import { readLimiter, writeLimiter } from './middleware/rate-limit.middleware';
+import { readLimiter, writeLimiter, authLimiter, adminLimiter } from './middleware/rate-limit.middleware';
+import { csrfProtection } from './middleware/csrf.middleware';
 import { configurePassport } from './config/passport.config';
 import { AuthController } from './controllers/auth.controller';
 import { LeagueController } from './controllers/league.controller';
@@ -114,7 +116,8 @@ export class App {
     this.app.use(readLimiter);
     this.app.use(writeLimiter);
 
-    // Body parsing middleware
+    // Cookie and body parsing middleware
+    this.app.use(cookieParser());
     this.app.use(express.json({ limit: '1mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   }
@@ -142,6 +145,9 @@ export class App {
     // Initialize passport middleware
     this.app.use(passport.initialize());
     this.app.use(passport.session());
+
+    // CSRF protection (after session so cookie context is established)
+    this.app.use(csrfProtection);
   }
 
   private async initializeRedis(): Promise<void> {
@@ -245,11 +251,11 @@ export class App {
     const userController = new UserController(this.userService);
     const weekController = new WeekController(this.weekService);
 
-    // Set up Admin routes
-    this.app.use('/api/admin', isAdmin, adminController.router);
+    // Set up Admin routes (dedicated tight rate limit)
+    this.app.use('/api/admin', adminLimiter, isAdmin, adminController.router);
 
-    // Set up Auth routes
-    this.app.use('/api/auth', authController.router);
+    // Set up Auth routes (dedicated tight rate limit)
+    this.app.use('/api/auth', authLimiter, authController.router);
 
     // Set up Admin data routes
     this.app.use('/api/ability', isAuthReadAdminWrite, abilityController.router);

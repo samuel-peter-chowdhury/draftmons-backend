@@ -8,6 +8,10 @@ import { Request } from 'express';
 
 @Service()
 export class UserService extends BaseService<User, UserInputDto> {
+  private static readonly ALLOWED_SORT_FIELDS = new Set([
+    'id', 'firstName', 'lastName', 'email', 'createdAt', 'updatedAt',
+  ]);
+
   constructor(
     @Inject('UserRepository')
     private userRepository: Repository<User>,
@@ -49,8 +53,11 @@ export class UserService extends BaseService<User, UserInputDto> {
       );
     }
 
-    // Add sorting if provided
+    // Add sorting if provided (validate against allowlist)
     if (sortOptions) {
+      if (!UserService.ALLOWED_SORT_FIELDS.has(sortOptions.sortBy)) {
+        throw new Error(`Invalid sort field: ${sortOptions.sortBy}`);
+      }
       queryBuilder = queryBuilder.orderBy(
         `user.${sortOptions.sortBy}`,
         sortOptions.sortOrder as 'ASC' | 'DESC',

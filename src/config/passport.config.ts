@@ -33,13 +33,9 @@ export const configurePassport = (userService: UserService): void => {
           const user = await userService.findOrCreate({ googleId }, userInputDto, {
             leagueUsers: true,
           });
-          const userOutputDto = plainToInstance(UserOutputDto, user, {
-            groups: ['user.full'],
-            excludeExtraneousValues: true,
-          });
 
-          // Return user to passport
-          return done(null, userOutputDto);
+          // Return user to passport (full object used only for initial serialize)
+          return done(null, user);
         } catch (error) {
           return done(error as Error);
         }
@@ -47,13 +43,22 @@ export const configurePassport = (userService: UserService): void => {
     ),
   );
 
-  // Serialize full user DTO to session (avoids per-request DB queries)
+  // Serialize only the user ID to the session
   passport.serializeUser((user: any, done) => {
-    done(null, user);
+    done(null, user.id);
   });
 
-  // Deserialize user directly from session (no DB hit)
-  passport.deserializeUser((user: Express.User, done) => {
-    done(null, user);
+  // Deserialize by re-querying the database for fresh user data on every request
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await userService.findOne({ id } as any, { leagueUsers: true } as any);
+      const userOutputDto = plainToInstance(UserOutputDto, user, {
+        groups: ['user.full'],
+        excludeExtraneousValues: true,
+      });
+      done(null, userOutputDto);
+    } catch (error) {
+      done(error);
+    }
   });
 };

@@ -16,7 +16,7 @@ export const dataSourceOptions: DataSourceOptions = {
   database: process.env.DB_NAME || 'draftmons',
   entities: [path.join(__dirname, '../entities/*.entity{.ts,.js}')],
   migrations: [path.join(__dirname, '../migrations/*{.ts,.js}')],
-  synchronize: process.env.NODE_ENV === 'development' && process.env.DB_SYNC !== 'false',
+  synchronize: process.env.NODE_ENV === 'development',
   logging: process.env.NODE_ENV === 'development',
   ssl: process.env.NODE_ENV === 'production',
   namingStrategy: new SnakeNamingStrategy(),

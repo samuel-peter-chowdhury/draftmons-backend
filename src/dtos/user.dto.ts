@@ -17,7 +17,7 @@ export class UserOutputDto extends BaseOutputDto {
   @Expose()
   isAdmin: boolean;
 
-  @Expose()
+  @Expose({ groups: ['user.private'] })
   googleId: string;
 
   @Expose()
@@ -51,9 +51,6 @@ export class UserInputDto extends BaseInputDto {
   @IsString()
   email: string;
 
-  @IsBoolean()
-  isAdmin: boolean;
-
   @IsOptional()
   @IsString()
   googleId: string;
@@ -69,4 +66,9 @@ export class UserInputDto extends BaseInputDto {
   @IsOptional()
   @IsString()
   timezone: string;
+}
+
+export class AdminUserRoleDto {
+  @IsBoolean()
+  isAdmin: boolean;
 }

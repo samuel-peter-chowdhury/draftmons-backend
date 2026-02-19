@@ -26,3 +26,21 @@ export const writeLimiter = rateLimit({
   message: rateLimitMessage,
   skip: (req) => req.method === 'GET',
 });
+
+// Tight limit for auth endpoints (prevent brute force)
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: rateLimitMessage,
+});
+
+// Very tight limit for admin endpoints (destructive operations)
+export const adminLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: rateLimitMessage,
+});

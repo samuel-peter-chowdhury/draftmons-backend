@@ -1,11 +1,18 @@
 import { Request, Response, Router } from 'express';
 import { AdminService } from '../services/admin.service';
+import { UserService } from '../services/user.service';
 import { asyncHandler } from '../utils/error.utils';
+import { validateDto } from '../middleware/validation.middleware';
+import { AdminUserRoleDto } from '../dtos/user.dto';
+import { ValidationError } from '../errors';
+import { Container } from 'typedi';
 
 export class AdminController {
   public router = Router();
+  private userService: UserService;
 
   constructor(private adminService: AdminService) {
+    this.userService = Container.get(UserService);
     this.initializeRoutes();
   }
 
@@ -13,7 +20,18 @@ export class AdminController {
     this.router.delete('/wipe', this.wipeAllData);
     this.router.post('/initialize-pokemon', this.initializePokemonData);
     this.router.post('/initialize-mock', this.createMockData);
+    this.router.put('/user/:id/role', validateDto(AdminUserRoleDto), this.updateUserRole);
   }
+
+  updateUserRole = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+      throw new ValidationError('Invalid user ID');
+    }
+    const { isAdmin } = req.body as AdminUserRoleDto;
+    const user = await this.userService.update({ id: userId } as any, { isAdmin } as any);
+    res.json(user);
+  });
 
   wipeAllData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     await this.adminService.wipeAllData();
@@ -47,6 +65,15 @@ export class AdminController {
    *           type: string
    *           description: Status message describing the result of the operation
    *           example: "All data has been wiped successfully (admin users preserved)"
+   *     AdminUserRoleInput:
+   *       type: object
+   *       required:
+   *         - isAdmin
+   *       properties:
+   *         isAdmin:
+   *           type: boolean
+   *           description: Whether the user should have admin privileges
+   *           example: true
    */
 
   /**
@@ -185,6 +212,100 @@ export class AdminController {
    *             example:
    *               error: "Admin access required"
    *               statusCode: 403
+   *               timestamp: "2024-01-20T10:00:00.000Z"
+   */
+
+  /**
+   * @swagger
+   * /api/admin/user/{id}/role:
+   *   put:
+   *     tags:
+   *       - Admin
+   *     summary: Update a user's admin role
+   *     description: |
+   *       Promote or demote a user's admin privileges.
+   *       Only accessible by existing admin users.
+   *     security:
+   *       - sessionAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Unique identifier of the user to update
+   *         example: 1
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/AdminUserRoleInput'
+   *           examples:
+   *             promote:
+   *               summary: Promote user to admin
+   *               value:
+   *                 isAdmin: true
+   *             demote:
+   *               summary: Demote user from admin
+   *               value:
+   *                 isAdmin: false
+   *     responses:
+   *       200:
+   *         description: User role updated successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/User'
+   *             example:
+   *               id: 1
+   *               firstName: "John"
+   *               lastName: "Doe"
+   *               email: "john.doe@example.com"
+   *               isAdmin: true
+   *               isActive: true
+   *               createdAt: "2024-01-01T00:00:00.000Z"
+   *               updatedAt: "2024-01-20T10:00:00.000Z"
+   *       400:
+   *         description: Invalid user ID or input data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *             example:
+   *               error: "isAdmin: must be a boolean"
+   *               statusCode: 400
+   *               timestamp: "2024-01-20T10:00:00.000Z"
+   *       401:
+   *         description: User not authenticated
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *             example:
+   *               error: "Please log in to access this resource"
+   *               statusCode: 401
+   *               timestamp: "2024-01-20T10:00:00.000Z"
+   *       403:
+   *         description: User is not an admin
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *             example:
+   *               error: "Admin access required"
+   *               statusCode: 403
+   *               timestamp: "2024-01-20T10:00:00.000Z"
+   *       404:
+   *         description: User not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/ErrorResponse'
+   *             example:
+   *               error: "User not found"
+   *               statusCode: 404
    *               timestamp: "2024-01-20T10:00:00.000Z"
    */
 }
