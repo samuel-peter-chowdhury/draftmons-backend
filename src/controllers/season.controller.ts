@@ -40,7 +40,12 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
   }
 
   protected getFullRelations(): FindOptionsRelations<Season> | undefined {
-    return undefined;
+    return {
+      generation: true,
+      teams: {
+        user: true,
+      },
+    };
   }
 
   /**

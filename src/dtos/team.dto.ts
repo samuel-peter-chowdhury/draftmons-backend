@@ -21,7 +21,7 @@ export class TeamOutputDto extends BaseOutputDto {
   @Type(() => SeasonOutputDto)
   season: SeasonOutputDto;
 
-  @Expose({ groups: ['team.full'] })
+  @Expose({ groups: ['team.full', 'season.full'] })
   @Type(() => UserOutputDto)
   user: UserOutputDto;
 

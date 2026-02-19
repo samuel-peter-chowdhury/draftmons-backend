@@ -47,7 +47,7 @@ export class MoveOutputDto extends BaseOutputDto {
   @Type(() => PokemonOutputDto)
   pokemon: PokemonOutputDto[];
 
-  @Expose({ groups: ['move.full'] })
+  @Expose({ groups: ['move.full', 'pokemon.full'] })
   @Type(() => SpecialMoveCategoryOutputDto)
   specialMoveCategories: SpecialMoveCategoryOutputDto[];
 }
