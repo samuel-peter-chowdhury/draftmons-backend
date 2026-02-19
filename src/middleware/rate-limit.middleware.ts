@@ -34,6 +34,7 @@ export const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: rateLimitMessage,
+  skip: (req) => req.method === 'GET',
 });
 
 // Very tight limit for admin endpoints (destructive operations)
@@ -43,4 +44,5 @@ export const adminLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: rateLimitMessage,
+  skip: (req) => req.method === 'GET',
 });
