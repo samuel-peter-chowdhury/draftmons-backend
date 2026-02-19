@@ -31,6 +31,10 @@ export class GameStatController extends BaseController<
     return ['gameStat.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<GameStat> | FindOptionsWhere<GameStat>[] | undefined> {

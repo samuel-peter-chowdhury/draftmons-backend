@@ -27,6 +27,10 @@ export class MatchController extends BaseController<Match, MatchInputDto, MatchO
     return ['match.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Match> | FindOptionsWhere<Match>[] | undefined> {

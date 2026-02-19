@@ -31,6 +31,10 @@ export class GenerationController extends BaseController<
     return ['generation.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'name', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Generation> | FindOptionsWhere<Generation>[] | undefined> {

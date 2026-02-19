@@ -56,6 +56,10 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
     return ['pokemon.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'name', 'baseStatTotal', 'hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed', 'height', 'weight', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Pokemon> | FindOptionsWhere<Pokemon>[] | undefined> {

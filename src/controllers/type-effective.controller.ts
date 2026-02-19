@@ -31,6 +31,10 @@ export class TypeEffectiveController extends BaseController<
     return ['typeEffective.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'value', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<TypeEffective> | FindOptionsWhere<TypeEffective>[] | undefined> {

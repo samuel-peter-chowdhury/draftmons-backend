@@ -27,6 +27,10 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
     return ['team.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'name', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Team> | FindOptionsWhere<Team>[] | undefined> {

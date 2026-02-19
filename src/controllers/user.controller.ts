@@ -67,6 +67,10 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
     return ['user.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'firstName', 'lastName', 'email', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<User> | FindOptionsWhere<User>[] | undefined> {

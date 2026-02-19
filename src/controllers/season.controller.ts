@@ -27,6 +27,10 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
     return ['season.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'name', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Season> | FindOptionsWhere<Season>[] | undefined> {

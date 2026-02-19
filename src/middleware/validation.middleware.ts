@@ -48,10 +48,18 @@ export const validateDto = (dtoClass: any) => {
 export const validatePartialDto = (dtoClass: any) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // Convert plain object to class instance
       const dtoObj: Object = plainToInstance(dtoClass, req.body);
 
-      // Validation passed, proceed
+      const errors: ValidationError[] = await validate(dtoObj, {
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        skipMissingProperties: true,
+      });
+
+      if (errors.length > 0) {
+        return next(new AppValidationError(formatValidationErrors(errors)));
+      }
+
       req.body = dtoObj;
       next();
     } catch (error) {

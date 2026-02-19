@@ -32,6 +32,10 @@ export class SeasonPokemonTeamController extends BaseController<
     return ['seasonPokemonTeam.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<SeasonPokemonTeam> | FindOptionsWhere<SeasonPokemonTeam>[] | undefined> {

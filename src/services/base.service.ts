@@ -82,8 +82,11 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
     try {
       const entity = await this.findOne(where, relations);
       return entity;
-    } catch (NotFoundError) {
-      return this.create(data);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return this.create(data);
+      }
+      throw error;
     }
   }
 
@@ -95,8 +98,11 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
     try {
       const entity = await this.update(where, data, relations);
       return entity;
-    } catch (NotFoundError) {
-      return this.create(data);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return this.create(data);
+      }
+      throw error;
     }
   }
 }

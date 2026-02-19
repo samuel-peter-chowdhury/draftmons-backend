@@ -27,6 +27,10 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
     return ['week.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Week> | FindOptionsWhere<Week>[] | undefined> {

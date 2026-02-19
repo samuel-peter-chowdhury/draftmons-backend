@@ -31,6 +31,10 @@ export class PokemonTypeController extends BaseController<
     return ['pokemonType.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'name', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<PokemonType> | FindOptionsWhere<PokemonType>[] | undefined> {

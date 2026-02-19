@@ -56,6 +56,10 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
     return ['league.full', 'leagueUser.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'name', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<League> | FindOptionsWhere<League>[] | undefined> {

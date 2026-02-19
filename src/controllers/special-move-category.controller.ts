@@ -31,6 +31,10 @@ export class SpecialMoveCategoryController extends BaseController<
     return ['specialMoveCategory.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<

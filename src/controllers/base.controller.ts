@@ -134,6 +134,14 @@ export abstract class BaseController<
     if (req.query.sortBy) {
       const sortBy: string = req.query.sortBy as string;
       const sortOrder: string = (req.query.sortOrder as string) || 'ASC';
+
+      const allowedFields = this.getAllowedSortFields();
+      if (!allowedFields.includes(sortBy)) {
+        throw new AppValidationError(
+          `Invalid sortBy field '${sortBy}'. Allowed fields: ${allowedFields.join(', ')}`,
+        );
+      }
+
       const sortOptions: SortOptions = plainToInstance(SortOptions, {
         sortBy,
         sortOrder,
@@ -160,4 +168,6 @@ export abstract class BaseController<
   protected abstract getFullRelations(): FindOptionsRelations<E> | undefined;
 
   protected abstract getFullTransformGroup(): string[];
+
+  protected abstract getAllowedSortFields(): string[];
 }

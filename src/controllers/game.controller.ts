@@ -27,6 +27,10 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
     return ['game.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Game> | FindOptionsWhere<Game>[] | undefined> {

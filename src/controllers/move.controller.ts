@@ -27,6 +27,10 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
     return ['move.full'];
   }
 
+  protected getAllowedSortFields(): string[] {
+    return ['id', 'name', 'power', 'accuracy', 'pp', 'priority', 'createdAt', 'updatedAt'];
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Move> | FindOptionsWhere<Move>[] | undefined> {
