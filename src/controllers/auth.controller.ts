@@ -46,10 +46,14 @@ export class AuthController {
   });
 
   logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    req.logout((err) => {
-      if (err) {
-        console.error('Logout error:', err);
-      }
+    await new Promise<void>((resolve, reject) => {
+      req.logout((err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
     });
 
     res.json({

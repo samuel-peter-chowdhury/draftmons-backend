@@ -69,7 +69,7 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
       }),
     };
     if (req.query.ids) {
-      where['id'] = In([getQueryIntArray(req, 'ids')]);
+      where['id'] = In(getQueryIntArray(req, 'ids'));
     }
     return where;
   }

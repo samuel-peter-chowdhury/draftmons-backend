@@ -7,7 +7,7 @@ export class SpecialMoveCategoryOutputDto extends BaseOutputDto {
   @Expose()
   name: string;
 
-  @Expose({ groups: ['pokemonType.full'] })
+  @Expose({ groups: ['specialMoveCategory.full'] })
   @Type(() => MoveOutputDto)
   moves: MoveOutputDto[];
 }

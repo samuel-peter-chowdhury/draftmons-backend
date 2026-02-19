@@ -47,7 +47,7 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
     });
 
     if (!entity) {
-      throw new NotFoundError(this.entityName, String(where));
+      throw new NotFoundError(this.entityName, JSON.stringify(where));
     }
 
     return entity;
