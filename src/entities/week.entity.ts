@@ -12,7 +12,7 @@ export class Week extends BaseApplicationEntity {
   @Column()
   seasonId: number;
 
-  @ManyToOne(() => Season, (season) => season.weeks)
+  @ManyToOne(() => Season, (season) => season.weeks, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'season_id' })
   season: Season;
 

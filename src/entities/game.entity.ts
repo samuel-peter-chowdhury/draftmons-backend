@@ -21,15 +21,15 @@ export class Game extends BaseApplicationEntity {
   @Column({ nullable: true, unique: true })
   replayLink: string;
 
-  @ManyToOne(() => Match, (match) => match.games)
+  @ManyToOne(() => Match, (match) => match.games, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'match_id' })
   match: Match;
 
-  @ManyToOne(() => Team, (team) => team.lostGames)
+  @ManyToOne(() => Team, (team) => team.lostGames, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'losing_team_id' })
   losingTeam: Team;
 
-  @ManyToOne(() => Team, (team) => team.wonGames)
+  @ManyToOne(() => Team, (team) => team.wonGames, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'winning_team_id' })
   winningTeam: Team;
 

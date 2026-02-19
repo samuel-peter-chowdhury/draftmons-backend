@@ -9,6 +9,7 @@ export const APP_CONFIG = {
   nodeEnv: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
   sessionSecret: process.env.SESSION_SECRET || 'draftmons_secret_key',
+  clientUrl: process.env.CLIENT_URL || 'http://localhost:3333',
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),

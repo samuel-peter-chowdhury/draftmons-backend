@@ -15,11 +15,11 @@ export class LeagueUser extends BaseApplicationEntity {
   @Column({ default: false })
   isModerator: boolean;
 
-  @ManyToOne(() => League, (league) => league.leagueUsers)
+  @ManyToOne(() => League, (league) => league.leagueUsers, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'league_id' })
   league: League;
 
-  @ManyToOne(() => User, (user) => user.leagueUsers)
+  @ManyToOne(() => User, (user) => user.leagueUsers, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 }

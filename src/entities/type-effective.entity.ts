@@ -12,14 +12,14 @@ export class TypeEffective extends BaseApplicationEntity {
   @Column()
   pokemonTypeId: number;
 
-  @ManyToOne(() => PokemonType, (pokemonType) => pokemonType.typeEffectiveness)
+  @ManyToOne(() => PokemonType, (pokemonType) => pokemonType.typeEffectiveness, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'pokemon_type_id' })
   pokemonType: PokemonType;
 
   @Column({ type: 'double precision' })
   value: number;
 
-  @ManyToOne(() => Pokemon, (pokemon) => pokemon.typeEffectiveness)
+  @ManyToOne(() => Pokemon, (pokemon) => pokemon.typeEffectiveness, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'pokemon_id' })
   pokemon: Pokemon;
 }

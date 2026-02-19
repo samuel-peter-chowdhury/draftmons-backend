@@ -20,11 +20,11 @@ export class SeasonPokemon extends BaseApplicationEntity {
   @Column({ nullable: true })
   pointValue: number;
 
-  @ManyToOne(() => Season, (season) => season.seasonPokemon)
+  @ManyToOne(() => Season, (season) => season.seasonPokemon, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'season_id' })
   season: Season;
 
-  @ManyToOne(() => Pokemon, (pokemon) => pokemon.seasonPokemon)
+  @ManyToOne(() => Pokemon, (pokemon) => pokemon.seasonPokemon, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'pokemon_id' })
   pokemon: Pokemon;
 

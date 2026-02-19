@@ -10,6 +10,7 @@ import swaggerUi from 'swagger-ui-express';
 import { errorMiddleware } from './middleware/error.middleware';
 import { APP_CONFIG } from './config/app.config';
 import { swaggerSpec } from './config/swagger.config';
+import { apiLimiter } from './middleware/rate-limit.middleware';
 import { configurePassport } from './config/passport.config';
 import { AuthController } from './controllers/auth.controller';
 import { LeagueController } from './controllers/league.controller';
@@ -94,17 +95,20 @@ export class App {
   private async initializeMiddlewares(): Promise<void> {
     // Security and logging middleware
     this.app.use(helmet());
+    this.app.use(apiLimiter);
     this.app.use(
       cors({
-        origin: APP_CONFIG.isProduction ? [/\.draftmons\.com$/] : true,
+        origin: APP_CONFIG.isProduction
+          ? [/\.draftmons\.com$/]
+          : ['http://localhost:3333', 'http://localhost:3000'],
         credentials: true,
       }),
     );
     this.app.use(morgan(APP_CONFIG.isProduction ? 'combined' : 'dev'));
 
     // Body parsing middleware
-    this.app.use(express.json());
-    this.app.use(express.urlencoded({ extended: true }));
+    this.app.use(express.json({ limit: '1mb' }));
+    this.app.use(express.urlencoded({ extended: true, limit: '1mb' }));
   }
 
   private async initializeSession(): Promise<void> {
@@ -118,8 +122,9 @@ export class App {
           resave: false,
           saveUninitialized: false,
           cookie: {
-            secure: false, // Set to false in development
+            secure: false,
             httpOnly: true,
+            sameSite: 'lax',
             maxAge: 24 * 60 * 60 * 1000, // 1 day
           },
         }),
@@ -161,6 +166,7 @@ export class App {
         cookie: {
           secure: APP_CONFIG.isProduction,
           httpOnly: true,
+          sameSite: APP_CONFIG.isProduction ? 'none' : 'lax',
           maxAge: 24 * 60 * 60 * 1000, // 1 day
         },
       }),
@@ -196,6 +202,8 @@ export class App {
   }
 
   private async initializeSwagger(): Promise<void> {
+    if (APP_CONFIG.isProduction) return;
+
     this.app.use(
       '/api-docs',
       swaggerUi.serve,
@@ -287,8 +295,13 @@ export class App {
     this.app.use('/api/league/:leagueId/week', isAuthReadLeagueModWrite(), weekController.router);
 
     // Health check route
-    this.app.get('/health', (req, res) => {
-      res.json({ status: 'ok', time: new Date().toISOString() });
+    this.app.get('/health', async (req, res) => {
+      try {
+        await AppDataSource.query('SELECT 1');
+        res.json({ status: 'ok', db: 'connected', time: new Date().toISOString() });
+      } catch {
+        res.status(503).json({ status: 'error', db: 'disconnected', time: new Date().toISOString() });
+      }
     });
   }
 

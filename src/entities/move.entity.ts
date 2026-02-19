@@ -23,11 +23,11 @@ export class Move extends BaseApplicationEntity {
   @Column()
   generationId: number;
 
-  @ManyToOne(() => PokemonType, (pokemonType) => pokemonType.moves)
+  @ManyToOne(() => PokemonType, (pokemonType) => pokemonType.moves, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'pokemon_type_id' })
   pokemonType: PokemonType;
 
-  @ManyToOne(() => Generation, (generation) => generation.moves)
+  @ManyToOne(() => Generation, (generation) => generation.moves, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'generation_id' })
   generation: Generation;
 

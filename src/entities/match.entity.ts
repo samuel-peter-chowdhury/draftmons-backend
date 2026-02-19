@@ -15,18 +15,18 @@ export class Match extends BaseApplicationEntity {
   @Column({ nullable: true })
   winningTeamId: number;
 
-  @ManyToOne(() => Week, (week) => week.matches)
+  @ManyToOne(() => Week, (week) => week.matches, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'week_id' })
   week: Week;
 
   @ManyToMany(() => Team, (team) => team.matches)
   teams: Team[];
 
-  @ManyToOne(() => Team, (team) => team.lostMatches)
+  @ManyToOne(() => Team, (team) => team.lostMatches, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'losing_team_id' })
   losingTeam: Team;
 
-  @ManyToOne(() => Team, (team) => team.wonMatches)
+  @ManyToOne(() => Team, (team) => team.wonMatches, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'winning_team_id' })
   winningTeam: Team;
 

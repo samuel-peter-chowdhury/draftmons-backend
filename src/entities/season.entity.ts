@@ -43,11 +43,11 @@ export class Season extends BaseApplicationEntity {
   @Column()
   generationId: number;
 
-  @ManyToOne(() => League, (league) => league.seasons)
+  @ManyToOne(() => League, (league) => league.seasons, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'league_id' })
   league: League;
 
-  @ManyToOne(() => Generation, (generation) => generation.seasons)
+  @ManyToOne(() => Generation, (generation) => generation.seasons, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'generation_id' })
   generation: Generation;
 

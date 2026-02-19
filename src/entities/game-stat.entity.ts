@@ -21,11 +21,11 @@ export class GameStat extends BaseApplicationEntity {
   @Column()
   deaths: number;
 
-  @ManyToOne(() => Game, (game) => game.gameStats)
+  @ManyToOne(() => Game, (game) => game.gameStats, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'game_id' })
   game: Game;
 
-  @ManyToOne(() => SeasonPokemon, (seasonPokemon) => seasonPokemon.gameStats)
+  @ManyToOne(() => SeasonPokemon, (seasonPokemon) => seasonPokemon.gameStats, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'season_pokemon_id' })
   seasonPokemon: SeasonPokemon;
 }

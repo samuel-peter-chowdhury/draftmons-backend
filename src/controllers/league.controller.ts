@@ -15,6 +15,8 @@ import { asyncHandler } from '../utils/error.utils';
 import { getQueryIntArray } from '../utils/request.utils';
 import { LeagueUserService } from '../services/league-user.service';
 import { LeagueUserInputDto } from '../dtos/league-user.dto';
+import { LeagueUser } from '../entities/league-user.entity';
+import AppDataSource from '../config/database.config';
 
 export class LeagueController extends BaseController<League, LeagueInputDto, LeagueOutputDto> {
   public router = Router();
@@ -34,17 +36,26 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
 
   createWithModerator = asyncHandler(
     async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-      let league = await this.leagueService.create(req.body);
-      const leagueUserInputDto = plainToInstance(LeagueUserInputDto, {
-        leagueId: league.id,
-        userId: req.user.id,
-        isModerator: true,
+      const league = await AppDataSource.transaction(async (manager) => {
+        const leagueRepo = manager.getRepository(League);
+        const newLeague = leagueRepo.create(req.body as Partial<League>);
+        const savedLeague = await leagueRepo.save(newLeague);
+
+        const leagueUserRepo = manager.getRepository(LeagueUser);
+        const leagueUser = leagueUserRepo.create({
+          leagueId: savedLeague.id,
+          userId: req.user.id,
+          isModerator: true,
+        });
+        await leagueUserRepo.save(leagueUser);
+
+        return savedLeague;
       });
-      await this.leagueUserService.create(leagueUserInputDto);
-      league = await this.leagueService.findOne({ id: league.id }, this.getFullRelations());
+
+      const fullLeague = await this.leagueService.findOne({ id: league.id }, this.getFullRelations());
 
       res.status(201).json(
-        plainToInstance(LeagueOutputDto, league, {
+        plainToInstance(LeagueOutputDto, fullLeague, {
           groups: this.getFullTransformGroup(),
           excludeExtraneousValues: true,
         }),

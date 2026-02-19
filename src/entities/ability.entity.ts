@@ -15,7 +15,7 @@ export class Ability extends BaseApplicationEntity {
   @Column()
   generationId: number;
 
-  @ManyToOne(() => Generation, (generation) => generation.abilities)
+  @ManyToOne(() => Generation, (generation) => generation.abilities, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'generation_id' })
   generation: Generation;
 

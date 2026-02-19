@@ -20,6 +20,13 @@ export const dataSourceOptions: DataSourceOptions = {
   logging: process.env.NODE_ENV === 'development',
   ssl: process.env.NODE_ENV === 'production',
   namingStrategy: new SnakeNamingStrategy(),
+  extra: {
+    max: 20,
+    min: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+    statement_timeout: 30000,
+  },
 };
 
 // Create and export the DataSource instance

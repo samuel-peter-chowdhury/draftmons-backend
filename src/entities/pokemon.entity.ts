@@ -49,7 +49,7 @@ export class Pokemon extends BaseApplicationEntity {
   @Column()
   generationId: number;
 
-  @ManyToOne(() => Generation, (generation) => generation.pokemon)
+  @ManyToOne(() => Generation, (generation) => generation.pokemon, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'generation_id' })
   generation: Generation;
 

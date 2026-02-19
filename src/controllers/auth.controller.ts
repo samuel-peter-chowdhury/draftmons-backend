@@ -4,6 +4,7 @@ import { asyncHandler } from '../utils/error.utils';
 import { isAuthenticated, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { plainToInstance } from 'class-transformer';
 import { UserOutputDto } from '../dtos/user.dto';
+import { APP_CONFIG } from '../config/app.config';
 
 export class AuthController {
   public router = Router();
@@ -19,8 +20,8 @@ export class AuthController {
     this.router.get(
       '/google/callback',
       passport.authenticate('google', {
-        failureRedirect: 'http://localhost:3333',
-        successRedirect: process.env.CLIENT_URL || 'http://localhost:3333/home',
+        failureRedirect: APP_CONFIG.clientUrl,
+        successRedirect: `${APP_CONFIG.clientUrl}/home`,
       }),
     );
 

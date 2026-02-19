@@ -6,7 +6,26 @@ import { Container } from 'typedi';
 import AppDataSource from './config/database.config';
 import { registerRepositories } from './config/repository.config';
 
+function validateProductionEnv(): void {
+  if (APP_CONFIG.isProduction) {
+    const required = [
+      'SESSION_SECRET',
+      'GOOGLE_CLIENT_ID',
+      'GOOGLE_CLIENT_SECRET',
+      'GOOGLE_CALLBACK_URL',
+      'CLIENT_URL',
+    ];
+    const missing = required.filter((key) => !process.env[key]);
+    if (missing.length > 0) {
+      throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    }
+  }
+}
+
 async function bootstrap() {
+  // Validate required env vars in production
+  validateProductionEnv();
+
   // Configure TypeORM to use typedi container with fallback options for migrations
   useContainer(Container, { fallbackOnErrors: true, fallback: false });
 

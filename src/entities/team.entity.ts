@@ -27,11 +27,11 @@ export class Team extends BaseApplicationEntity {
   @Column()
   userId: number;
 
-  @ManyToOne(() => Season, (season) => season.teams)
+  @ManyToOne(() => Season, (season) => season.teams, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'season_id' })
   season: Season;
 
-  @ManyToOne(() => User, (user) => user.teams)
+  @ManyToOne(() => User, (user) => user.teams, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 

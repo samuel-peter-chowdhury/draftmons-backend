@@ -1,10 +1,11 @@
-import { IsIn, IsPositive, IsString } from 'class-validator';
+import { IsIn, IsPositive, IsString, Max } from 'class-validator';
 
 export class PaginationOptions {
   @IsPositive()
   page: number;
 
   @IsPositive()
+  @Max(100)
   pageSize: number;
 }
 
