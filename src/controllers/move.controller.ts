@@ -45,8 +45,10 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
 
   protected getFullRelations(): FindOptionsRelations<Move> | undefined {
     return {
+      pokemonType: true,
       generation: true,
       pokemon: true,
+      specialMoveCategories: true,
     };
   }
 

@@ -42,7 +42,7 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
   }
 
   protected getFullRelations(): FindOptionsRelations<Game> | undefined {
-    return undefined;
+    return { match: true, losingTeam: true, winningTeam: true, gameStats: true };
   }
 
   /**

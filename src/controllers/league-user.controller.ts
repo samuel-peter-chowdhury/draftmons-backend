@@ -46,7 +46,7 @@ export class LeagueUserController extends BaseController<
   }
 
   protected getFullRelations(): FindOptionsRelations<LeagueUser> | undefined {
-    return undefined;
+    return { league: true, user: true };
   }
 
   /**

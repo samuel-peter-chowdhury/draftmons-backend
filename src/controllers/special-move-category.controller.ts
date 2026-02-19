@@ -50,7 +50,7 @@ export class SpecialMoveCategoryController extends BaseController<
   }
 
   protected getFullRelations(): FindOptionsRelations<SpecialMoveCategory> | undefined {
-    return undefined;
+    return { moves: true };
   }
 
   /**

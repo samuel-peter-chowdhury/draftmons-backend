@@ -42,7 +42,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
   }
 
   protected getFullRelations(): FindOptionsRelations<Week> | undefined {
-    return undefined;
+    return { season: true, matches: true };
   }
 
   /**

@@ -46,7 +46,7 @@ export class PokemonTypeController extends BaseController<
   }
 
   protected getFullRelations(): FindOptionsRelations<PokemonType> | undefined {
-    return undefined;
+    return { moves: true, pokemon: true, typeEffectiveness: true };
   }
 
   /**

@@ -47,7 +47,10 @@ export class SeasonPokemonController extends BaseController<
 
   protected getFullRelations(): FindOptionsRelations<SeasonPokemon> | undefined {
     return {
+      season: true,
+      pokemon: true,
       seasonPokemonTeams: true,
+      gameStats: true,
     };
   }
 

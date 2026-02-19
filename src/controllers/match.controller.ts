@@ -42,7 +42,7 @@ export class MatchController extends BaseController<Match, MatchInputDto, MatchO
   }
 
   protected getFullRelations(): FindOptionsRelations<Match> | undefined {
-    return undefined;
+    return { week: true, teams: true, losingTeam: true, winningTeam: true, games: true };
   }
 
   /**
