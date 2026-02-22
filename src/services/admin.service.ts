@@ -38,6 +38,7 @@ import {
 
 const LATEST_GEN = 9;
 const NAT_DEX_GENERATION_ID = 10;
+const NAT_DEX_MOVE_START_GEN = 3;
 
 @Service()
 export class AdminService {
@@ -778,6 +779,7 @@ export class AdminService {
     const allPokemonInserts: PokemonInsert[] = [];
     const allPokemonMeta: PokemonMeta[] = [];
     const natDexMap = new Map<string, NatDexPokemonData>();
+    const natDexMoveAccumulator = new Map<string, Set<string>>();
 
     for (let gen = 1; gen <= LATEST_GEN; gen++) {
       const dex = Dex.forGen(gen as any);
@@ -799,8 +801,10 @@ export class AdminService {
         // Collect learnset and extract moves
         const learnsetSources = await this.collectLearnsets(dex, species);
         const genMoveNames = this.extractMoveNamesForGen(dex, learnsetSources, gen);
-        // Unfiltered moves for nat dex (computed every gen, latest overwrites)
-        const allMoveNames = this.extractAllMoveNames(dex, learnsetSources);
+        // Unfiltered moves for nat dex accumulation (only needed for gens 3+)
+        const allMoveNames = gen >= NAT_DEX_MOVE_START_GEN
+          ? this.extractAllMoveNames(dex, learnsetSources)
+          : [];
 
         return {
           species,
@@ -835,13 +839,33 @@ export class AdminService {
           moveNames: genMoveNames,
         });
 
-        // Track for nat dex: later generations overwrite earlier ones
+        // Track for nat dex: later generations overwrite scalar/type/ability data
         natDexMap.set(species.name, {
           insert: pokemonInsert,
           typeNames: species.types,
           abilityNames,
-          moveNames: allMoveNames,
+          moveNames: [],
         });
+
+        // Accumulate nat dex moves across gens 3-9 for a comprehensive pool
+        if (gen >= NAT_DEX_MOVE_START_GEN) {
+          let moveSet = natDexMoveAccumulator.get(species.name);
+          if (!moveSet) {
+            moveSet = new Set();
+            natDexMoveAccumulator.set(species.name, moveSet);
+          }
+          for (const moveName of allMoveNames) {
+            moveSet.add(moveName);
+          }
+        }
+      }
+    }
+
+    // Assign accumulated nat dex moves (union of gens 3-9) to each Pokemon
+    for (const [name, data] of natDexMap) {
+      const moveSet = natDexMoveAccumulator.get(name);
+      if (moveSet) {
+        data.moveNames = [...moveSet];
       }
     }
 

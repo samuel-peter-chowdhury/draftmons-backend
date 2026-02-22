@@ -1,4 +1,4 @@
-import { Request, Response, Router } from 'express';
+import { Request, Response, NextFunction, Router } from 'express';
 import passport from 'passport';
 import { asyncHandler } from '../utils/error.utils';
 import { isAuthenticated, AuthenticatedRequest } from '../middleware/auth.middleware';
@@ -15,14 +15,24 @@ export class AuthController {
 
   private initializeRoutes(): void {
     // Google OAuth routes
-    this.router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+    this.router.get('/google', (req: Request, _res: Response, next: NextFunction) => {
+      if (req.query.redirect === 'swagger') {
+        (req.session as unknown as Record<string, unknown>).swaggerRedirect = true;
+      }
+      passport.authenticate('google', { scope: ['profile', 'email'] })(req, _res, next);
+    });
 
     this.router.get(
       '/google/callback',
-      passport.authenticate('google', {
-        failureRedirect: APP_CONFIG.clientUrl,
-        successRedirect: `${APP_CONFIG.clientUrl}/home`,
-      }),
+      passport.authenticate('google', { failureRedirect: APP_CONFIG.clientUrl }),
+      (req: Request, res: Response) => {
+        const session = req.session as unknown as Record<string, unknown>;
+        if (session.swaggerRedirect) {
+          delete session.swaggerRedirect;
+          return res.redirect('/api-docs');
+        }
+        return res.redirect(`${APP_CONFIG.clientUrl}/home`);
+      },
     );
 
     // Session management routes
@@ -92,7 +102,14 @@ export class AuthController {
    *     tags:
    *       - Authentication
    *     summary: Initiate Google OAuth login
-   *     description: Redirects to Google's OAuth consent screen
+   *     description: Redirects to Google's OAuth consent screen. Pass `?redirect=swagger` to redirect back to `/api-docs` after login instead of the frontend.
+   *     parameters:
+   *       - in: query
+   *         name: redirect
+   *         schema:
+   *           type: string
+   *           enum: [swagger]
+   *         description: Set to "swagger" to redirect back to Swagger UI after login
    *     responses:
    *       302:
    *         description: Redirect to Google OAuth

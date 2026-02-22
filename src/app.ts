@@ -218,12 +218,89 @@ export class App {
   private async initializeSwagger(): Promise<void> {
     if (APP_CONFIG.isProduction) return;
 
+    // Serve auth banner script as an external file (avoids Helmet CSP blocking inline scripts)
+    this.app.get('/api-docs/auth.js', (_req, res) => {
+      res.type('application/javascript').send(`
+(function () {
+  function getCookie(name) {
+    var match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  function createBanner() {
+    var banner = document.createElement('div');
+    banner.id = 'swagger-auth-banner';
+    banner.innerHTML = '<span>Checking auth...</span>';
+    document.body.prepend(banner);
+    return banner;
+  }
+
+  function updateBanner(banner, data) {
+    if (data.isAuthenticated) {
+      var name = data.user ? (data.user.displayName || data.user.email || 'User') : 'User';
+      banner.innerHTML =
+        '<span>Logged in as <strong>' + name + '</strong></span>' +
+        '<button id="swagger-logout-btn">Logout</button>';
+      document.getElementById('swagger-logout-btn').addEventListener('click', function () {
+        var token = getCookie('XSRF-TOKEN');
+        fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+          headers: token ? { 'x-xsrf-token': token } : {},
+        }).then(function () { location.reload(); });
+      });
+    } else {
+      banner.innerHTML =
+        '<span>Not authenticated</span>' +
+        '<a href="/api/auth/google?redirect=swagger">Login with Google</a>';
+    }
+  }
+
+  var banner = createBanner();
+  fetch('/api/auth/status', { credentials: 'include' })
+    .then(function (r) { return r.json(); })
+    .then(function (data) { updateBanner(banner, data); })
+    .catch(function () { updateBanner(banner, { isAuthenticated: false }); });
+})();
+`);
+    });
+
     this.app.use(
       '/api-docs',
       swaggerUi.serve,
       swaggerUi.setup(swaggerSpec, {
-        customCss: '.swagger-ui .topbar { display: none }',
+        customCss: `
+          .swagger-ui .topbar { display: none }
+          #swagger-auth-banner {
+            position: sticky; top: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 20px;
+            background: #1b1b1b; color: #fff;
+            font-family: sans-serif; font-size: 14px;
+            border-bottom: 2px solid #61affe;
+          }
+          #swagger-auth-banner a {
+            color: #61affe; text-decoration: none; font-weight: 600;
+          }
+          #swagger-auth-banner a:hover { text-decoration: underline; }
+          #swagger-auth-banner button {
+            background: #61affe; color: #fff; border: none;
+            padding: 6px 14px; border-radius: 4px; cursor: pointer;
+            font-size: 13px; font-weight: 600;
+          }
+          #swagger-auth-banner button:hover { background: #4a9aed; }
+        `,
         customSiteTitle: 'Draftmons API Documentation',
+        customJs: '/api-docs/auth.js',
+        swaggerOptions: {
+          // This function is serialized and runs in the browser, not on the server.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          requestInterceptor: new Function('req',
+            "var match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);" +
+            "if (match) req.headers['x-xsrf-token'] = decodeURIComponent(match[1]);" +
+            "return req;"
+          ),
+        },
       }),
     );
   }
