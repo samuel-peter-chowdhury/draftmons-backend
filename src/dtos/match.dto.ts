@@ -37,13 +37,16 @@ export class MatchOutputDto extends BaseOutputDto {
 }
 
 export class MatchInputDto extends BaseInputDto {
+  @Expose()
   @IsNumber()
   weekId: number;
 
+  @Expose()
   @IsOptional()
   @IsNumber()
   losingTeamId: number;
 
+  @Expose()
   @IsOptional()
   @IsNumber()
   winningTeamId: number;

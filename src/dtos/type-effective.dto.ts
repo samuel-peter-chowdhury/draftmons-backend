@@ -24,12 +24,15 @@ export class TypeEffectiveOutputDto extends BaseOutputDto {
 }
 
 export class TypeEffectiveInputDto extends BaseInputDto {
+  @Expose()
   @IsNumber()
   pokemonId: number;
 
+  @Expose()
   @IsNumber()
   pokemonTypeId: number;
 
+  @Expose()
   @IsNumber()
   value: number;
 }

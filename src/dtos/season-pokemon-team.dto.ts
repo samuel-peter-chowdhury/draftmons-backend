@@ -11,7 +11,7 @@ export class SeasonPokemonTeamOutputDto extends BaseOutputDto {
   @Expose()
   teamId: number;
 
-  @Expose({ groups: ['seasonPokemonTeam.full'] })
+  @Expose({ groups: ['seasonPokemonTeam.full', 'team.full'] })
   @Type(() => SeasonPokemonOutputDto)
   seasonPokemon: SeasonPokemonOutputDto;
 
@@ -21,9 +21,11 @@ export class SeasonPokemonTeamOutputDto extends BaseOutputDto {
 }
 
 export class SeasonPokemonTeamInputDto extends BaseInputDto {
+  @Expose()
   @IsNumber()
   seasonPokemonId: number;
 
+  @Expose()
   @IsNumber()
   teamId: number;
 }

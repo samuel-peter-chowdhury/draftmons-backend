@@ -26,9 +26,11 @@ export class PokemonTypeOutputDto extends BaseOutputDto {
 }
 
 export class PokemonTypeInputDto extends BaseInputDto {
+  @Expose()
   @IsString()
   name: string;
 
+  @Expose()
   @IsString()
   color: string;
 }

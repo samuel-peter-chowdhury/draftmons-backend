@@ -21,9 +21,11 @@ export class WeekOutputDto extends BaseOutputDto {
 }
 
 export class WeekInputDto extends BaseInputDto {
+  @Expose()
   @IsString()
   name: string;
 
+  @Expose()
   @IsNumber()
   seasonId: number;
 }

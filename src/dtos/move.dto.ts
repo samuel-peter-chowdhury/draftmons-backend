@@ -53,30 +53,39 @@ export class MoveOutputDto extends BaseOutputDto {
 }
 
 export class MoveInputDto extends BaseInputDto {
+  @Expose()
   @IsString()
   name: string;
 
+  @Expose()
   @IsNumber()
   pokemonTypeId: number;
 
+  @Expose()
   @IsNumber()
   generationId: number;
 
+  @Expose()
   @IsEnum(MoveCategory)
   category: MoveCategory;
 
+  @Expose()
   @IsNumber()
   power: number;
 
+  @Expose()
   @IsNumber()
   accuracy: number;
 
+  @Expose()
   @IsNumber()
   priority: number;
 
+  @Expose()
   @IsNumber()
   pp: number;
 
+  @Expose()
   @IsString()
   description: string;
 }

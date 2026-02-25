@@ -51,12 +51,15 @@ export class TeamOutputDto extends BaseOutputDto {
 }
 
 export class TeamInputDto extends BaseInputDto {
+  @Expose()
   @IsString()
   name: string;
 
+  @Expose()
   @IsNumber()
   seasonId: number;
 
+  @Expose()
   @IsNumber()
   userId: number;
 }

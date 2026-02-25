@@ -87,42 +87,55 @@ export class PokemonOutputDto extends BaseOutputDto {
 }
 
 export class PokemonInputDto extends BaseInputDto {
+  @Expose()
   @IsNumber()
   dexId: number;
 
+  @Expose()
   @IsString()
   name: string;
 
+  @Expose()
   @IsNumber()
   hp: number;
 
+  @Expose()
   @IsNumber()
   attack: number;
 
+  @Expose()
   @IsNumber()
   defense: number;
 
+  @Expose()
   @IsNumber()
   specialAttack: number;
 
+  @Expose()
   @IsNumber()
   specialDefense: number;
 
+  @Expose()
   @IsNumber()
   speed: number;
 
+  @Expose()
   @IsNumber()
   baseStatTotal: number;
 
+  @Expose()
   @IsNumber()
   height: number;
 
+  @Expose()
   @IsNumber()
   weight: number;
 
+  @Expose()
   @IsString()
   sprite: string;
 
+  @Expose()
   @IsNumber()
   generationId: number;
 }

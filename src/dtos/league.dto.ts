@@ -21,9 +21,11 @@ export class LeagueOutputDto extends BaseOutputDto {
 }
 
 export class LeagueInputDto extends BaseInputDto {
+  @Expose()
   @IsString()
   name: string;
 
+  @Expose()
   @IsString()
   abbreviation: string;
 }

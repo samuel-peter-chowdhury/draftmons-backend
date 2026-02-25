@@ -23,6 +23,7 @@ export class GenerationOutputDto extends BaseOutputDto {
 }
 
 export class GenerationInputDto extends BaseInputDto {
+  @Expose()
   @IsString()
   name: string;
 }

@@ -4,7 +4,10 @@ import { BaseController } from './base.controller';
 import { SeasonPokemonTeam } from '../entities/season-pokemon-team.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { isAuthenticated } from '../middleware/auth.middleware';
-import { SeasonPokemonTeamInputDto, SeasonPokemonTeamOutputDto } from '../dtos/season-pokemon-team.dto';
+import {
+  SeasonPokemonTeamInputDto,
+  SeasonPokemonTeamOutputDto,
+} from '../dtos/season-pokemon-team.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
@@ -24,7 +27,12 @@ export class SeasonPokemonTeamController extends BaseController<
     this.router.get('/', this.getAll);
     this.router.get('/:id', this.getById);
     this.router.post('/', isAuthenticated, validateDto(SeasonPokemonTeamInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(SeasonPokemonTeamInputDto), this.update);
+    this.router.put(
+      '/:id',
+      isAuthenticated,
+      validatePartialDto(SeasonPokemonTeamInputDto),
+      this.update,
+    );
     this.router.delete('/:id', isAuthenticated, this.delete);
   }
 
@@ -38,7 +46,9 @@ export class SeasonPokemonTeamController extends BaseController<
 
   protected async getWhere(
     req: Request,
-  ): Promise<FindOptionsWhere<SeasonPokemonTeam> | FindOptionsWhere<SeasonPokemonTeam>[] | undefined> {
+  ): Promise<
+    FindOptionsWhere<SeasonPokemonTeam> | FindOptionsWhere<SeasonPokemonTeam>[] | undefined
+  > {
     return plainToInstance(SeasonPokemonTeamInputDto, req.query, { excludeExtraneousValues: true });
   }
 
@@ -48,7 +58,13 @@ export class SeasonPokemonTeamController extends BaseController<
 
   protected getFullRelations(): FindOptionsRelations<SeasonPokemonTeam> | undefined {
     return {
-      seasonPokemon: true,
+      seasonPokemon: {
+        pokemon: {
+          pokemonTypes: true,
+          abilities: true,
+          generation: true,
+        },
+      },
       team: true,
     };
   }

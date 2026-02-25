@@ -39,18 +39,23 @@ export class GameOutputDto extends BaseOutputDto {
 }
 
 export class GameInputDto extends BaseInputDto {
+  @Expose()
   @IsNumber()
   matchId: number;
 
+  @Expose()
   @IsNumber()
   losingTeamId: number;
 
+  @Expose()
   @IsNumber()
   winningTeamId: number;
 
+  @Expose()
   @IsNumber()
   differential: number;
 
+  @Expose()
   @IsOptional()
   @IsString()
   replayLink: string;

@@ -39,30 +39,37 @@ export class UserOutputDto extends BaseOutputDto {
 }
 
 export class UserInputDto extends BaseInputDto {
+  @Expose()
   @IsOptional()
   @IsString()
   firstName: string;
 
+  @Expose()
   @IsOptional()
   @IsString()
   lastName: string;
 
+  @Expose()
   @IsOptional()
   @IsString()
   email: string;
 
+  @Expose()
   @IsOptional()
   @IsString()
   googleId: string;
 
+  @Expose()
   @IsOptional()
   @IsString()
   showdownUsername: string;
 
+  @Expose()
   @IsOptional()
   @IsString()
   discordUsername: string;
 
+  @Expose()
   @IsOptional()
   @IsString()
   timezone: string;

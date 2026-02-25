@@ -24,12 +24,15 @@ export class AbilityOutputDto extends BaseOutputDto {
 }
 
 export class AbilityInputDto extends BaseInputDto {
+  @Expose()
   @IsString()
   name: string;
 
+  @Expose()
   @IsString()
   description: string;
 
+  @Expose()
   @IsNumber()
   generationId: number;
 }

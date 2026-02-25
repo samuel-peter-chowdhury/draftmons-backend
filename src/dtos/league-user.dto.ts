@@ -24,12 +24,15 @@ export class LeagueUserOutputDto extends BaseOutputDto {
 }
 
 export class LeagueUserInputDto extends BaseInputDto {
+  @Expose()
   @IsNumber()
   leagueId: number;
 
+  @Expose()
   @IsNumber()
   userId: number;
 
+  @Expose()
   @IsBoolean()
   isModerator: boolean;
 }

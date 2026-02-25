@@ -43,7 +43,15 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
 
   protected getFullRelations(): FindOptionsRelations<Team> | undefined {
     return {
-      seasonPokemonTeams: true,
+      seasonPokemonTeams: {
+        seasonPokemon: {
+          pokemon: {
+            pokemonTypes: true,
+            abilities: true,
+            generation: true,
+          },
+        },
+      },
     };
   }
 

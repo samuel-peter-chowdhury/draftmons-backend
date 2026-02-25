@@ -23,7 +23,7 @@ export class SeasonPokemonOutputDto extends BaseOutputDto {
   @Type(() => SeasonOutputDto)
   season: SeasonOutputDto;
 
-  @Expose({ groups: ['seasonPokemon.full'] })
+  @Expose({ groups: ['seasonPokemon.full', 'team.full', 'seasonPokemonTeam.full'] })
   @Type(() => PokemonOutputDto)
   pokemon: PokemonOutputDto;
 
@@ -37,16 +37,20 @@ export class SeasonPokemonOutputDto extends BaseOutputDto {
 }
 
 export class SeasonPokemonInputDto extends BaseInputDto {
+  @Expose()
   @IsNumber()
   seasonId: number;
 
+  @Expose()
   @IsNumber()
   pokemonId: number;
 
+  @Expose()
   @IsOptional()
   @IsString()
   condition: string;
 
+  @Expose()
   @IsOptional()
   @IsNumber()
   pointValue: number;

@@ -30,18 +30,23 @@ export class GameStatOutputDto extends BaseOutputDto {
 }
 
 export class GameStatInputDto extends BaseInputDto {
+  @Expose()
   @IsNumber()
   gameId: number;
 
+  @Expose()
   @IsNumber()
   seasonPokemonId: number;
 
+  @Expose()
   @IsNumber()
   directKills: number;
 
+  @Expose()
   @IsNumber()
   indirectKills: number;
 
+  @Expose()
   @IsNumber()
   deaths: number;
 }

@@ -52,25 +52,32 @@ export class SeasonOutputDto extends BaseOutputDto {
 }
 
 export class SeasonInputDto extends BaseInputDto {
+  @Expose()
   @IsString()
   name: string;
 
+  @Expose()
   @IsEnum(SeasonStatus)
   status: SeasonStatus;
 
+  @Expose()
   @IsOptional()
   @IsString()
   rules: string;
 
+  @Expose()
   @IsNumber()
   pointLimit: number;
 
+  @Expose()
   @IsNumber()
   maxPointValue: number;
 
+  @Expose()
   @IsNumber()
   leagueId: number;
 
+  @Expose()
   @IsNumber()
   generationId: number;
 }

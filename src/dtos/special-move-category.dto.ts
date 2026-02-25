@@ -13,6 +13,7 @@ export class SpecialMoveCategoryOutputDto extends BaseOutputDto {
 }
 
 export class SpecialMoveCategoryInputDto extends BaseInputDto {
+  @Expose()
   @IsString()
   name: string;
 }
