@@ -16,22 +16,37 @@ export class AuthController {
   private initializeRoutes(): void {
     // Google OAuth routes
     this.router.get('/google', (req: Request, _res: Response, next: NextFunction) => {
-      if (req.query.redirect === 'swagger') {
-        (req.session as unknown as Record<string, unknown>).swaggerRedirect = true;
+      const redirect = req.query.redirect as string | undefined;
+      let state = '/home';
+
+      if (redirect === 'swagger') {
+        state = 'swagger';
+      } else if (redirect) {
+        try {
+          const url = new URL(redirect);
+          if (url.origin === APP_CONFIG.clientUrl) {
+            state = url.pathname;
+          }
+        } catch {
+          // Invalid URL — use default
+        }
       }
-      passport.authenticate('google', { scope: ['profile', 'email'] })(req, _res, next);
+
+      passport.authenticate('google', { scope: ['profile', 'email'], state })(req, _res, next);
     });
 
     this.router.get(
       '/google/callback',
       passport.authenticate('google', { failureRedirect: APP_CONFIG.clientUrl }),
       (req: Request, res: Response) => {
-        const session = req.session as unknown as Record<string, unknown>;
-        if (session.swaggerRedirect) {
-          delete session.swaggerRedirect;
+        const state = req.query.state as string | undefined;
+
+        if (state === 'swagger') {
           return res.redirect('/api-docs');
         }
-        return res.redirect(`${APP_CONFIG.clientUrl}/home`);
+
+        const redirectPath = state && /^\/[a-zA-Z0-9/_-]*$/.test(state) ? state : '/home';
+        return res.redirect(`${APP_CONFIG.clientUrl}${redirectPath}`);
       },
     );
 
