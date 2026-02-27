@@ -50,8 +50,8 @@ export class AdminService {
   async wipeAllData(): Promise<void> {
     const entities = AppDataSource.entityMetadatas;
     const tableNames = entities
-      .filter(entity => entity.tableName !== 'user')
-      .map(entity => `"${entity.tableName}"`)
+      .filter((entity) => entity.tableName !== 'user')
+      .map((entity) => `"${entity.tableName}"`)
       .join(', ');
     await AppDataSource.query(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE`);
     await AppDataSource.query(`DELETE FROM "user" WHERE "is_admin" = false`);
@@ -93,18 +93,14 @@ export class AdminService {
    * Returns their IDs in insertion order.
    */
   private async createMockUsers(): Promise<number[]> {
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(User)
-      .values(mockUsers)
-      .execute();
+    await AppDataSource.createQueryBuilder().insert().into(User).values(mockUsers).execute();
 
     const users = await AppDataSource.getRepository(User).find({
       where: { isAdmin: false },
       select: ['id'],
       order: { id: 'ASC' },
     });
-    return users.map(u => u.id);
+    return users.map((u) => u.id);
   }
 
   /**
@@ -112,17 +108,13 @@ export class AdminService {
    * Returns their IDs in insertion order.
    */
   private async createMockLeagues(): Promise<number[]> {
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(League)
-      .values(mockLeagues)
-      .execute();
+    await AppDataSource.createQueryBuilder().insert().into(League).values(mockLeagues).execute();
 
     const leagues = await AppDataSource.getRepository(League).find({
       select: ['id'],
       order: { id: 'ASC' },
     });
-    return leagues.map(l => l.id);
+    return leagues.map((l) => l.id);
   }
 
   /**
@@ -154,7 +146,7 @@ export class AdminService {
    * Returns their IDs in insertion order.
    */
   private async createMockSeasons(leagueIds: number[]): Promise<number[]> {
-    const seasons = mockSeasons.map(s => ({
+    const seasons = mockSeasons.map((s) => ({
       name: s.name,
       status: s.status,
       pointLimit: s.pointLimit,
@@ -164,17 +156,13 @@ export class AdminService {
       generationId: s.generationId,
     }));
 
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(Season)
-      .values(seasons)
-      .execute();
+    await AppDataSource.createQueryBuilder().insert().into(Season).values(seasons).execute();
 
     const savedSeasons = await AppDataSource.getRepository(Season).find({
       select: ['id'],
       order: { id: 'ASC' },
     });
-    return savedSeasons.map(s => s.id);
+    return savedSeasons.map((s) => s.id);
   }
 
   /**
@@ -201,11 +189,7 @@ export class AdminService {
 
     if (teams.length === 0) return new Map();
 
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(Team)
-      .values(teams)
-      .execute();
+    await AppDataSource.createQueryBuilder().insert().into(Team).values(teams).execute();
 
     const savedTeams = await AppDataSource.getRepository(Team).find({
       select: ['id', 'seasonId'],
@@ -239,11 +223,7 @@ export class AdminService {
 
     if (weeks.length === 0) return new Map();
 
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(Week)
-      .values(weeks)
-      .execute();
+    await AppDataSource.createQueryBuilder().insert().into(Week).values(weeks).execute();
 
     const savedWeeks = await AppDataSource.getRepository(Week).find({
       select: ['id', 'seasonId'],
@@ -299,7 +279,7 @@ export class AdminService {
         let pointValue: number;
         if (percentile < 0.13) pointValue = faker.number.int({ min: 10, max: 12 });
         else if (percentile < 0.33) pointValue = faker.number.int({ min: 7, max: 9 });
-        else if (percentile < 0.60) pointValue = faker.number.int({ min: 4, max: 6 });
+        else if (percentile < 0.6) pointValue = faker.number.int({ min: 4, max: 6 });
         else pointValue = faker.number.int({ min: 1, max: 3 });
 
         return { seasonId, pokemonId: p.id, pointValue };
@@ -337,7 +317,7 @@ export class AdminService {
           const remainingPicks = TEAM_ROSTER_SIZE - roster.length;
           const maxAffordable = budget - (remainingPicks - 1);
 
-          const pickIndex = available.findIndex(sp => (sp.pointValue ?? 0) <= maxAffordable);
+          const pickIndex = available.findIndex((sp) => (sp.pointValue ?? 0) <= maxAffordable);
           if (pickIndex === -1) continue;
 
           const pick = available.splice(pickIndex, 1)[0];
@@ -349,7 +329,10 @@ export class AdminService {
       // Create season_pokemon_team assignments
       const rosterAssignments: { seasonPokemonId: number; teamId: number }[] = [];
       for (const [teamId, roster] of teamRosters) {
-        seasonPokemonByTeam.set(teamId, roster.map(sp => sp.id));
+        seasonPokemonByTeam.set(
+          teamId,
+          roster.map((sp) => sp.id),
+        );
         for (const sp of roster) {
           rosterAssignments.push({ seasonPokemonId: sp.id, teamId });
         }
@@ -411,11 +394,7 @@ export class AdminService {
 
     if (matchInserts.length === 0) return;
 
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(Match)
-      .values(matchInserts)
-      .execute();
+    await AppDataSource.createQueryBuilder().insert().into(Match).values(matchInserts).execute();
 
     const savedMatches = await AppDataSource.getRepository(Match).find({
       select: ['id'],
@@ -471,11 +450,7 @@ export class AdminService {
 
     await this.batchInsertRaw('team_matches', teamMatchJoins);
 
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(Game)
-      .values(gameInserts)
-      .execute();
+    await AppDataSource.createQueryBuilder().insert().into(Game).values(gameInserts).execute();
 
     // Create game stats with realistic kill/death distributions
     const savedGames = await AppDataSource.getRepository(Game).find({
@@ -572,18 +547,14 @@ export class AdminService {
     const rest = generationData.filter((g) => g.id !== 0);
 
     if (natDex) {
-      await AppDataSource.query(
-        `INSERT INTO generation (id, name) VALUES ($1, $2)`,
-        [natDex.id, natDex.name],
-      );
+      await AppDataSource.query(`INSERT INTO generation (id, name) VALUES ($1, $2)`, [
+        natDex.id,
+        natDex.name,
+      ]);
     }
 
     if (rest.length) {
-      await AppDataSource.createQueryBuilder()
-        .insert()
-        .into(Generation)
-        .values(rest)
-        .execute();
+      await AppDataSource.createQueryBuilder().insert().into(Generation).values(rest).execute();
     }
 
     await this.resetSequence('generation');
@@ -638,11 +609,7 @@ export class AdminService {
       allAbilities.push({ name, description, generationId: NAT_DEX_GENERATION_ID });
     }
 
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(Ability)
-      .values(allAbilities)
-      .execute();
+    await AppDataSource.createQueryBuilder().insert().into(Ability).values(allAbilities).execute();
     await this.resetSequence('ability');
   }
 
@@ -671,9 +638,7 @@ export class AdminService {
 
     for (let gen = 1; gen <= LATEST_GEN; gen++) {
       const dex = Dex.forGen(gen as any);
-      const moves = dex.moves
-        .all()
-        .filter((m) => !m.isNonstandard);
+      const moves = dex.moves.all().filter((m) => !m.isNonstandard);
 
       for (const m of moves) {
         const pokemonTypeId = pokemonTypeMap.get(m.type.toLowerCase());
@@ -684,7 +649,7 @@ export class AdminService {
           pokemonTypeId,
           category: m.category.toUpperCase() as MoveCategory,
           power: m.basePower,
-          accuracy: m.accuracy === true ? 0 : m.accuracy as number,
+          accuracy: m.accuracy === true ? 0 : (m.accuracy as number),
           priority: m.priority,
           pp: m.pp,
           description: m.desc || m.shortDesc || '',
@@ -700,11 +665,7 @@ export class AdminService {
       allMoves.push({ ...moveData, generationId: NAT_DEX_GENERATION_ID });
     }
 
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(Move)
-      .values(allMoves)
-      .execute();
+    await AppDataSource.createQueryBuilder().insert().into(Move).values(allMoves).execute();
     await this.resetSequence('move');
 
     await this.linkMovesToSpecialMoveCategories();
@@ -801,33 +762,34 @@ export class AdminService {
       const allSpecies = dex.species.all().filter((s) => !s.isNonstandard);
 
       // Process all pokemon in this generation concurrently
-      const results = await Promise.all(allSpecies.map(async (species) => {
-        // Extract ability names
-        const abilityNames: string[] = [];
-        for (const [, abilityName] of Object.entries(species.abilities)) {
-          if (!abilityName) continue;
-          const ability = dex.abilities.get(abilityName);
-          if (!ability.exists || ability.isNonstandard || ability.name === 'No Ability') continue;
-          if (!abilityNames.includes(ability.name)) {
-            abilityNames.push(ability.name);
+      const results = await Promise.all(
+        allSpecies.map(async (species) => {
+          // Extract ability names
+          const abilityNames: string[] = [];
+          for (const [, abilityName] of Object.entries(species.abilities)) {
+            if (!abilityName) continue;
+            const ability = dex.abilities.get(abilityName);
+            if (!ability.exists || ability.isNonstandard || ability.name === 'No Ability') continue;
+            if (!abilityNames.includes(ability.name)) {
+              abilityNames.push(ability.name);
+            }
           }
-        }
 
-        // Collect learnset and extract moves
-        const learnsetSources = await this.collectLearnsets(dex, species);
-        const genMoveNames = this.extractMoveNamesForGen(dex, learnsetSources, gen);
-        // Unfiltered moves for nat dex accumulation (only needed for gens 3+)
-        const allMoveNames = gen >= NAT_DEX_MOVE_START_GEN
-          ? this.extractAllMoveNames(dex, learnsetSources)
-          : [];
+          // Collect learnset and extract moves
+          const learnsetSources = await this.collectLearnsets(dex, species);
+          const genMoveNames = this.extractMoveNamesForGen(dex, learnsetSources, gen);
+          // Unfiltered moves for nat dex accumulation (only needed for gens 3+)
+          const allMoveNames =
+            gen >= NAT_DEX_MOVE_START_GEN ? this.extractAllMoveNames(dex, learnsetSources) : [];
 
-        return {
-          species,
-          abilityNames,
-          genMoveNames,
-          allMoveNames,
-        };
-      }));
+          return {
+            species,
+            abilityNames,
+            genMoveNames,
+            allMoveNames,
+          };
+        }),
+      );
 
       for (const { species, abilityNames, genMoveNames, allMoveNames } of results) {
         const pokemonInsert = {
@@ -927,7 +889,13 @@ export class AdminService {
    * Builds and inserts all Pokemon join table entries (types, abilities, moves).
    */
   private async linkPokemonRelations(
-    allPokemonMeta: { name: string; generationId: number; typeNames: string[]; abilityNames: string[]; moveNames: string[] }[],
+    allPokemonMeta: {
+      name: string;
+      generationId: number;
+      typeNames: string[];
+      abilityNames: string[];
+      moveNames: string[];
+    }[],
     pokemonTypeMap: Map<string, number>,
   ): Promise<void> {
     // Build pokemon lookup: "name_lower|generationId" → pokemonId
@@ -990,13 +958,14 @@ export class AdminService {
         }
       }
 
-      // Type effectiveness (18 rows per pokemon)
+      // Type effectiveness — use generation-appropriate chart
+      const typeChart = this.getTypeEffectiveChart(meta.generationId);
       const defendingTypes = meta.typeNames.map((t) => t.toLowerCase());
       for (const atkType of allTypeNames) {
         const atkTypeId = pokemonTypeMap.get(atkType);
         if (!atkTypeId) continue;
 
-        const atkChart = typeEffectiveData[atkType];
+        const atkChart = typeChart[atkType];
         if (!atkChart) continue;
 
         // Multiply effectiveness across all defending types
@@ -1062,7 +1031,11 @@ export class AdminService {
    * Extracts move names that are learnable in a specific generation.
    * Filters learnset sources by checking if the first character matches the generation number.
    */
-  private extractMoveNamesForGen(dex: any, learnsetSources: Record<string, string[]>, gen: number): string[] {
+  private extractMoveNamesForGen(
+    dex: any,
+    learnsetSources: Record<string, string[]>,
+    gen: number,
+  ): string[] {
     const moveNames: string[] = [];
     for (const [moveId, sources] of Object.entries(learnsetSources)) {
       const hasValidSource = sources.some((s) => parseInt(s.charAt(0), 10) === gen);
@@ -1104,30 +1077,38 @@ export class AdminService {
   }
 
   /**
+   * Returns the generation-appropriate type effectiveness chart.
+   * Gen 1: excludes dark, fairy, steel.
+   * Gen 2-5: excludes fairy.
+   * Gen 6+ and Nat Dex (0): full 18-type chart.
+   */
+  private getTypeEffectiveChart(generationId: number): Record<string, Record<string, number>> {
+    if (generationId === 1) return typeEffectiveData.gen1;
+    if (generationId >= 2 && generationId <= 5) return typeEffectiveData.gen2to5;
+    return typeEffectiveData.gen6to9;
+  }
+
+  /**
    * Batch inserts entity rows to avoid PostgreSQL's parameter limit.
    */
   private async batchInsert(entity: any, values: any[], batchSize: number = 5000): Promise<void> {
     for (let i = 0; i < values.length; i += batchSize) {
       const batch = values.slice(i, i + batchSize);
-      await AppDataSource.createQueryBuilder()
-        .insert()
-        .into(entity)
-        .values(batch)
-        .execute();
+      await AppDataSource.createQueryBuilder().insert().into(entity).values(batch).execute();
     }
   }
 
   /**
    * Batch inserts into a raw table (e.g. join tables) to avoid PostgreSQL's parameter limit.
    */
-  private async batchInsertRaw(tableName: string, values: any[], batchSize: number = 10000): Promise<void> {
+  private async batchInsertRaw(
+    tableName: string,
+    values: any[],
+    batchSize: number = 10000,
+  ): Promise<void> {
     for (let i = 0; i < values.length; i += batchSize) {
       const batch = values.slice(i, i + batchSize);
-      await AppDataSource.createQueryBuilder()
-        .insert()
-        .into(tableName)
-        .values(batch)
-        .execute();
+      await AppDataSource.createQueryBuilder().insert().into(tableName).values(batch).execute();
     }
   }
 
@@ -1137,8 +1118,13 @@ export class AdminService {
    * on subsequent inserts without explicit IDs.
    */
   private static readonly ALLOWED_RESET_TABLES = new Set([
-    'generation', 'pokemon_type', 'special_move_category', 'ability',
-    'move', 'pokemon', 'type_effective',
+    'generation',
+    'pokemon_type',
+    'special_move_category',
+    'ability',
+    'move',
+    'pokemon',
+    'type_effective',
   ]);
 
   private async resetSequence(tableName: string): Promise<void> {
