@@ -8,5 +8,5 @@ export const generationData = [
   { id: 7, name: 'SM' },
   { id: 8, name: 'SS' },
   { id: 9, name: 'SV' },
-  { id: 10, name: 'Nat Dex' },
+  { id: 0, name: 'Nat Dex' },
 ];

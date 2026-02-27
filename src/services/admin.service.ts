@@ -37,7 +37,7 @@ import {
 } from '../data/mock.data';
 
 const LATEST_GEN = 9;
-const NAT_DEX_GENERATION_ID = 10;
+const NAT_DEX_GENERATION_ID = 0;
 const NAT_DEX_MOVE_START_GEN = 3;
 
 @Service()
