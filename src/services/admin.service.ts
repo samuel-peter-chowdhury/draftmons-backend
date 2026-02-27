@@ -566,11 +566,26 @@ export class AdminService {
   }
 
   private async initializeGenerations(): Promise<void> {
-    await AppDataSource.createQueryBuilder()
-      .insert()
-      .into(Generation)
-      .values(generationData)
-      .execute();
+    // Insert ID 0 (Nat Dex) via raw SQL because TypeORM's QueryBuilder
+    // treats 0 as falsy and omits it from the INSERT, falling back to the sequence.
+    const natDex = generationData.find((g) => g.id === 0);
+    const rest = generationData.filter((g) => g.id !== 0);
+
+    if (natDex) {
+      await AppDataSource.query(
+        `INSERT INTO generation (id, name) VALUES ($1, $2)`,
+        [natDex.id, natDex.name],
+      );
+    }
+
+    if (rest.length) {
+      await AppDataSource.createQueryBuilder()
+        .insert()
+        .into(Generation)
+        .values(rest)
+        .execute();
+    }
+
     await this.resetSequence('generation');
   }
 
