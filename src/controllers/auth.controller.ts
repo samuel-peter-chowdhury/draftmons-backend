@@ -25,7 +25,7 @@ export class AuthController {
         try {
           const url = new URL(redirect);
           if (url.origin === APP_CONFIG.clientUrl) {
-            state = url.pathname;
+            state = url.pathname + url.search;
           }
         } catch {
           // Invalid URL — use default
@@ -45,7 +45,8 @@ export class AuthController {
           return res.redirect('/api-docs');
         }
 
-        const redirectPath = state && /^\/[a-zA-Z0-9/_-]*$/.test(state) ? state : '/home';
+        const redirectPath =
+          state && /^\/[a-zA-Z0-9/_-]*(\?[a-zA-Z0-9_=&.%-]*)?$/.test(state) ? state : '/home';
         return res.redirect(`${APP_CONFIG.clientUrl}${redirectPath}`);
       },
     );
