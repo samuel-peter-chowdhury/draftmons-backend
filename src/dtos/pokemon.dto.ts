@@ -77,7 +77,7 @@ export class PokemonOutputDto extends BaseOutputDto {
   @Type(() => AbilityOutputDto)
   abilities: AbilityOutputDto[];
 
-  @Expose({ groups: ['pokemon.full'] })
+  @Expose({ groups: ['pokemon.full', 'seasonPokemonTeam.full'] })
   @Type(() => TypeEffectiveOutputDto)
   typeEffectiveness: TypeEffectiveOutputDto[];
 

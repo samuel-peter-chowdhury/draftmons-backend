@@ -63,6 +63,9 @@ export class SeasonPokemonTeamController extends BaseController<
           pokemonTypes: true,
           abilities: true,
           generation: true,
+          typeEffectiveness: {
+            pokemonType: true,
+          },
         },
       },
       team: true,
