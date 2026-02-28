@@ -8,6 +8,8 @@ import { SpecialMoveCategory } from '../entities/special-move-category.entity';
 import { Ability } from '../entities/ability.entity';
 import { Move, MoveCategory } from '../entities/move.entity';
 import { Pokemon } from '../entities/pokemon.entity';
+import { Nature, StatType } from '../entities/nature.entity';
+import { Item } from '../entities/item.entity';
 import { TypeEffective } from '../entities/type-effective.entity';
 import { User } from '../entities/user.entity';
 import { League } from '../entities/league.entity';
@@ -65,6 +67,8 @@ export class AdminService {
     await this.initializeGenerations();
     await this.initializePokemonTypes();
     await this.initializeSpecialMoveCategories();
+    await this.initializeNatures();
+    await this.initializeItems();
     await this.initializeAbilities();
     await this.initializeMoves();
     await this.initializePokemon();
@@ -576,6 +580,82 @@ export class AdminService {
       .values(specialMoveCategoryData)
       .execute();
     await this.resetSequence('special_move_category');
+  }
+
+  /**
+   * Initializes all 25 natures using Gen 9 data from @pkmn/dex.
+   * Maps pkmn StatID ('atk', 'def', etc.) to the project's StatType enum.
+   * Auto-generates descriptions since @pkmn/dex provides none for natures.
+   */
+  private async initializeNatures(): Promise<void> {
+    const statIdToStatType: Record<string, StatType> = {
+      atk: StatType.ATTACK,
+      def: StatType.DEFENSE,
+      spa: StatType.SPECIAL_ATTACK,
+      spd: StatType.SPECIAL_DEFENSE,
+      spe: StatType.SPEED,
+    };
+
+    const statTypeDisplayName: Record<StatType, string> = {
+      [StatType.HP]: 'HP',
+      [StatType.ATTACK]: 'Attack',
+      [StatType.DEFENSE]: 'Defense',
+      [StatType.SPECIAL_ATTACK]: 'Special Attack',
+      [StatType.SPECIAL_DEFENSE]: 'Special Defense',
+      [StatType.SPEED]: 'Speed',
+    };
+
+    const dex = Dex.forGen(LATEST_GEN as any);
+    const natures = dex.natures.all().filter((n: any) => !n.isNonstandard);
+
+    const allNatures = natures.map((nature: any) => {
+      const positiveStat = nature.plus ? statIdToStatType[nature.plus] ?? null : null;
+      const negativeStat = nature.minus ? statIdToStatType[nature.minus] ?? null : null;
+
+      const description =
+        positiveStat && negativeStat
+          ? `Increases ${statTypeDisplayName[positiveStat]}, decreases ${statTypeDisplayName[negativeStat]}.`
+          : 'No stat modifications.';
+
+      return {
+        name: nature.name,
+        description,
+        positiveStat,
+        negativeStat,
+      };
+    });
+
+    await AppDataSource.createQueryBuilder().insert().into(Nature).values(allNatures).execute();
+    await this.resetSequence('nature');
+  }
+
+  /**
+   * Initializes items for each generation 1-9 from @pkmn/dex,
+   * then creates a "nat dex" set (generation 0) containing all unique
+   * items with descriptions from the latest generation they appear in.
+   */
+  private async initializeItems(): Promise<void> {
+    const allItems: { name: string; description: string; generationId: number }[] = [];
+    const natDexMap = new Map<string, string>();
+
+    for (let gen = 1; gen <= LATEST_GEN; gen++) {
+      const dex = Dex.forGen(gen as any);
+      const items = dex.items.all().filter((i: any) => !i.isNonstandard);
+
+      for (const item of items) {
+        const description = (item as any).desc || (item as any).shortDesc || '';
+        allItems.push({ name: (item as any).name, description, generationId: gen });
+        natDexMap.set((item as any).name, description);
+      }
+    }
+
+    // Add nat dex items (unique set with latest descriptions)
+    for (const [name, description] of natDexMap) {
+      allItems.push({ name, description, generationId: NAT_DEX_GENERATION_ID });
+    }
+
+    await this.batchInsert(Item, allItems);
+    await this.resetSequence('item');
   }
 
   /**
@@ -1121,6 +1201,8 @@ export class AdminService {
     'generation',
     'pokemon_type',
     'special_move_category',
+    'nature',
+    'item',
     'ability',
     'move',
     'pokemon',
