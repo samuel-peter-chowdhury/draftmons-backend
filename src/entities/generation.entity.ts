@@ -5,6 +5,7 @@ import { Season } from './season.entity';
 import { Move } from './move.entity';
 import { Ability } from './ability.entity';
 import { Item } from './item.entity';
+import { TeamBuild } from './team-build.entity';
 
 @Entity('generation')
 export class Generation extends BaseApplicationEntity {
@@ -25,4 +26,7 @@ export class Generation extends BaseApplicationEntity {
 
   @OneToMany(() => Item, (item) => item.generation)
   items: Item[];
+
+  @OneToMany(() => TeamBuild, (teamBuild) => teamBuild.generation)
+  teamBuilds: TeamBuild[];
 }

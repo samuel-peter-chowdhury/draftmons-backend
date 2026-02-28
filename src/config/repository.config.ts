@@ -16,6 +16,8 @@ import { PokemonType } from '../entities/pokemon-type.entity';
 import { SeasonPokemon } from '../entities/season-pokemon.entity';
 import { SeasonPokemonTeam } from '../entities/season-pokemon-team.entity';
 import { Team } from '../entities/team.entity';
+import { TeamBuild } from '../entities/team-build.entity';
+import { TeamBuildSet } from '../entities/team-build-set.entity';
 import { Week } from '../entities/week.entity';
 import { Item } from '../entities/item.entity';
 import { Nature } from '../entities/nature.entity';
@@ -39,6 +41,8 @@ export function registerRepositories(): void {
   Container.set('SeasonRepository', AppDataSource.getRepository(Season));
   Container.set('SpecialMoveCategoryRepository', AppDataSource.getRepository(SpecialMoveCategory));
   Container.set('TeamRepository', AppDataSource.getRepository(Team));
+  Container.set('TeamBuildRepository', AppDataSource.getRepository(TeamBuild));
+  Container.set('TeamBuildSetRepository', AppDataSource.getRepository(TeamBuildSet));
   Container.set('TypeEffectiveRepository', AppDataSource.getRepository(TypeEffective));
   Container.set('UserRepository', AppDataSource.getRepository(User));
   Container.set('WeekRepository', AppDataSource.getRepository(Week));

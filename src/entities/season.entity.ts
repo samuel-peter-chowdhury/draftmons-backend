@@ -5,6 +5,7 @@ import { Week } from './week.entity';
 import { Team } from './team.entity';
 import { BaseApplicationEntity } from './base-application.entity';
 import { Generation } from './generation.entity';
+import { TeamBuild } from './team-build.entity';
 
 export enum SeasonStatus {
   PRE_DRAFT = 'PRE_DRAFT',
@@ -59,4 +60,7 @@ export class Season extends BaseApplicationEntity {
 
   @OneToMany(() => SeasonPokemon, (seasonPokemon) => seasonPokemon.season)
   seasonPokemon: SeasonPokemon[];
+
+  @OneToMany(() => TeamBuild, (teamBuild) => teamBuild.season)
+  teamBuilds: TeamBuild[];
 }

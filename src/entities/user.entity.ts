@@ -2,6 +2,7 @@ import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseApplicationEntity } from './base-application.entity';
 import { LeagueUser } from './league-user.entity';
 import { Team } from './team.entity';
+import { TeamBuild } from './team-build.entity';
 
 @Entity('user')
 export class User extends BaseApplicationEntity {
@@ -34,4 +35,7 @@ export class User extends BaseApplicationEntity {
 
   @OneToMany(() => Team, (team) => team.user)
   teams: Team[];
+
+  @OneToMany(() => TeamBuild, (teamBuild) => teamBuild.user)
+  teamBuilds: TeamBuild[];
 }
