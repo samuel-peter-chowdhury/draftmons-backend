@@ -4,7 +4,7 @@ import { BaseController } from './base.controller';
 import { GameStat } from '../entities/game-stat.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { GameStatInputDto, GameStatOutputDto } from '../dtos/game-stat.dto';
-import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
+import { FindOptionsWhere, FindOptionsRelations, In } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 
 export class GameStatController extends BaseController<
@@ -35,10 +35,28 @@ export class GameStatController extends BaseController<
     return ['id', 'createdAt', 'updatedAt'];
   }
 
+  protected getMaxPageSize(): number {
+    return 1000;
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<GameStat> | FindOptionsWhere<GameStat>[] | undefined> {
-    return plainToInstance(GameStatInputDto, req.query, { excludeExtraneousValues: true });
+    const where: FindOptionsWhere<GameStat> = plainToInstance(GameStatInputDto, req.query, {
+      excludeExtraneousValues: true,
+    });
+
+    if (req.query.gameIds) {
+      const gameIdsRaw = Array.isArray(req.query.gameIds)
+        ? (req.query.gameIds as string[])
+        : (req.query.gameIds as string).split(',');
+      const gameIds = gameIdsRaw.map(Number).filter((id) => !isNaN(id));
+      if (gameIds.length > 0) {
+        where.gameId = In(gameIds) as any;
+      }
+    }
+
+    return where;
   }
 
   protected getBaseRelations(): FindOptionsRelations<GameStat> | undefined {
@@ -210,8 +228,19 @@ export class GameStatController extends BaseController<
    *         schema:
    *           type: integer
    *           minimum: 1
+   *           maximum: 1000
    *           default: 25
-   *         description: Number of items per page
+   *         description: Number of items per page (max 1000)
+   *       - in: query
+   *         name: gameIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: false
+   *         description: Comma-separated list of game IDs to filter by
+   *         example: "1,2,3"
    *       - in: query
    *         name: sortBy
    *         schema:
@@ -615,8 +644,19 @@ export class GameStatController extends BaseController<
    *         schema:
    *           type: integer
    *           minimum: 1
+   *           maximum: 1000
    *           default: 25
-   *         description: Number of items per page
+   *         description: Number of items per page (max 1000)
+   *       - in: query
+   *         name: gameIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: false
+   *         description: Comma-separated list of game IDs to filter by
+   *         example: "1,2,3"
    *       - in: query
    *         name: sortBy
    *         schema:

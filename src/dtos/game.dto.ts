@@ -21,7 +21,7 @@ export class GameOutputDto extends BaseOutputDto {
   @Expose()
   replayLink: string;
 
-  @Expose({ groups: ['game.full'] })
+  @Expose({ groups: ['game.full', 'team.full'] })
   @Type(() => MatchOutputDto)
   match: MatchOutputDto;
 

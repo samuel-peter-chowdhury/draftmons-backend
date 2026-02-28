@@ -15,7 +15,7 @@ export class MatchOutputDto extends BaseOutputDto {
   @Expose()
   winningTeamId: number;
 
-  @Expose({ groups: ['match.full'] })
+  @Expose({ groups: ['match.full', 'team.full'] })
   @Type(() => WeekOutputDto)
   week: WeekOutputDto;
 

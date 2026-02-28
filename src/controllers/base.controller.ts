@@ -113,9 +113,19 @@ export abstract class BaseController<
     res.status(204).send();
   });
 
+  protected getMaxPageSize(): number {
+    return 100;
+  }
+
   protected async getPaginationOptions(req: Request): Promise<PaginationOptions> {
     const page: number = parseInt(req.query.page as string) || 1;
     const pageSize: number = parseInt(req.query.pageSize as string) || 25;
+    const maxPageSize = this.getMaxPageSize();
+
+    if (pageSize > maxPageSize) {
+      throw new AppValidationError(`pageSize must not exceed ${maxPageSize}`);
+    }
+
     const paginationOptions: PaginationOptions = plainToInstance(PaginationOptions, {
       page,
       pageSize,

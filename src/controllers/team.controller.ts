@@ -6,6 +6,7 @@ import { validateDto, validatePartialDto } from '../middleware/validation.middle
 import { TeamInputDto, TeamOutputDto } from '../dtos/team.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import { tr } from '@faker-js/faker/.';
 
 export class TeamController extends BaseController<Team, TeamInputDto, TeamOutputDto> {
   public router = Router();
@@ -43,6 +44,22 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
 
   protected getFullRelations(): FindOptionsRelations<Team> | undefined {
     return {
+      lostGames: {
+        match: {
+          week: true,
+        },
+      },
+      wonGames: {
+        match: {
+          week: true,
+        },
+      },
+      lostMatches: {
+        week: true,
+      },
+      wonMatches: {
+        week: true,
+      },
       seasonPokemonTeams: {
         seasonPokemon: {
           pokemon: {
@@ -52,6 +69,7 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
           },
         },
       },
+      user: true,
     };
   }
 
