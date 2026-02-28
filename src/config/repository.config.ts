@@ -17,6 +17,8 @@ import { SeasonPokemon } from '../entities/season-pokemon.entity';
 import { SeasonPokemonTeam } from '../entities/season-pokemon-team.entity';
 import { Team } from '../entities/team.entity';
 import { Week } from '../entities/week.entity';
+import { Item } from '../entities/item.entity';
+import { Nature } from '../entities/nature.entity';
 import { SpecialMoveCategory } from '../entities/special-move-category.entity';
 
 export function registerRepositories(): void {
@@ -24,10 +26,12 @@ export function registerRepositories(): void {
   Container.set('GameStatRepository', AppDataSource.getRepository(GameStat));
   Container.set('GameRepository', AppDataSource.getRepository(Game));
   Container.set('GenerationRepository', AppDataSource.getRepository(Generation));
+  Container.set('ItemRepository', AppDataSource.getRepository(Item));
   Container.set('LeagueUserRepository', AppDataSource.getRepository(LeagueUser));
   Container.set('LeagueRepository', AppDataSource.getRepository(League));
   Container.set('MatchRepository', AppDataSource.getRepository(Match));
   Container.set('MoveRepository', AppDataSource.getRepository(Move));
+  Container.set('NatureRepository', AppDataSource.getRepository(Nature));
   Container.set('PokemonTypeRepository', AppDataSource.getRepository(PokemonType));
   Container.set('PokemonRepository', AppDataSource.getRepository(Pokemon));
   Container.set('SeasonPokemonRepository', AppDataSource.getRepository(SeasonPokemon));

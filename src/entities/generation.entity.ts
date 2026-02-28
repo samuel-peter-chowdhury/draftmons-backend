@@ -4,6 +4,7 @@ import { Pokemon } from './pokemon.entity';
 import { Season } from './season.entity';
 import { Move } from './move.entity';
 import { Ability } from './ability.entity';
+import { Item } from './item.entity';
 
 @Entity('generation')
 export class Generation extends BaseApplicationEntity {
@@ -21,4 +22,7 @@ export class Generation extends BaseApplicationEntity {
 
   @OneToMany(() => Season, (season) => season.generation)
   seasons: Season[];
+
+  @OneToMany(() => Item, (item) => item.generation)
+  items: Item[];
 }
