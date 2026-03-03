@@ -59,6 +59,10 @@ export class MoveController extends BaseController<Move, MoveInputDto, MoveOutpu
     return ['id', 'name', 'power', 'accuracy', 'pp', 'priority', 'createdAt', 'updatedAt'];
   }
 
+  protected getMaxPageSize(): number {
+    return 10000;
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Move> | FindOptionsWhere<Move>[] | undefined> {

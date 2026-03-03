@@ -26,9 +26,10 @@ export class MoveService extends BaseService<Move, MoveInputDto> {
 
     let queryBuilder = this.repository.createQueryBuilder('move');
 
-    queryBuilder = this.applyRelations(queryBuilder, relations);
+    queryBuilder = this.applyRelations(queryBuilder, relations, req);
     queryBuilder = this.applyNameFilter(queryBuilder, req);
     queryBuilder = this.applyGenerationFilter(queryBuilder, req);
+    queryBuilder = this.applyPokemonFilter(queryBuilder, req);
     queryBuilder = this.applySorting(queryBuilder, sortOptions);
     queryBuilder = this.applyPagination(queryBuilder, page, pageSize);
 
@@ -46,10 +47,26 @@ export class MoveService extends BaseService<Move, MoveInputDto> {
   private applyRelations(
     queryBuilder: SelectQueryBuilder<Move>,
     relations?: FindOptionsRelations<Move>,
+    req?: Request,
   ): SelectQueryBuilder<Move> {
     if (relations) {
+      const pokemonIds = req?.query.pokemonIds
+        ? getQueryIntArray(req, 'pokemonIds')
+        : [];
+
       Object.keys(relations).forEach((relation) => {
-        queryBuilder = queryBuilder.leftJoinAndSelect(`move.${relation}`, relation);
+        if (relation === 'pokemon' && pokemonIds.length > 0) {
+          // When pokemonIds filter is active, only load matching Pokemon
+          // in the relation to keep the response lean
+          queryBuilder = queryBuilder.leftJoinAndSelect(
+            `move.${relation}`,
+            relation,
+            `${relation}.id IN (:...relPokemonIds)`,
+            { relPokemonIds: pokemonIds },
+          );
+        } else {
+          queryBuilder = queryBuilder.leftJoinAndSelect(`move.${relation}`, relation);
+        }
       });
     }
     return queryBuilder;
@@ -80,6 +97,28 @@ export class MoveService extends BaseService<Move, MoveInputDto> {
         });
       }
     }
+    return queryBuilder;
+  }
+
+  private applyPokemonFilter(
+    queryBuilder: SelectQueryBuilder<Move>,
+    req: Request,
+  ): SelectQueryBuilder<Move> {
+    if (req.query.pokemonIds) {
+      const pokemonIdNumbers = getQueryIntArray(req, 'pokemonIds');
+
+      if (pokemonIdNumbers.length > 0) {
+        queryBuilder = queryBuilder.andWhere(
+          `EXISTS (
+            SELECT 1 FROM pokemon_moves pm
+            WHERE pm.move_id = move.id
+            AND pm.pokemon_id IN (:...pokemonIds)
+          )`,
+          { pokemonIds: pokemonIdNumbers },
+        );
+      }
+    }
+
     return queryBuilder;
   }
 
