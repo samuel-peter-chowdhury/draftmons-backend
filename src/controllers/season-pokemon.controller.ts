@@ -35,16 +35,22 @@ export class SeasonPokemonController extends BaseController<
     return ['id', 'pointValue', 'createdAt', 'updatedAt', 'name'];
   }
 
+  protected getMaxPageSize(): number {
+    return 10000;
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<SeasonPokemon> | FindOptionsWhere<SeasonPokemon>[] | undefined> {
-    const where: any = {... plainToInstance(SeasonPokemonInputDto, req.query, { excludeExtraneousValues: true })};
+    const where: any = {
+      ...plainToInstance(SeasonPokemonInputDto, req.query, { excludeExtraneousValues: true }),
+    };
 
     const teamId = req.query.teamId;
-    if (teamId){
+    if (teamId) {
       where.seasonPokemonTeams = {
         teamId: teamId,
-      }
+      };
     }
 
     return where;
@@ -60,7 +66,7 @@ export class SeasonPokemonController extends BaseController<
       pokemon: {
         pokemonTypes: true,
         abilities: true,
-        generation: true
+        generation: true,
       },
       seasonPokemonTeams: true,
       gameStats: true,
