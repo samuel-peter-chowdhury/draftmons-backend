@@ -6,7 +6,6 @@ import { PokemonInputDto } from '../dtos/pokemon.dto';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import { Request } from 'express';
 import {
-  applyPokemonRelations,
   applyPokemonNameFilter,
   applyPokemonStatRangeFilters,
   applyPokemonBulkFilters,
@@ -21,6 +20,7 @@ import {
   applyPokemonNotWeakFilter,
   applyPokemonSorting,
   applyPokemonPagination,
+  applyRelations,
 } from '../utils/pokemon-search.utils';
 
 @Service()
@@ -44,21 +44,21 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
     let queryBuilder = this.repository.createQueryBuilder('pokemon');
 
     if (relations) {
-      queryBuilder = applyPokemonRelations(queryBuilder, relations as Record<string, boolean>, 'pokemon');
+      queryBuilder = applyRelations(queryBuilder, relations as Record<string, boolean>, 'pokemon');
     }
-    queryBuilder = applyPokemonNameFilter(queryBuilder, req, 'pokemon');
-    queryBuilder = applyPokemonStatRangeFilters(queryBuilder, req, 'pokemon');
-    queryBuilder = applyPokemonBulkFilters(queryBuilder, req, 'pokemon');
-    queryBuilder = applyPokemonTypeFilter(queryBuilder, req, 'pokemon.id');
-    queryBuilder = applyPokemonAbilityFilter(queryBuilder, req, 'pokemon.id');
-    queryBuilder = applyPokemonMoveFilter(queryBuilder, req, 'pokemon.id');
-    queryBuilder = applyPokemonGenerationFilter(queryBuilder, req, 'pokemon');
-    queryBuilder = applyPokemonSpecialMoveCategoryFilter(queryBuilder, req, 'pokemon.id');
-    queryBuilder = applyPokemonWeaknessFilter(queryBuilder, req, 'pokemon.id');
-    queryBuilder = applyPokemonResistanceFilter(queryBuilder, req, 'pokemon.id');
-    queryBuilder = applyPokemonImmunityFilter(queryBuilder, req, 'pokemon.id');
-    queryBuilder = applyPokemonNotWeakFilter(queryBuilder, req, 'pokemon.id');
-    queryBuilder = applyPokemonSorting(queryBuilder, sortOptions, 'pokemon');
+    queryBuilder = applyPokemonNameFilter(queryBuilder, req);
+    queryBuilder = applyPokemonStatRangeFilters(queryBuilder, req);
+    queryBuilder = applyPokemonBulkFilters(queryBuilder, req);
+    queryBuilder = applyPokemonTypeFilter(queryBuilder, req);
+    queryBuilder = applyPokemonAbilityFilter(queryBuilder, req);
+    queryBuilder = applyPokemonMoveFilter(queryBuilder, req);
+    queryBuilder = applyPokemonGenerationFilter(queryBuilder, req);
+    queryBuilder = applyPokemonSpecialMoveCategoryFilter(queryBuilder, req);
+    queryBuilder = applyPokemonWeaknessFilter(queryBuilder, req);
+    queryBuilder = applyPokemonResistanceFilter(queryBuilder, req);
+    queryBuilder = applyPokemonImmunityFilter(queryBuilder, req);
+    queryBuilder = applyPokemonNotWeakFilter(queryBuilder, req);
+    queryBuilder = applyPokemonSorting(queryBuilder, sortOptions);
     queryBuilder = applyPokemonPagination(queryBuilder, page, pageSize);
 
     const [data, total] = await queryBuilder.getManyAndCount();

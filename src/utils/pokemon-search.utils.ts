@@ -2,52 +2,58 @@ import { SelectQueryBuilder, ObjectLiteral } from 'typeorm';
 import { Request } from 'express';
 import { getQueryIntArray } from './request.utils';
 import { SortOptions } from './pagination.utils';
-import { Pokemon } from '@/entities/pokemon.entity';
 
 const ALLOWED_SORT_FIELDS = new Set([
   'id', 'name', 'dexId', 'baseStatTotal', 'hp', 'attack', 'defense',
-  'specialAttack', 'specialDefense', 'speed', 'height', 'weight',
-  'createdAt', 'updatedAt',
+  'specialAttack', 'specialDefense', 'speed', 'pointValue', 'height', 'weight',
+  'createdAt', 'updatedAt'
 ]);
 
-export function applyPokemonRelations<T extends ObjectLiteral>(
+/**
+ * Apply relations (joins) to the query builder
+ */
+export function applyRelations<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
   relations: Record<string, boolean>,
-  alias: string,
+  tableName: string,
 ): SelectQueryBuilder<T> {
   Object.keys(relations).forEach((relation) => {
-    queryBuilder = queryBuilder.leftJoinAndSelect(`${alias}.${relation}`, relation);
+    queryBuilder = queryBuilder.leftJoinAndSelect(`${tableName}.${relation}`, relation);
   });
   return queryBuilder;
 }
 
+/**
+ * Apply name ILIKE filter
+ */
 export function applyPokemonNameFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  alias: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.nameLike) {
-    queryBuilder = queryBuilder.andWhere(`${alias}.name ILIKE :nameLike`, {
+    queryBuilder = queryBuilder.andWhere('pokemon.name ILIKE :nameLike', {
       nameLike: `%${req.query.nameLike}%`,
     });
   }
   return queryBuilder;
 }
 
+/**
+ * Apply stat range filters (hp, attack, defense, etc.)
+ */
 export function applyPokemonStatRangeFilters<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  alias: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   const statFieldsMap: { [key: string]: string } = {
-    hp: 'hp',
-    attack: 'attack',
-    defense: 'defense',
-    specialAttack: 'special_attack',
-    specialDefense: 'special_defense',
-    speed: 'speed',
-    baseStatTotal: 'base_stat_total',
-    seasonPointValue: 'season_point_value'
+    hp: 'pokemon.hp',
+    attack: 'pokemon.attack',
+    defense: 'pokemon.defense',
+    specialAttack: 'pokemon.special_attack',
+    specialDefense: 'pokemon.special_defense',
+    speed: 'pokemon.speed',
+    baseStatTotal: 'pokemon.base_stat_total',
+    pointValue: 'seasonPokemon.point_value'
   };
 
   for (const [field, dbColumn] of Object.entries(statFieldsMap)) {
@@ -57,7 +63,7 @@ export function applyPokemonStatRangeFilters<T extends ObjectLiteral>(
     if (req.query[minParam]) {
       const minValue = parseInt(req.query[minParam] as string);
       if (!isNaN(minValue)) {
-        queryBuilder = queryBuilder.andWhere(`${alias}.${dbColumn} >= :${minParam}`, {
+        queryBuilder = queryBuilder.andWhere(`${dbColumn} >= :${minParam}`, {
           [minParam]: minValue,
         });
       }
@@ -66,7 +72,7 @@ export function applyPokemonStatRangeFilters<T extends ObjectLiteral>(
     if (req.query[maxParam]) {
       const maxValue = parseInt(req.query[maxParam] as string);
       if (!isNaN(maxValue)) {
-        queryBuilder = queryBuilder.andWhere(`${alias}.${dbColumn} <= :${maxParam}`, {
+        queryBuilder = queryBuilder.andWhere(`${dbColumn} <= :${maxParam}`, {
           [maxParam]: maxValue,
         });
       }
@@ -76,15 +82,17 @@ export function applyPokemonStatRangeFilters<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply bulk filters (physical and special bulk calculations)
+ */
 export function applyPokemonBulkFilters<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  alias: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.minPhysicalBulk) {
     const minPhysicalBulk = parseInt(req.query.minPhysicalBulk as string);
     if (!isNaN(minPhysicalBulk)) {
-      queryBuilder = queryBuilder.andWhere(`(${alias}.hp + ${alias}.defense) >= :minPhysicalBulk`, {
+      queryBuilder = queryBuilder.andWhere('(pokemon.hp + pokemon.defense) >= :minPhysicalBulk', {
         minPhysicalBulk,
       });
     }
@@ -93,17 +101,18 @@ export function applyPokemonBulkFilters<T extends ObjectLiteral>(
   if (req.query.maxPhysicalBulk) {
     const maxPhysicalBulk = parseInt(req.query.maxPhysicalBulk as string);
     if (!isNaN(maxPhysicalBulk)) {
-      queryBuilder = queryBuilder.andWhere(`(${alias}.hp + ${alias}.defense) <= :maxPhysicalBulk`, {
+      queryBuilder = queryBuilder.andWhere('(pokemon.hp + pokemon.defense) <= :maxPhysicalBulk', {
         maxPhysicalBulk,
       });
     }
   }
 
+  // Special bulk filter (hp + specialDefense)
   if (req.query.minSpecialBulk) {
     const minSpecialBulk = parseInt(req.query.minSpecialBulk as string);
     if (!isNaN(minSpecialBulk)) {
       queryBuilder = queryBuilder.andWhere(
-        `(${alias}.hp + ${alias}.special_defense) >= :minSpecialBulk`,
+        '(pokemon.hp + pokemon.special_defense) >= :minSpecialBulk',
         { minSpecialBulk },
       );
     }
@@ -113,7 +122,7 @@ export function applyPokemonBulkFilters<T extends ObjectLiteral>(
     const maxSpecialBulk = parseInt(req.query.maxSpecialBulk as string);
     if (!isNaN(maxSpecialBulk)) {
       queryBuilder = queryBuilder.andWhere(
-        `(${alias}.hp + ${alias}.special_defense) <= :maxSpecialBulk`,
+        '(pokemon.hp + pokemon.special_defense) <= :maxSpecialBulk',
         { maxSpecialBulk },
       );
     }
@@ -122,10 +131,12 @@ export function applyPokemonBulkFilters<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply Pokemon type IDs filter (must have ALL specified types)
+ */
 export function applyPokemonTypeFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  pokemonIdExpression: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.pokemonTypeIds) {
     const typeIdNumbers = getQueryIntArray(req, 'pokemonTypeIds');
@@ -135,7 +146,7 @@ export function applyPokemonTypeFilter<T extends ObjectLiteral>(
         queryBuilder = queryBuilder.andWhere(
           `EXISTS (
             SELECT 1 FROM pokemon_pokemon_types ppt
-            WHERE ppt.pokemon_id = ${pokemonIdExpression}
+            WHERE ppt.pokemon_id = pokemon.id
             AND ppt.pokemon_type_id = :typeId${i}
           )`,
           { [`typeId${i}`]: typeIdNumbers[i] },
@@ -147,10 +158,12 @@ export function applyPokemonTypeFilter<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply ability IDs filter (must have ALL specified abilities)
+ */
 export function applyPokemonAbilityFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  pokemonIdExpression: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.abilityIds) {
     const abilityIdNumbers = getQueryIntArray(req, 'abilityIds');
@@ -160,7 +173,7 @@ export function applyPokemonAbilityFilter<T extends ObjectLiteral>(
         queryBuilder = queryBuilder.andWhere(
           `EXISTS (
             SELECT 1 FROM pokemon_abilities pa
-            WHERE pa.pokemon_id = ${pokemonIdExpression}
+            WHERE pa.pokemon_id = pokemon.id
             AND pa.ability_id = :abilityId${i}
           )`,
           { [`abilityId${i}`]: abilityIdNumbers[i] },
@@ -172,10 +185,12 @@ export function applyPokemonAbilityFilter<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply move IDs filter (must have ALL specified moves)
+ */
 export function applyPokemonMoveFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  pokemonIdExpression: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.moveIds) {
     const moveIdNumbers = getQueryIntArray(req, 'moveIds');
@@ -185,7 +200,7 @@ export function applyPokemonMoveFilter<T extends ObjectLiteral>(
         queryBuilder = queryBuilder.andWhere(
           `EXISTS (
             SELECT 1 FROM pokemon_moves pm
-            WHERE pm.pokemon_id = ${pokemonIdExpression}
+            WHERE pm.pokemon_id = pokemon.id
             AND pm.move_id = :moveId${i}
           )`,
           { [`moveId${i}`]: moveIdNumbers[i] },
@@ -197,16 +212,18 @@ export function applyPokemonMoveFilter<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply generation IDs filter (must belong to one of the specified generations)
+ */
 export function applyPokemonGenerationFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  alias: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.generationIds) {
     const generationIdNumbers = getQueryIntArray(req, 'generationIds');
 
     if (generationIdNumbers.length > 0) {
-      queryBuilder = queryBuilder.andWhere(`${alias}.generation_id IN (:...generationIds)`, {
+      queryBuilder = queryBuilder.andWhere('pokemon.generation_id IN (:...generationIds)', {
         generationIds: generationIdNumbers,
       });
     }
@@ -215,10 +232,12 @@ export function applyPokemonGenerationFilter<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply special move category IDs filter (must have ALL specified categories)
+ */
 export function applyPokemonSpecialMoveCategoryFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  pokemonIdExpression: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.specialMoveCategoryIds) {
     const specialMoveCategoryIdNumbers = getQueryIntArray(req, 'specialMoveCategoryIds');
@@ -229,7 +248,7 @@ export function applyPokemonSpecialMoveCategoryFilter<T extends ObjectLiteral>(
           `EXISTS (
             SELECT 1 FROM pokemon_moves pm
             INNER JOIN move_special_move_categories msmc ON pm.move_id = msmc.move_id
-            WHERE pm.pokemon_id = ${pokemonIdExpression}
+            WHERE pm.pokemon_id = pokemon.id
             AND msmc.special_move_category_id = :specialMoveCategoryId${i}
           )`,
           { [`specialMoveCategoryId${i}`]: specialMoveCategoryIdNumbers[i] },
@@ -241,10 +260,12 @@ export function applyPokemonSpecialMoveCategoryFilter<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply weakness filter (must not be weak to ALL specified types - value <= 1)
+ */
 export function applyPokemonWeaknessFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  pokemonIdExpression: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.weakPokemonTypeIds) {
     const weakTypeIdNumbers = getQueryIntArray(req, 'weakPokemonTypeIds');
@@ -254,7 +275,7 @@ export function applyPokemonWeaknessFilter<T extends ObjectLiteral>(
         queryBuilder = queryBuilder.andWhere(
           `EXISTS (
             SELECT 1 FROM type_effective te
-            WHERE te.pokemon_id = ${pokemonIdExpression}
+            WHERE te.pokemon_id = pokemon.id
             AND te.pokemon_type_id = :weakTypeId${i}
             AND te.value > 1
           )`,
@@ -267,10 +288,12 @@ export function applyPokemonWeaknessFilter<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply resistance filter (must resist ALL specified types - value < 1)
+ */
 export function applyPokemonResistanceFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  pokemonIdExpression: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.resistedPokemonTypeIds) {
     const resistedTypeIdNumbers = getQueryIntArray(req, 'resistedPokemonTypeIds');
@@ -280,7 +303,7 @@ export function applyPokemonResistanceFilter<T extends ObjectLiteral>(
         queryBuilder = queryBuilder.andWhere(
           `EXISTS (
             SELECT 1 FROM type_effective te
-            WHERE te.pokemon_id = ${pokemonIdExpression}
+            WHERE te.pokemon_id = pokemon.id
             AND te.pokemon_type_id = :resistedTypeId${i}
             AND te.value < 1
           )`,
@@ -293,10 +316,12 @@ export function applyPokemonResistanceFilter<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply immunity filter (must be immune ALL specified types - value = 0)
+ */
 export function applyPokemonImmunityFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  pokemonIdExpression: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.immunePokemonTypeIds) {
     const immuneTypeIdNumbers = getQueryIntArray(req, 'immunePokemonTypeIds');
@@ -306,7 +331,7 @@ export function applyPokemonImmunityFilter<T extends ObjectLiteral>(
         queryBuilder = queryBuilder.andWhere(
           `EXISTS (
             SELECT 1 FROM type_effective te
-            WHERE te.pokemon_id = ${pokemonIdExpression}
+            WHERE te.pokemon_id = pokemon.id
             AND te.pokemon_type_id = :immuneTypeId${i}
             AND te.value = 0
           )`,
@@ -319,10 +344,12 @@ export function applyPokemonImmunityFilter<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
+/**
+ * Apply not weak filter (must not be weak to ALL specified types - value <= 1)
+ */
 export function applyPokemonNotWeakFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  pokemonIdExpression: string,
+  req: Request
 ): SelectQueryBuilder<T> {
   if (req.query.notWeakPokemonTypeIds) {
     const notWeakTypeIdNumbers = getQueryIntArray(req, 'notWeakPokemonTypeIds');
@@ -332,7 +359,7 @@ export function applyPokemonNotWeakFilter<T extends ObjectLiteral>(
         queryBuilder = queryBuilder.andWhere(
           `EXISTS (
             SELECT 1 FROM type_effective te
-            WHERE te.pokemon_id = ${pokemonIdExpression}
+            WHERE te.pokemon_id = pokemon.id
             AND te.pokemon_type_id = :notWeakTypeId${i}
             AND te.value <= 1
           )`,
@@ -345,48 +372,53 @@ export function applyPokemonNotWeakFilter<T extends ObjectLiteral>(
   return queryBuilder;
 }
 
-export function applySeasonPokemonDraftedFilter<T extends ObjectLiteral>(
+/**
+ * Apply not drafted filter (season pokemon has no season pokemon team references)
+ */
+export function applySeasonPokemonNotDraftedFilter<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  req: Request,
-  pokemonIdExpression: string,
+  req: Request
 ): SelectQueryBuilder<T> {
-  if (req.query.pokemonTypeIds) {
-    const typeIdNumbers = getQueryIntArray(req, 'pokemonTypeIds');
-
-    if (typeIdNumbers.length > 0) {
-      for (let i = 0; i < typeIdNumbers.length; i++) {
-        queryBuilder = queryBuilder.andWhere(
-          `EXISTS (
-            SELECT 1 FROM pokemon_pokemon_types ppt
-            WHERE ppt.pokemon_id = ${pokemonIdExpression}
-            AND ppt.pokemon_type_id = :typeId${i}
-          )`,
-          { [`typeId${i}`]: typeIdNumbers[i] },
-        );
-      }
-    }
+  if (req.query.excludeDrafted === 'true') {
+    queryBuilder = queryBuilder.andWhere(
+      `NOT EXISTS (
+        SELECT 1 FROM season_pokemon_team spt
+        WHERE spt.season_pokemon_id = seasonPokemon.id
+      )`
+    );
   }
 
   return queryBuilder;
 }
 
+/**
+ * Apply sorting to the query
+ */
 export function applyPokemonSorting<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
-  sortOptions: SortOptions | undefined,
-  alias: string,
+  sortOptions: SortOptions | undefined
 ): SelectQueryBuilder<T> {
+  let tableNameVariant: 'pokemon' | 'seasonPokemon';
   if (sortOptions) {
     if (!ALLOWED_SORT_FIELDS.has(sortOptions.sortBy)) {
       throw new Error(`Invalid sort field: ${sortOptions.sortBy}`);
     }
+    if (sortOptions.sortBy === 'pointValue'){
+      tableNameVariant = 'seasonPokemon';
+    } else {
+      tableNameVariant = 'pokemon';
+    }
     queryBuilder = queryBuilder.orderBy(
-      `${alias}.${sortOptions.sortBy}`,
+      `${tableNameVariant}.${sortOptions.sortBy}`,
       sortOptions.sortOrder as 'ASC' | 'DESC',
     );
   }
   return queryBuilder;
 }
 
+/**
+ * Apply pagination (skip and take)
+ */
 export function applyPokemonPagination<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
   page: number,
