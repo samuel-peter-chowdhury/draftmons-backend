@@ -2,7 +2,6 @@ import { SeasonPokemon } from '../entities/season-pokemon.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
 import {
-  FindOptionsOrder,
   FindOptionsRelations,
   FindOptionsWhere,
   Repository,
@@ -27,7 +26,6 @@ import {
   applyPokemonNotWeakFilter,
   applyPokemonSorting,
   applyPokemonPagination,
-  applyRelations,
   applySeasonPokemonNotDraftedFilter,
 } from '../utils/pokemon-search.utils';
 
@@ -53,41 +51,8 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
     return super.delete(where);
   }
 
-    async findAll(
-    where?: FindOptionsWhere<SeasonPokemon> | FindOptionsWhere<SeasonPokemon>[],
-    relations?: FindOptionsRelations<SeasonPokemon>,
-    paginationOptions?: PaginationOptions,
-    sortOptions?: SortOptions,
-  ): Promise<PaginatedResponse<SeasonPokemon>> {
-    let order: FindOptionsOrder<SeasonPokemon> | undefined;
-    const sortBy = sortOptions?.sortBy;
-    if (sortOptions?.sortBy === 'name'){
-      order = {pokemon: {name: sortOptions.sortOrder}} as FindOptionsOrder<SeasonPokemon>;
-    } else {
-      order = sortOptions ? ({ [sortOptions.sortBy]: sortOptions.sortOrder } as FindOptionsOrder<SeasonPokemon>) : undefined;
-    }
-
-    const { page, pageSize } = paginationOptions ? paginationOptions : { page: 1, pageSize: 25 };
-    const skip = (page - 1) * pageSize;
-
-    const [data, total] = await this.repository.findAndCount({
-      where: where,
-      relations: relations,
-      skip: skip,
-      take: pageSize,
-      order: order,
-    });
-
-    return {
-      data,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    };
-  }
-
   async search(
+    where: Record<string, unknown>,
     req: Request,
     isFull: boolean,
     relations?: FindOptionsRelations<SeasonPokemon>,
@@ -99,7 +64,7 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
     let queryBuilder = this.repository.createQueryBuilder('seasonPokemon');
 
     if (relations) {
-      queryBuilder = applyRelations(queryBuilder, relations as Record<string, boolean>, 'seasonPokemon');
+      queryBuilder = this.buildFullRelationsQb(where)
     }
     queryBuilder = applyPokemonNameFilter(queryBuilder, req);
     queryBuilder = applyPokemonStatRangeFilters(queryBuilder, req);

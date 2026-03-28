@@ -6,6 +6,7 @@ import { PokemonInputDto } from '../dtos/pokemon.dto';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import { Request } from 'express';
 import {
+  applyPokemonRelations,
   applyPokemonNameFilter,
   applyPokemonStatRangeFilters,
   applyPokemonBulkFilters,
@@ -19,8 +20,7 @@ import {
   applyPokemonImmunityFilter,
   applyPokemonNotWeakFilter,
   applyPokemonSorting,
-  applyPokemonPagination,
-  applyRelations,
+  applyPokemonPagination
 } from '../utils/pokemon-search.utils';
 
 @Service()
@@ -44,7 +44,7 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
     let queryBuilder = this.repository.createQueryBuilder('pokemon');
 
     if (relations) {
-      queryBuilder = applyRelations(queryBuilder, relations as Record<string, boolean>, 'pokemon');
+      queryBuilder = applyPokemonRelations(queryBuilder, relations as Record<string, boolean>, 'pokemon');
     }
     queryBuilder = applyPokemonNameFilter(queryBuilder, req);
     queryBuilder = applyPokemonStatRangeFilters(queryBuilder, req);

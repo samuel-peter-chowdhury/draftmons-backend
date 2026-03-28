@@ -48,14 +48,16 @@ export class SeasonPokemonController extends BaseController<
         return;
       }
 
-      const where = await this.getWhere(req);
+      const where = await this.buildWhereMap(req);
       const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
       const paginationOptions = await this.getPaginationOptions(req);
       const sortOptions = await this.getSortOptions(req);
       const group = isFull ? this.getFullTransformGroup() : undefined;
 
-      const paginatedEntities = await this.seasonPokemonService.findAll(
+      const paginatedEntities = await this.seasonPokemonService.search(
         where,
+        req,
+        isFull,
         relations,
         paginationOptions,
         sortOptions,
@@ -120,34 +122,6 @@ export class SeasonPokemonController extends BaseController<
     this.router.delete('/:id', this.delete);
   }
 
-  getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const isFull = req.query.full === 'true';
-    const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
-    const paginationOptions = await this.getPaginationOptions(req);
-    const sortOptions = await this.getSortOptions(req);
-    const group = isFull ? this.getFullTransformGroup() : undefined;
-
-    const paginatedEntities = await this.seasonPokemonService.search(
-      req,
-      isFull,
-      relations,
-      paginationOptions,
-      sortOptions,
-    );
-
-    const response = {
-      data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
-        groups: group,
-        excludeExtraneousValues: true,
-      }),
-      total: paginatedEntities.total,
-      page: paginatedEntities.page,
-      pageSize: paginatedEntities.pageSize,
-      totalPages: paginatedEntities.totalPages,
-    };
-    res.json(response);
-  });
-
   protected getFullTransformGroup(): string[] {
     return ['seasonPokemon.full'];
   }
@@ -163,18 +137,7 @@ export class SeasonPokemonController extends BaseController<
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<SeasonPokemon> | FindOptionsWhere<SeasonPokemon>[] | undefined> {
-    const where: any = {
-      ...plainToInstance(SeasonPokemonInputDto, req.query, { excludeExtraneousValues: true }),
-    };
-
-    const teamId = req.query.teamId;
-    if (teamId) {
-      where.seasonPokemonTeams = {
-        teamId: teamId,
-      };
-    }
-
-    return where;
+    return plainToInstance(SeasonPokemonInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   private async buildWhereMap(req: Request): Promise<Record<string, unknown>> {
@@ -398,6 +361,12 @@ export class SeasonPokemonController extends BaseController<
    *           type: boolean
    *           default: false
    *         description: When used with full=true, only include active (isActive=true) related entities such as team assignments
+   *       - in: query
+   *         name: seasonId
+   *         schema:
+   *           type: integer
+   *         description: Season ID
+   *         example: 1
    *       - in: query
    *         name: excludeDrafted
    *         schema:

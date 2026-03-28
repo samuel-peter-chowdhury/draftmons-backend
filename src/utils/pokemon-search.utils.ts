@@ -12,7 +12,7 @@ const ALLOWED_SORT_FIELDS = new Set([
 /**
  * Apply relations (joins) to the query builder
  */
-export function applyRelations<T extends ObjectLiteral>(
+export function applyPokemonRelations<T extends ObjectLiteral>(
   queryBuilder: SelectQueryBuilder<T>,
   relations: Record<string, boolean>,
   tableName: string,
@@ -383,7 +383,7 @@ export function applySeasonPokemonNotDraftedFilter<T extends ObjectLiteral>(
     queryBuilder = queryBuilder.andWhere(
       `NOT EXISTS (
         SELECT 1 FROM season_pokemon_team spt
-        WHERE spt.season_pokemon_id = seasonPokemon.id
+        WHERE spt.season_pokemon_id = "seasonPokemon".id
       )`
     );
   }
