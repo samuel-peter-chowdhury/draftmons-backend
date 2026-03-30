@@ -155,14 +155,7 @@ export class SeasonPokemonController extends BaseController<
   }
 
   protected getBaseRelations(): FindOptionsRelations<SeasonPokemon> | undefined {
-    return {
-      pokemon: {
-        pokemonTypes: true,
-        abilities: true,
-        generation: true,
-      },
-      seasonPokemonTeams: true
-    };
+    return undefined;
   }
 
   protected getFullRelations(): FindOptionsRelations<SeasonPokemon> | undefined {
