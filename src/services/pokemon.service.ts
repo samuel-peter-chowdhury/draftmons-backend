@@ -1,4 +1,4 @@
-import { Repository, FindOptionsRelations } from 'typeorm';
+import { Repository, FindOptionsRelations, SelectQueryBuilder } from 'typeorm';
 import { Pokemon } from '../entities/pokemon.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
@@ -6,7 +6,6 @@ import { PokemonInputDto } from '../dtos/pokemon.dto';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import { Request } from 'express';
 import {
-  applyPokemonRelations,
   applyPokemonNameFilter,
   applyPokemonStatRangeFilters,
   applyPokemonBulkFilters,
@@ -44,7 +43,7 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
     let queryBuilder = this.repository.createQueryBuilder('pokemon');
 
     if (relations) {
-      queryBuilder = applyPokemonRelations(queryBuilder, relations as Record<string, boolean>, 'pokemon');
+      queryBuilder = this.applyRelations(queryBuilder, relations);
     }
     queryBuilder = applyPokemonNameFilter(queryBuilder, req);
     queryBuilder = applyPokemonStatRangeFilters(queryBuilder, req);
@@ -70,5 +69,17 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     };
+  }
+
+  private applyRelations(
+    queryBuilder: SelectQueryBuilder<Pokemon>,
+    relations?: FindOptionsRelations<Pokemon>,
+  ): SelectQueryBuilder<Pokemon> {
+    if (relations) {
+      Object.keys(relations).forEach((relation) => {
+        queryBuilder = queryBuilder.leftJoinAndSelect(`pokemon.${relation}`, relation);
+      });
+    }
+    return queryBuilder;
   }
 }

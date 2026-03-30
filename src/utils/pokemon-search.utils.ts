@@ -10,20 +10,6 @@ const ALLOWED_SORT_FIELDS = new Set([
 ]);
 
 /**
- * Apply relations (joins) to the query builder
- */
-export function applyPokemonRelations<T extends ObjectLiteral>(
-  queryBuilder: SelectQueryBuilder<T>,
-  relations: Record<string, boolean>,
-  tableName: string,
-): SelectQueryBuilder<T> {
-  Object.keys(relations).forEach((relation) => {
-    queryBuilder = queryBuilder.leftJoinAndSelect(`${tableName}.${relation}`, relation);
-  });
-  return queryBuilder;
-}
-
-/**
  * Apply name ILIKE filter
  */
 export function applyPokemonNameFilter<T extends ObjectLiteral>(
