@@ -127,7 +127,7 @@ export class SeasonPokemonController extends BaseController<
   }
 
   protected getAllowedSortFields(): string[] {
-    return ['id', 'pointValue', 'createdAt', 'updatedAt', 'name'];
+    return ['id', 'pointValue', 'name', 'baseStatTotal', 'hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed', 'height', 'weight', 'createdAt', 'updatedAt'];
   }
 
   protected getMaxPageSize(): number {
