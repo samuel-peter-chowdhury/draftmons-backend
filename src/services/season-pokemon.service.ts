@@ -49,15 +49,15 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
   ): Promise<PaginatedResponse<SeasonPokemon>> {
     const { page, pageSize } = paginationOptions ?? { page: 1, pageSize: 25 };
 
-    const qb = this.buildQueryBuilder(
+    let qb = this.buildQueryBuilder(
       loadFullRelations,
       activeRelationsOnly,
       filters.teamId !== undefined,
     );
 
-    applySeasonPokemonSearchFilters(qb, filters);
-    applySearchSorting(qb, sortOptions, SEASON_POKEMON_SORT_FIELD_MAP);
-    applySearchPagination(qb, page, pageSize);
+    qb = applySeasonPokemonSearchFilters(qb, filters);
+    qb = applySearchSorting(qb, sortOptions, SEASON_POKEMON_SORT_FIELD_MAP);
+    qb = applySearchPagination(qb, page, pageSize);
 
     const [data, total] = await qb.getManyAndCount();
 
