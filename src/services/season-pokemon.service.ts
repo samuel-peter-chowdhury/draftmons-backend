@@ -9,24 +9,13 @@ import {
 } from 'typeorm';
 import { SeasonPokemonInputDto } from '../dtos/season-pokemon.dto';
 import { ConflictError, NotFoundError } from '../errors';
-import { PaginatedResponse, PaginationOptions, SortOptions } from '@/utils/pagination.utils';
-import { Request } from 'express';
+import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import {
-  applyPokemonNameFilter,
-  applyPokemonStatRangeFilters,
-  applyPokemonBulkFilters,
-  applyPokemonTypeFilter,
-  applyPokemonAbilityFilter,
-  applyPokemonMoveFilter,
-  applyPokemonGenerationFilter,
-  applyPokemonSpecialMoveCategoryFilter,
-  applyPokemonWeaknessFilter,
-  applyPokemonResistanceFilter,
-  applyPokemonImmunityFilter,
-  applyPokemonNotWeakFilter,
-  applyPokemonSorting,
-  applyPokemonPagination,
-  applySeasonPokemonNotDraftedFilter,
+  SeasonPokemonSearchFilters,
+  applySeasonPokemonSearchFilters,
+  applySearchSorting,
+  applySearchPagination,
+  SEASON_POKEMON_SORT_FIELD_MAP,
 } from '../utils/pokemon-search.utils';
 
 @Service()
@@ -52,58 +41,23 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
   }
 
   async search(
-    where: Record<string, unknown>,
-    req: Request,
-    isFull: boolean,
-    relations?: FindOptionsRelations<SeasonPokemon>,
-    paginationOptions?: PaginationOptions,
-    sortOptions?: SortOptions,
-  ): Promise<PaginatedResponse<SeasonPokemon>> {
-    const { page, pageSize } = paginationOptions ? paginationOptions : { page: 1, pageSize: 25 };
-
-    let queryBuilder = this.repository.createQueryBuilder('seasonPokemon');
-
-    if (relations) {
-      queryBuilder = this.buildFullRelationsQb(where)
-    }
-    queryBuilder = applyPokemonNameFilter(queryBuilder, req);
-    queryBuilder = applyPokemonStatRangeFilters(queryBuilder, req);
-    queryBuilder = applyPokemonBulkFilters(queryBuilder, req);
-    queryBuilder = applyPokemonTypeFilter(queryBuilder, req);
-    queryBuilder = applyPokemonAbilityFilter(queryBuilder, req);
-    queryBuilder = applyPokemonMoveFilter(queryBuilder, req);
-    queryBuilder = applyPokemonGenerationFilter(queryBuilder, req);
-    queryBuilder = applyPokemonSpecialMoveCategoryFilter(queryBuilder, req);
-    queryBuilder = applyPokemonWeaknessFilter(queryBuilder, req);
-    queryBuilder = applyPokemonResistanceFilter(queryBuilder, req);
-    queryBuilder = applyPokemonImmunityFilter(queryBuilder, req);
-    queryBuilder = applyPokemonNotWeakFilter(queryBuilder, req);
-    queryBuilder = applySeasonPokemonNotDraftedFilter(queryBuilder, req);  
-    queryBuilder = applyPokemonSorting(queryBuilder, sortOptions);
-    queryBuilder = applyPokemonPagination(queryBuilder, page, pageSize);
-
-    const [data, total] = await queryBuilder.getManyAndCount();
-
-    return {
-      data,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    };
-  }
-
-  async findAllActiveRelations(
-    where: Record<string, unknown>,
+    filters: SeasonPokemonSearchFilters,
+    loadFullRelations: boolean,
+    activeRelationsOnly: boolean,
     paginationOptions?: PaginationOptions,
     sortOptions?: SortOptions,
   ): Promise<PaginatedResponse<SeasonPokemon>> {
     const { page, pageSize } = paginationOptions ?? { page: 1, pageSize: 25 };
-    const skip = (page - 1) * pageSize;
 
-    const qb = this.buildFullRelationsQb(where);
-    this.applySortToQb(qb, sortOptions);
-    qb.skip(skip).take(pageSize);
+    const qb = this.buildQueryBuilder(
+      loadFullRelations,
+      activeRelationsOnly,
+      filters.teamId !== undefined,
+    );
+
+    applySeasonPokemonSearchFilters(qb, filters);
+    applySearchSorting(qb, sortOptions, SEASON_POKEMON_SORT_FIELD_MAP);
+    applySearchPagination(qb, page, pageSize);
 
     const [data, total] = await qb.getManyAndCount();
 
@@ -116,8 +70,28 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
     };
   }
 
-  async findOneActiveRelations(where: Record<string, unknown>): Promise<SeasonPokemon> {
-    const qb = this.buildFullRelationsQb(where);
+  async findOne(
+    where: FindOptionsWhere<SeasonPokemon>,
+    relations?: FindOptionsRelations<SeasonPokemon>,
+    activeRelationsOnly?: boolean,
+  ): Promise<SeasonPokemon> {
+    if (!activeRelationsOnly) {
+      return super.findOne(where, relations);
+    }
+
+    const qb = this.buildQueryBuilder(true, true);
+    const whereRecord = where as Record<string, unknown>;
+
+    if (whereRecord.id !== undefined) {
+      qb.andWhere('seasonPokemon.id = :id', { id: whereRecord.id });
+    }
+    if (whereRecord.seasonId !== undefined) {
+      qb.andWhere('seasonPokemon.seasonId = :seasonId', { seasonId: whereRecord.seasonId });
+    }
+    if (whereRecord.pokemonId !== undefined) {
+      qb.andWhere('seasonPokemon.pokemonId = :pokemonId', { pokemonId: whereRecord.pokemonId });
+    }
+
     const entity = await qb.getOne();
 
     if (!entity) {
@@ -127,50 +101,45 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
     return entity;
   }
 
-  private buildFullRelationsQb(
-    where: Record<string, unknown>,
+  private buildQueryBuilder(
+    loadFullRelations: boolean,
+    activeRelationsOnly: boolean,
+    needsTeamJoin?: boolean,
   ): SelectQueryBuilder<SeasonPokemon> {
     const qb = this.repository
       .createQueryBuilder('seasonPokemon')
-      .leftJoinAndSelect('seasonPokemon.season', 'season')
-      .leftJoinAndSelect('seasonPokemon.pokemon', 'pokemon')
-      .leftJoinAndSelect('pokemon.pokemonTypes', 'pokemonType')
-      .leftJoinAndSelect('pokemon.abilities', 'ability')
-      .leftJoinAndSelect('pokemon.generation', 'generation')
-      .leftJoinAndSelect(
-        'seasonPokemon.seasonPokemonTeams',
-        'seasonPokemonTeam',
-        'seasonPokemonTeam.isActive = :sptActive',
-        { sptActive: true },
-      )
-      .leftJoinAndSelect('seasonPokemon.gameStats', 'gameStat');
+      .leftJoinAndSelect('seasonPokemon.pokemon', 'pokemon');
 
-    if (where.id !== undefined) {
-      qb.andWhere('seasonPokemon.id = :id', { id: where.id });
-    }
-    if (where.seasonId !== undefined) {
-      qb.andWhere('seasonPokemon.seasonId = :seasonId', { seasonId: where.seasonId });
-    }
-    if (where.pokemonId !== undefined) {
-      qb.andWhere('seasonPokemon.pokemonId = :pokemonId', { pokemonId: where.pokemonId });
-    }
-    if (where.teamId !== undefined) {
-      qb.andWhere('seasonPokemonTeam.teamId = :teamId', { teamId: where.teamId });
+    if (loadFullRelations) {
+      qb.leftJoinAndSelect('seasonPokemon.season', 'season')
+        .leftJoinAndSelect('pokemon.pokemonTypes', 'pokemonType')
+        .leftJoinAndSelect('pokemon.abilities', 'ability')
+        .leftJoinAndSelect('pokemon.generation', 'generation')
+        .leftJoinAndSelect('seasonPokemon.gameStats', 'gameStat');
+
+      if (activeRelationsOnly) {
+        qb.leftJoinAndSelect(
+          'seasonPokemon.seasonPokemonTeams',
+          'seasonPokemonTeam',
+          'seasonPokemonTeam.isActive = :sptActive',
+          { sptActive: true },
+        );
+      } else {
+        qb.leftJoinAndSelect('seasonPokemon.seasonPokemonTeams', 'seasonPokemonTeam');
+      }
+    } else if (needsTeamJoin) {
+      if (activeRelationsOnly) {
+        qb.leftJoin(
+          'seasonPokemon.seasonPokemonTeams',
+          'seasonPokemonTeam',
+          'seasonPokemonTeam.isActive = :sptActive',
+          { sptActive: true },
+        );
+      } else {
+        qb.leftJoin('seasonPokemon.seasonPokemonTeams', 'seasonPokemonTeam');
+      }
     }
 
     return qb;
-  }
-
-  private applySortToQb(
-    qb: SelectQueryBuilder<SeasonPokemon>,
-    sortOptions?: SortOptions,
-  ): void {
-    if (!sortOptions) return;
-
-    if (sortOptions.sortBy === 'name') {
-      qb.orderBy('pokemon.name', sortOptions.sortOrder);
-    } else {
-      qb.orderBy(`seasonPokemon.${sortOptions.sortBy}`, sortOptions.sortOrder);
-    }
   }
 }
