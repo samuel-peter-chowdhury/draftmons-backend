@@ -1,7 +1,8 @@
-import { SelectQueryBuilder, ObjectLiteral } from 'typeorm';
+import { SelectQueryBuilder } from 'typeorm';
 import { Request } from 'express';
 import { getQueryIntArray } from './request.utils';
 import { SortOptions } from './pagination.utils';
+import { BaseApplicationEntity } from '@/entities/base-application.entity';
 
 const ALLOWED_SORT_FIELDS = new Set([
   'id', 'name', 'dexId', 'baseStatTotal', 'hp', 'attack', 'defense',
@@ -12,7 +13,7 @@ const ALLOWED_SORT_FIELDS = new Set([
 /**
  * Apply name ILIKE filter
  */
-export function applyPokemonNameFilter<T extends ObjectLiteral>(
+export function applyPokemonNameFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -27,7 +28,7 @@ export function applyPokemonNameFilter<T extends ObjectLiteral>(
 /**
  * Apply stat range filters (hp, attack, defense, etc.)
  */
-export function applyPokemonStatRangeFilters<T extends ObjectLiteral>(
+export function applyPokemonStatRangeFilters<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -71,7 +72,7 @@ export function applyPokemonStatRangeFilters<T extends ObjectLiteral>(
 /**
  * Apply bulk filters (physical and special bulk calculations)
  */
-export function applyPokemonBulkFilters<T extends ObjectLiteral>(
+export function applyPokemonBulkFilters<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -120,7 +121,7 @@ export function applyPokemonBulkFilters<T extends ObjectLiteral>(
 /**
  * Apply Pokemon type IDs filter (must have ALL specified types)
  */
-export function applyPokemonTypeFilter<T extends ObjectLiteral>(
+export function applyPokemonTypeFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -147,7 +148,7 @@ export function applyPokemonTypeFilter<T extends ObjectLiteral>(
 /**
  * Apply ability IDs filter (must have ALL specified abilities)
  */
-export function applyPokemonAbilityFilter<T extends ObjectLiteral>(
+export function applyPokemonAbilityFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -174,7 +175,7 @@ export function applyPokemonAbilityFilter<T extends ObjectLiteral>(
 /**
  * Apply move IDs filter (must have ALL specified moves)
  */
-export function applyPokemonMoveFilter<T extends ObjectLiteral>(
+export function applyPokemonMoveFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -201,7 +202,7 @@ export function applyPokemonMoveFilter<T extends ObjectLiteral>(
 /**
  * Apply generation IDs filter (must belong to one of the specified generations)
  */
-export function applyPokemonGenerationFilter<T extends ObjectLiteral>(
+export function applyPokemonGenerationFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -221,7 +222,7 @@ export function applyPokemonGenerationFilter<T extends ObjectLiteral>(
 /**
  * Apply special move category IDs filter (must have ALL specified categories)
  */
-export function applyPokemonSpecialMoveCategoryFilter<T extends ObjectLiteral>(
+export function applyPokemonSpecialMoveCategoryFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -249,7 +250,7 @@ export function applyPokemonSpecialMoveCategoryFilter<T extends ObjectLiteral>(
 /**
  * Apply weakness filter (must not be weak to ALL specified types - value <= 1)
  */
-export function applyPokemonWeaknessFilter<T extends ObjectLiteral>(
+export function applyPokemonWeaknessFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -277,7 +278,7 @@ export function applyPokemonWeaknessFilter<T extends ObjectLiteral>(
 /**
  * Apply resistance filter (must resist ALL specified types - value < 1)
  */
-export function applyPokemonResistanceFilter<T extends ObjectLiteral>(
+export function applyPokemonResistanceFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -305,7 +306,7 @@ export function applyPokemonResistanceFilter<T extends ObjectLiteral>(
 /**
  * Apply immunity filter (must be immune ALL specified types - value = 0)
  */
-export function applyPokemonImmunityFilter<T extends ObjectLiteral>(
+export function applyPokemonImmunityFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -333,7 +334,7 @@ export function applyPokemonImmunityFilter<T extends ObjectLiteral>(
 /**
  * Apply not weak filter (must not be weak to ALL specified types - value <= 1)
  */
-export function applyPokemonNotWeakFilter<T extends ObjectLiteral>(
+export function applyPokemonNotWeakFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -361,7 +362,7 @@ export function applyPokemonNotWeakFilter<T extends ObjectLiteral>(
 /**
  * Apply not drafted filter (season pokemon has no season pokemon team references)
  */
-export function applySeasonPokemonNotDraftedFilter<T extends ObjectLiteral>(
+export function applySeasonPokemonNotDraftedFilter<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   req: Request
 ): SelectQueryBuilder<T> {
@@ -380,7 +381,7 @@ export function applySeasonPokemonNotDraftedFilter<T extends ObjectLiteral>(
 /**
  * Apply sorting to the query
  */
-export function applyPokemonSorting<T extends ObjectLiteral>(
+export function applyPokemonSorting<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   sortOptions: SortOptions | undefined
 ): SelectQueryBuilder<T> {
@@ -405,7 +406,7 @@ export function applyPokemonSorting<T extends ObjectLiteral>(
 /**
  * Apply pagination (skip and take)
  */
-export function applyPokemonPagination<T extends ObjectLiteral>(
+export function applyPokemonPagination<T extends BaseApplicationEntity>(
   queryBuilder: SelectQueryBuilder<T>,
   page: number,
   pageSize: number,
