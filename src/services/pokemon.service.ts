@@ -4,22 +4,12 @@ import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
 import { PokemonInputDto } from '../dtos/pokemon.dto';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
-import { Request } from 'express';
 import {
-  applyPokemonNameFilter,
-  applyPokemonStatRangeFilters,
-  applyPokemonBulkFilters,
-  applyPokemonTypeFilter,
-  applyPokemonAbilityFilter,
-  applyPokemonMoveFilter,
-  applyPokemonGenerationFilter,
-  applyPokemonSpecialMoveCategoryFilter,
-  applyPokemonWeaknessFilter,
-  applyPokemonResistanceFilter,
-  applyPokemonImmunityFilter,
-  applyPokemonNotWeakFilter,
-  applyPokemonSorting,
-  applyPokemonPagination
+  PokemonSearchFilters,
+  applyPokemonSearchFilters,
+  applySearchSorting,
+  applySearchPagination,
+  POKEMON_SORT_FIELD_MAP,
 } from '../utils/pokemon-search.utils';
 
 @Service()
@@ -32,35 +22,24 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
   }
 
   async search(
-    req: Request,
-    isFull: boolean,
+    filters: PokemonSearchFilters,
     relations?: FindOptionsRelations<Pokemon>,
     paginationOptions?: PaginationOptions,
     sortOptions?: SortOptions,
   ): Promise<PaginatedResponse<Pokemon>> {
-    const { page, pageSize } = paginationOptions ? paginationOptions : { page: 1, pageSize: 25 };
+    const { page, pageSize } = paginationOptions ?? { page: 1, pageSize: 25 };
 
-    let queryBuilder = this.repository.createQueryBuilder('pokemon');
+    let qb = this.repository.createQueryBuilder('pokemon');
 
     if (relations) {
-      queryBuilder = this.applyRelations(queryBuilder, relations);
+      qb = this.applyRelations(qb, relations);
     }
-    queryBuilder = applyPokemonNameFilter(queryBuilder, req);
-    queryBuilder = applyPokemonStatRangeFilters(queryBuilder, req);
-    queryBuilder = applyPokemonBulkFilters(queryBuilder, req);
-    queryBuilder = applyPokemonTypeFilter(queryBuilder, req);
-    queryBuilder = applyPokemonAbilityFilter(queryBuilder, req);
-    queryBuilder = applyPokemonMoveFilter(queryBuilder, req);
-    queryBuilder = applyPokemonGenerationFilter(queryBuilder, req);
-    queryBuilder = applyPokemonSpecialMoveCategoryFilter(queryBuilder, req);
-    queryBuilder = applyPokemonWeaknessFilter(queryBuilder, req);
-    queryBuilder = applyPokemonResistanceFilter(queryBuilder, req);
-    queryBuilder = applyPokemonImmunityFilter(queryBuilder, req);
-    queryBuilder = applyPokemonNotWeakFilter(queryBuilder, req);
-    queryBuilder = applyPokemonSorting(queryBuilder, sortOptions);
-    queryBuilder = applyPokemonPagination(queryBuilder, page, pageSize);
 
-    const [data, total] = await queryBuilder.getManyAndCount();
+    qb = applyPokemonSearchFilters(qb, filters);
+    qb = applySearchSorting(qb, sortOptions, POKEMON_SORT_FIELD_MAP);
+    qb = applySearchPagination(qb, page, pageSize);
+
+    const [data, total] = await qb.getManyAndCount();
 
     return {
       data,
