@@ -8,6 +8,7 @@ import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 import { ValidationError as AppValidationError } from '../errors';
+import { parseSeasonPokemonSearchFilters, SEASON_POKEMON_SORT_FIELD_MAP } from '../utils/pokemon-search.utils';
 
 export class SeasonPokemonController extends BaseController<
   SeasonPokemon,
@@ -18,97 +19,6 @@ export class SeasonPokemonController extends BaseController<
 
   constructor(private seasonPokemonService: SeasonPokemonService) {
     super(seasonPokemonService, SeasonPokemonOutputDto);
-
-    this.getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const isFull = req.query.full === 'true';
-      const isActiveRelationsOnly = req.query.activeRelationsOnly === 'true';
-
-      if (isFull && isActiveRelationsOnly) {
-        const where = await this.buildWhereMap(req);
-        const paginationOptions = await this.getPaginationOptions(req);
-        const sortOptions = await this.getSortOptions(req);
-
-        const paginatedEntities = await this.seasonPokemonService.findAllActiveRelations(
-          where,
-          paginationOptions,
-          sortOptions,
-        );
-
-        const response = {
-          data: plainToInstance(SeasonPokemonOutputDto, paginatedEntities.data, {
-            groups: this.getFullTransformGroup(),
-            excludeExtraneousValues: true,
-          }),
-          total: paginatedEntities.total,
-          page: paginatedEntities.page,
-          pageSize: paginatedEntities.pageSize,
-          totalPages: paginatedEntities.totalPages,
-        };
-        res.json(response);
-        return;
-      }
-
-      const where = await this.getWhere(req);
-      const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
-      const paginationOptions = await this.getPaginationOptions(req);
-      const sortOptions = await this.getSortOptions(req);
-      const group = isFull ? this.getFullTransformGroup() : undefined;
-
-      const paginatedEntities = await this.seasonPokemonService.findAll(
-        where,
-        relations,
-        paginationOptions,
-        sortOptions,
-      );
-
-      const response = {
-        data: plainToInstance(SeasonPokemonOutputDto, paginatedEntities.data, {
-          groups: group,
-          excludeExtraneousValues: true,
-        }),
-        total: paginatedEntities.total,
-        page: paginatedEntities.page,
-        pageSize: paginatedEntities.pageSize,
-        totalPages: paginatedEntities.totalPages,
-      };
-      res.json(response);
-    });
-
-    this.getById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        throw new AppValidationError('Invalid ID format');
-      }
-
-      const isFull = req.query.full === 'true';
-      const isActiveRelationsOnly = req.query.activeRelationsOnly === 'true';
-
-      if (isFull && isActiveRelationsOnly) {
-        const entity = await this.seasonPokemonService.findOneActiveRelations({ id });
-
-        res.json(
-          plainToInstance(SeasonPokemonOutputDto, entity, {
-            groups: this.getFullTransformGroup(),
-            excludeExtraneousValues: true,
-          }),
-        );
-        return;
-      }
-
-      const where = { id } as FindOptionsWhere<SeasonPokemon>;
-      const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
-      const group = isFull ? this.getFullTransformGroup() : undefined;
-
-      const entity = await this.seasonPokemonService.findOne(where, relations);
-
-      res.json(
-        plainToInstance(SeasonPokemonOutputDto, entity, {
-          groups: group,
-          excludeExtraneousValues: true,
-        }),
-      );
-    });
-
     this.initializeRoutes();
   }
 
@@ -120,47 +30,79 @@ export class SeasonPokemonController extends BaseController<
     this.router.delete('/:id', this.delete);
   }
 
+  getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const isFull = req.query.full === 'true';
+    const activeRelationsOnly = req.query.activeRelationsOnly === 'true';
+    const filters = parseSeasonPokemonSearchFilters(req);
+    const paginationOptions = await this.getPaginationOptions(req);
+    const sortOptions = await this.getSortOptions(req);
+    const group = isFull ? this.getFullTransformGroup() : undefined;
+
+    const paginatedEntities = await this.seasonPokemonService.search(
+      filters,
+      isFull,
+      activeRelationsOnly,
+      paginationOptions,
+      sortOptions,
+    );
+
+    const response = {
+      data: plainToInstance(SeasonPokemonOutputDto, paginatedEntities.data, {
+        groups: group,
+        excludeExtraneousValues: true,
+      }),
+      total: paginatedEntities.total,
+      page: paginatedEntities.page,
+      pageSize: paginatedEntities.pageSize,
+      totalPages: paginatedEntities.totalPages,
+    };
+    res.json(response);
+  });
+
+  getById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      throw new AppValidationError('Invalid ID format');
+    }
+
+    const isFull = req.query.full === 'true';
+    const activeRelationsOnly = req.query.activeRelationsOnly === 'true';
+    const where = { id } as FindOptionsWhere<SeasonPokemon>;
+    const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+    const group = isFull ? this.getFullTransformGroup() : undefined;
+
+    const entity = await this.seasonPokemonService.findOne(
+      where,
+      relations,
+      isFull && activeRelationsOnly,
+    );
+
+    res.json(
+      plainToInstance(SeasonPokemonOutputDto, entity, {
+        groups: group,
+        excludeExtraneousValues: true,
+      }),
+    );
+  });
+
   protected getFullTransformGroup(): string[] {
     return ['seasonPokemon.full'];
   }
 
   protected getAllowedSortFields(): string[] {
-    return ['id', 'pointValue', 'createdAt', 'updatedAt', 'name'];
+    return Object.keys(SEASON_POKEMON_SORT_FIELD_MAP);
   }
 
+  // Intentionally large — the draft board UI needs all season pokemon in a single request
   protected getMaxPageSize(): number {
     return 10000;
   }
 
+  // Required by BaseController but unused — getAll is overridden to use search() instead of findAll()
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<SeasonPokemon> | FindOptionsWhere<SeasonPokemon>[] | undefined> {
-    const where: any = {
-      ...plainToInstance(SeasonPokemonInputDto, req.query, { excludeExtraneousValues: true }),
-    };
-
-    const teamId = req.query.teamId;
-    if (teamId) {
-      where.seasonPokemonTeams = {
-        teamId: teamId,
-      };
-    }
-
-    return where;
-  }
-
-  private async buildWhereMap(req: Request): Promise<Record<string, unknown>> {
-    const where: Record<string, unknown> = {};
-    const dto = plainToInstance(SeasonPokemonInputDto, req.query, {
-      excludeExtraneousValues: true,
-    });
-    if (dto.seasonId) where.seasonId = dto.seasonId;
-    if (dto.pokemonId) where.pokemonId = dto.pokemonId;
-
-    const teamId = req.query.teamId;
-    if (teamId) where.teamId = teamId;
-
-    return where;
+    return plainToInstance(SeasonPokemonInputDto, req.query, { excludeExtraneousValues: true });
   }
 
   protected getBaseRelations(): FindOptionsRelations<SeasonPokemon> | undefined {
@@ -319,8 +261,10 @@ export class SeasonPokemonController extends BaseController<
    *   get:
    *     tags:
    *       - SeasonPokemon
-   *     summary: Get all season pokemon entries
-   *     description: Retrieve a list of all pokemon entries for seasons with optional pagination, sorting, and full details
+   *     summary: Get all season pokemon entries with advanced filtering
+   *     description:  |
+   *       Retrieve a list of all season pokemon with optional pagination, sorting, advanced filtering, and full details.
+   *       Supports filtering by name pattern, stat ranges, calculated bulk stats, and type/ability requirements.
    *     parameters:
    *       - in: query
    *         name: page
@@ -340,8 +284,8 @@ export class SeasonPokemonController extends BaseController<
    *         name: sortBy
    *         schema:
    *           type: string
-   *         description: Field name to sort by (e.g., seasonId, pokemonId, pointValue)
-   *         example: pointValue
+   *         description: Field name to sort by (e.g. id, name, pointValue, createdAt, updatedAt)
+   *         example: name
    *       - in: query
    *         name: sortOrder
    *         schema:
@@ -354,13 +298,232 @@ export class SeasonPokemonController extends BaseController<
    *         schema:
    *           type: boolean
    *           default: false
-   *         description: Include full season pokemon details (season, pokemon, team assignments, game stats)
+   *         description: Include full season pokemon details (pokemon, season, team assignments, game stats)
    *       - in: query
    *         name: activeRelationsOnly
    *         schema:
    *           type: boolean
    *           default: false
    *         description: When used with full=true, only include active (isActive=true) related entities such as team assignments
+   *       - in: query
+   *         name: seasonId
+   *         schema:
+   *           type: integer
+   *         description: Season ID
+   *         example: 1
+   *       - in: query
+   *         name: excludeDrafted
+   *         schema:
+   *           type: boolean
+   *         description: Exclude drafted pokemon
+   *         example: true
+   *       - in: query
+   *         name: nameLike
+   *         schema:
+   *           type: string
+   *         description: Filter Pokemon by name (case-insensitive partial match)
+   *         example: char
+   *       - in: query
+   *         name: minHp
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum HP stat
+   *       - in: query
+   *         name: maxHp
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum HP stat
+   *       - in: query
+   *         name: minAttack
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Attack stat
+   *       - in: query
+   *         name: maxAttack
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Attack stat
+   *       - in: query
+   *         name: minDefense
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Defense stat
+   *       - in: query
+   *         name: maxDefense
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Defense stat
+   *       - in: query
+   *         name: minSpecialAttack
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Special Attack stat
+   *       - in: query
+   *         name: maxSpecialAttack
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Special Attack stat
+   *       - in: query
+   *         name: minSpecialDefense
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Special Defense stat
+   *       - in: query
+   *         name: maxSpecialDefense
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Special Defense stat
+   *       - in: query
+   *         name: minSpeed
+   *         schema:
+   *           type: integer
+   *           minimum: 1
+   *         description: Minimum Speed stat
+   *       - in: query
+   *         name: maxSpeed
+   *         schema:
+   *           type: integer
+   *           maximum: 255
+   *         description: Maximum Speed stat
+   *       - in: query
+   *         name: minBaseStatTotal
+   *         schema:
+   *           type: integer
+   *           minimum: 6
+   *         description: Minimum base stat total (sum of all stats)
+   *       - in: query
+   *         name: maxBaseStatTotal
+   *         schema:
+   *           type: integer
+   *           maximum: 1530
+   *         description: Maximum base stat total (sum of all stats)
+   *       - in: query
+   *         name: minPhysicalBulk
+   *         schema:
+   *           type: integer
+   *           minimum: 2
+   *         description: Minimum physical bulk (HP + Defense)
+   *       - in: query
+   *         name: maxPhysicalBulk
+   *         schema:
+   *           type: integer
+   *           maximum: 510
+   *         description: Maximum physical bulk (HP + Defense)
+   *       - in: query
+   *         name: minSpecialBulk
+   *         schema:
+   *           type: integer
+   *           minimum: 2
+   *         description: Minimum special bulk (HP + Special Defense)
+   *       - in: query
+   *         name: maxSpecialBulk
+   *         schema:
+   *           type: integer
+   *           maximum: 510
+   *         description: Maximum special bulk (HP + Special Defense)
+   *       - in: query
+   *         name: minPointValue
+   *         schema:
+   *           type: integer
+   *           minimum: 0
+   *         description: Minimum point value
+   *       - in: query
+   *         name: maxPointValue
+   *         schema:
+   *           type: integer
+   *           maximum: 510
+   *         description: Maximum point value
+   *       - in: query
+   *         name: pokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that have ALL specified type IDs (array of integers)
+   *       - in: query
+   *         name: abilityIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that have ALL specified ability IDs (array of integers)
+   *       - in: query
+   *         name: moveIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that have ALL specified move IDs (array of integers)
+   *       - in: query
+   *         name: generationIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that belong to ALL specified generation IDs (array of integers)
+   *       - in: query
+   *         name: specialMoveCategoryIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that have moves with ALL specified special move category IDs (array of integers)
+   *       - in: query
+   *         name: weakPokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that are weak to ALL specified type IDs (type effectiveness > 1, array of integers)
+   *       - in: query
+   *         name: resistedPokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that resist ALL specified type IDs (type effectiveness < 1, array of integers)
+   *       - in: query
+   *         name: immunePokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that are immune to ALL specified type IDs (type effectiveness = 0, array of integers)
+   *       - in: query
+   *         name: notWeakPokemonTypeIds
+   *         schema:
+   *           type: array
+   *           items:
+   *             type: integer
+   *         style: form
+   *         explode: true
+   *         description: Filter Pokemon that are not weak to ALL specified type IDs (type effectiveness <= 1, includes neutral and resistant, array of integers)
    *     responses:
    *       200:
    *         description: List of season pokemon entries retrieved successfully
