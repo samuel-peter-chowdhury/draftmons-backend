@@ -7,6 +7,7 @@ import { PokemonInputDto, PokemonOutputDto } from '../dtos/pokemon.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
+import { parsePokemonSearchFilters, POKEMON_SORT_FIELD_MAP } from '../utils/pokemon-search.utils';
 
 export class PokemonController extends BaseController<Pokemon, PokemonInputDto, PokemonOutputDto> {
   public router = Router();
@@ -26,14 +27,14 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const isFull = req.query.full === 'true';
+    const filters = parsePokemonSearchFilters(req);
     const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
     const paginationOptions = await this.getPaginationOptions(req);
     const sortOptions = await this.getSortOptions(req);
     const group = isFull ? this.getFullTransformGroup() : undefined;
 
     const paginatedEntities = await this.pokemonService.search(
-      req,
-      isFull,
+      filters,
       relations,
       paginationOptions,
       sortOptions,
@@ -57,9 +58,10 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
   }
 
   protected getAllowedSortFields(): string[] {
-    return ['id', 'name', 'baseStatTotal', 'hp', 'attack', 'defense', 'specialAttack', 'specialDefense', 'speed', 'height', 'weight', 'createdAt', 'updatedAt'];
+    return Object.keys(POKEMON_SORT_FIELD_MAP);
   }
 
+  // Required by BaseController but unused — getAll is overridden to use search() instead of findAll()
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Pokemon> | FindOptionsWhere<Pokemon>[] | undefined> {
