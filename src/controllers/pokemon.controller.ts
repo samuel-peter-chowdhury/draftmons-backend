@@ -61,6 +61,7 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
     return Object.keys(POKEMON_SORT_FIELD_MAP);
   }
 
+  // Required by BaseController but unused — getAll is overridden to use search() instead of findAll()
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Pokemon> | FindOptionsWhere<Pokemon>[] | undefined> {

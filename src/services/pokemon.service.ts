@@ -53,10 +53,19 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
   private applyRelations(
     queryBuilder: SelectQueryBuilder<Pokemon>,
     relations?: FindOptionsRelations<Pokemon>,
+    parentAlias: string = 'pokemon',
   ): SelectQueryBuilder<Pokemon> {
     if (relations) {
-      Object.keys(relations).forEach((relation) => {
-        queryBuilder = queryBuilder.leftJoinAndSelect(`pokemon.${relation}`, relation);
+      Object.entries(relations).forEach(([relation, value]) => {
+        if (!value) return;
+        queryBuilder = queryBuilder.leftJoinAndSelect(`${parentAlias}.${relation}`, relation);
+        if (typeof value === 'object') {
+          queryBuilder = this.applyRelations(
+            queryBuilder,
+            value as FindOptionsRelations<Pokemon>,
+            relation,
+          );
+        }
       });
     }
     return queryBuilder;

@@ -145,12 +145,15 @@ export function parseSeasonPokemonSearchFilters(req: Request): SeasonPokemonSear
 // Atomic filter helpers (private)
 // ---------------------------------------------------------------------------
 
+const MAX_NAME_LIKE_LENGTH = 100;
+
 function applyNameFilter<T extends BaseApplicationEntity>(
   qb: SelectQueryBuilder<T>,
   nameLike: string | undefined,
 ): SelectQueryBuilder<T> {
   if (nameLike) {
-    qb = qb.andWhere('pokemon.name ILIKE :nameLike', { nameLike: `%${nameLike}%` });
+    const trimmed = nameLike.slice(0, MAX_NAME_LIKE_LENGTH);
+    qb = qb.andWhere('pokemon.name ILIKE :nameLike', { nameLike: `%${trimmed}%` });
   }
   return qb;
 }
@@ -328,6 +331,7 @@ export function applySeasonPokemonSearchFilters<T extends BaseApplicationEntity>
 ): SelectQueryBuilder<T> {
   qb = applyPokemonSearchFilters(qb, filters);
 
+  // Simple equality filters use TypeORM property names (resolved by the query builder)
   if (filters.seasonId !== undefined) {
     qb = qb.andWhere('seasonPokemon.seasonId = :seasonId', { seasonId: filters.seasonId });
   }
@@ -338,6 +342,7 @@ export function applySeasonPokemonSearchFilters<T extends BaseApplicationEntity>
     qb = qb.andWhere('seasonPokemonTeam.teamId = :teamId', { teamId: filters.teamId });
   }
 
+  // Range filters use raw column names — TypeORM does not resolve property names in >= / <= expressions
   if (filters.minPointValue !== undefined) {
     qb = qb.andWhere('seasonPokemon.point_value >= :minPointValue', {
       minPointValue: filters.minPointValue,

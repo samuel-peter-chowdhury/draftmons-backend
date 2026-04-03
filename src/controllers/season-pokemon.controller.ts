@@ -93,10 +93,12 @@ export class SeasonPokemonController extends BaseController<
     return Object.keys(SEASON_POKEMON_SORT_FIELD_MAP);
   }
 
+  // Intentionally large — the draft board UI needs all season pokemon in a single request
   protected getMaxPageSize(): number {
     return 10000;
   }
 
+  // Required by BaseController but unused — getAll is overridden to use search() instead of findAll()
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<SeasonPokemon> | FindOptionsWhere<SeasonPokemon>[] | undefined> {
