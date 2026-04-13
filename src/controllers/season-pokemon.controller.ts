@@ -8,7 +8,10 @@ import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 import { ValidationError as AppValidationError } from '../errors';
-import { parseSeasonPokemonSearchFilters, SEASON_POKEMON_SORT_FIELD_MAP } from '../utils/pokemon-search.utils';
+import {
+  parseSeasonPokemonSearchFilters,
+  SEASON_POKEMON_SORT_FIELD_MAP,
+} from '../utils/pokemon-search.utils';
 
 export class SeasonPokemonController extends BaseController<
   SeasonPokemon,
@@ -117,7 +120,7 @@ export class SeasonPokemonController extends BaseController<
         abilities: true,
         generation: true,
       },
-      seasonPokemonTeams: true,
+      seasonPokemonTeams: { team: true },
       gameStats: true,
     };
   }
