@@ -114,22 +114,23 @@ export class DiscordService {
   }
 
   private async handleGuildCreate(guild: Guild): Promise<void> {
-    const systemChannel = guild.systemChannel;
-    if (!systemChannel || !systemChannel.isTextBased()) {
-      return;
-    }
+    // Fetch full guild data — cache may not be populated when guildCreate fires
+    const fetched = await guild.fetch();
+    const systemChannel = fetched.systemChannel;
 
-    const embed = new EmbedBuilder()
-      .setTitle('Draftmons is here!')
-      .setDescription(
-        "Link this server to your league at draftmons.com to get started. Once linked, I'll post match results and draft picks here.",
-      )
-      .setColor(0x5865f2);
+    if (systemChannel && systemChannel.isTextBased()) {
+      const embed = new EmbedBuilder()
+        .setTitle('Draftmons is here!')
+        .setDescription(
+          "Link this server to your league at draftmons.com to get started. Once linked, I'll post match results and draft picks here.",
+        )
+        .setColor(0x5865f2);
 
-    try {
-      await systemChannel.send({ embeds: [embed] });
-    } catch (error) {
-      console.warn('Discord bot: failed to send welcome message to guild', guild.id, error);
+      try {
+        await systemChannel.send({ embeds: [embed] });
+      } catch (error) {
+        console.warn('Discord bot: failed to send welcome message to guild', guild.id, error);
+      }
     }
 
     await this.registerGuildCommands(guild.id);
