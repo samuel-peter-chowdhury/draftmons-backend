@@ -34,6 +34,10 @@ export class DiscordService {
       return;
     }
 
+    if (!process.env.DISCORD_CLIENT_ID) {
+      console.warn('Discord bot: DISCORD_CLIENT_ID not set — slash command registration will be skipped');
+    }
+
     // Only Guilds intent (non-privileged) -- MessageContent/GuildMembers are privileged
     this.client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
