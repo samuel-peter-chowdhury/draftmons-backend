@@ -5,6 +5,7 @@ import {
   ActivityType,
   EmbedBuilder,
   ChannelType,
+  TextChannel,
   REST,
   Routes,
   SlashCommandBuilder,
@@ -13,6 +14,8 @@ import {
 import { Repository, Not, IsNull } from 'typeorm';
 import { Service, Inject } from 'typedi';
 import { League } from '../entities/league.entity';
+import { Match } from '../entities/match.entity';
+import { SeasonPokemonTeam } from '../entities/season-pokemon-team.entity';
 
 export type DiscordBotStatus = 'connected' | 'disconnected' | 'disabled';
 
@@ -163,6 +166,125 @@ export class DiscordService {
       console.info(`Discord bot: registered ${commands.length} command(s) for guild ${guildId}`);
     } catch (error) {
       console.error('Discord bot: failed to register guild commands', guildId, error);
+    }
+  }
+
+  async sendMatchNotification(match: Match): Promise<void> {
+    if (this.status !== 'connected' || !this.client) {
+      console.debug('[discord] bot not connected, skipping match notification');
+      return;
+    }
+    const league = match.week?.season?.league;
+    if (!league?.discordChannelId) {
+      console.debug(
+        `[discord] League ${league?.id ?? 'unknown'} has no channel configured, skipping notification`,
+      );
+      return;
+    }
+    const embed = this.buildMatchEmbed(match);
+    await this.sendToChannelWithRetry(league.discordChannelId, embed, 'match ' + match.id);
+  }
+
+  async sendDraftPickNotification(seasonPokemonTeam: SeasonPokemonTeam): Promise<void> {
+    if (this.status !== 'connected' || !this.client) {
+      console.debug('[discord] bot not connected, skipping draft pick notification');
+      return;
+    }
+    const league = seasonPokemonTeam.seasonPokemon?.season?.league;
+    if (!league?.discordChannelId) {
+      console.debug(
+        `[discord] League ${league?.id ?? 'unknown'} has no channel configured, skipping notification`,
+      );
+      return;
+    }
+    const embed = this.buildDraftPickEmbed(seasonPokemonTeam);
+    await this.sendToChannelWithRetry(league.discordChannelId, embed, 'draft pick ' + seasonPokemonTeam.id);
+  }
+
+  private buildMatchEmbed(match: Match): EmbedBuilder {
+    const season = match.week?.season;
+    const winner = match.winningTeam;
+    const loser = match.losingTeam;
+    const winnerCoach = winner?.user;
+    const loserCoach = loser?.user;
+    const winnerMention = winnerCoach?.discordId
+      ? '<@' + winnerCoach.discordId + '>'
+      : (winnerCoach?.firstName ?? 'Unknown');
+    const loserMention = loserCoach?.discordId
+      ? '<@' + loserCoach.discordId + '>'
+      : (loserCoach?.firstName ?? 'Unknown');
+    const games = match.games ?? [];
+    const gamesWon = games.filter((g) => g.winningTeamId === winner?.id).length;
+    const gamesLost = games.filter((g) => g.winningTeamId === loser?.id).length;
+    const scoreStr = games.length > 0 ? `${gamesWon} - ${gamesLost}` : '-';
+    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+    const url = `${clientUrl}/league/${season?.league?.id}/match/${match.id}`;
+
+    return new EmbedBuilder()
+      .setTitle('Match Result')
+      .setColor(0x57f287)
+      .setURL(url)
+      .addFields(
+        { name: 'Winner', value: `${winner?.name ?? 'TBD'} (${winnerMention})`, inline: true },
+        { name: 'Loser', value: `${loser?.name ?? 'TBD'} (${loserMention})`, inline: true },
+        { name: 'Score', value: scoreStr, inline: true },
+        { name: 'Week', value: match.week?.name ?? 'Unknown', inline: true },
+        { name: 'Season', value: season?.name ?? 'Unknown', inline: true },
+      )
+      .setTimestamp();
+  }
+
+  private buildDraftPickEmbed(spt: SeasonPokemonTeam): EmbedBuilder {
+    const pokemon = spt.seasonPokemon?.pokemon;
+    const season = spt.seasonPokemon?.season;
+    const league = season?.league;
+    const team = spt.team;
+    const coach = team?.user;
+    const coachMention = coach?.discordId
+      ? '<@' + coach.discordId + '>'
+      : (coach?.firstName ?? 'Unknown');
+    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+    const url = `${clientUrl}/league/${league?.id}/team/${team?.id}`;
+
+    return new EmbedBuilder()
+      .setTitle(`${pokemon?.name ?? 'Pokemon'} was drafted!`)
+      .setColor(0x5865f2)
+      .setURL(url)
+      .addFields(
+        { name: 'Team', value: team?.name ?? 'Unknown', inline: true },
+        { name: 'Coach', value: coachMention, inline: true },
+        { name: 'Season', value: season?.name ?? 'Unknown', inline: true },
+      )
+      .setTimestamp();
+  }
+
+  private async sendToChannelWithRetry(
+    channelId: string,
+    embed: EmbedBuilder,
+    context: string,
+  ): Promise<void> {
+    const trySend = async (): Promise<void> => {
+      const channel = await this.client!.channels.fetch(channelId);
+      if (!channel || !channel.isTextBased()) {
+        throw new Error(`Channel ${channelId} is not a valid text channel`);
+      }
+      await (channel as TextChannel).send({ embeds: [embed] });
+    };
+
+    try {
+      await trySend();
+    } catch (firstErr) {
+      console.warn(`[discord] First send attempt failed for ${context}, retrying in 2s`, firstErr);
+      await new Promise((res) => setTimeout(res, 2000));
+      try {
+        await trySend();
+      } catch (secondErr) {
+        console.error(`[discord] Notification failed after retry for ${context}`, {
+          channelId,
+          context,
+          error: secondErr,
+        });
+      }
     }
   }
 }
