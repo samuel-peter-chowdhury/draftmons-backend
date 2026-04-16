@@ -27,6 +27,9 @@ export class UserOutputDto extends BaseOutputDto {
   discordUsername: string;
 
   @Expose()
+  discordId: string;
+
+  @Expose()
   timezone: string;
 
   @Expose({ groups: ['user.full'] })
@@ -68,6 +71,11 @@ export class UserInputDto extends BaseInputDto {
   @IsOptional()
   @IsString()
   discordUsername: string;
+
+  @Expose()
+  @IsOptional()
+  @IsString()
+  discordId: string;
 
   @Expose()
   @IsOptional()
