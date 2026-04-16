@@ -431,33 +431,321 @@ export class DiscordService {
   }
 
   // ---------------------------------------------------------------------------
-  // /league roster (stub — Plan 02)
+  // /league roster
   // ---------------------------------------------------------------------------
 
   private async handleRoster(
     interaction: ChatInputCommandInteraction,
-    _league: League,
+    league: League,
   ): Promise<void> {
-    await interaction.editReply({ content: 'Roster command coming soon.' });
+    const teamName = interaction.options.getString('team', true);
+    const seasonName = interaction.options.getString('season');
+
+    // Resolve season (same pattern as handleStandings)
+    let season: Season | null;
+    if (seasonName) {
+      season = await this.seasonRepository.findOne({
+        where: { leagueId: league.id, name: seasonName },
+      });
+      if (!season) {
+        await interaction.editReply({ content: `Season "${seasonName}" not found.` });
+        return;
+      }
+    } else {
+      season = await this.seasonRepository.findOne({
+        where: { leagueId: league.id },
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    if (!season) {
+      await interaction.editReply({ content: 'No seasons found. Create one at draftmons.com.' });
+      return;
+    }
+
+    // Find the team by name within the season, load roster through relation chain
+    const team = await this.teamRepository.findOne({
+      where: { name: teamName, seasonId: season.id },
+      relations: {
+        user: true,
+        seasonPokemonTeams: {
+          seasonPokemon: {
+            pokemon: { pokemonTypes: true },
+          },
+        },
+      },
+    });
+
+    if (!team) {
+      await interaction.editReply({
+        content: `Team "${teamName}" not found in ${season.name}.`,
+      });
+      return;
+    }
+
+    const embed = this.buildRosterEmbed(league, season, team);
+    await interaction.editReply({ embeds: [embed] });
+  }
+
+  private buildRosterEmbed(league: League, season: Season, team: Team): EmbedBuilder {
+    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+    const pokemonList = (team.seasonPokemonTeams ?? [])
+      .map((spt) => {
+        const pokemon = spt.seasonPokemon?.pokemon;
+        if (!pokemon) return null;
+        const types = (pokemon.pokemonTypes ?? []).map((t) => t.name).join(' / ');
+        return `\u2022 **${pokemon.name}** \u2014 ${types || 'Unknown'}`;
+      })
+      .filter(Boolean);
+
+    const description =
+      pokemonList.length > 0 ? pokemonList.join('\n') : '*No Pokemon drafted yet*';
+
+    const coach = team.user?.firstName ?? 'Unknown';
+
+    return new EmbedBuilder()
+      .setTitle(`${team.name} Roster`)
+      .setColor(0x57f287)
+      .setURL(`${clientUrl}/league/${league.id}/team/${team.id}`)
+      .setDescription(description)
+      .addFields(
+        { name: 'Coach', value: coach, inline: true },
+        { name: 'Season', value: season.name, inline: true },
+        { name: 'Pokemon', value: String(pokemonList.length), inline: true },
+      )
+      .setFooter({ text: `${league.name} \u2022 Updated` })
+      .setTimestamp();
   }
 
   // ---------------------------------------------------------------------------
-  // /league schedule (stub — Plan 02)
+  // /league schedule
   // ---------------------------------------------------------------------------
 
   private async handleSchedule(
     interaction: ChatInputCommandInteraction,
-    _league: League,
+    league: League,
   ): Promise<void> {
-    await interaction.editReply({ content: 'Schedule command coming soon.' });
+    const seasonName = interaction.options.getString('season');
+    const weekName = interaction.options.getString('week');
+
+    // Resolve season
+    let season: Season | null;
+    if (seasonName) {
+      season = await this.seasonRepository.findOne({
+        where: { leagueId: league.id, name: seasonName },
+      });
+      if (!season) {
+        await interaction.editReply({ content: `Season "${seasonName}" not found.` });
+        return;
+      }
+    } else {
+      season = await this.seasonRepository.findOne({
+        where: { leagueId: league.id },
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    if (!season) {
+      await interaction.editReply({ content: 'No seasons found. Create one at draftmons.com.' });
+      return;
+    }
+
+    // Resolve week
+    let week: Week | null;
+    if (weekName) {
+      week = await this.weekRepository.findOne({
+        where: { seasonId: season.id, name: weekName },
+      });
+      if (!week) {
+        await interaction.editReply({
+          content: `Week "${weekName}" not found in ${season.name}.`,
+        });
+        return;
+      }
+    } else {
+      // Default: most recent week with at least one match
+      const weeksWithMatches = await this.weekRepository.find({
+        where: { seasonId: season.id },
+        relations: { matches: true },
+        order: { createdAt: 'DESC' },
+      });
+      week = weeksWithMatches.find((w) => w.matches && w.matches.length > 0) ?? weeksWithMatches[0] ?? null;
+    }
+
+    if (!week) {
+      await interaction.editReply({ content: `No weeks found in ${season.name}.` });
+      return;
+    }
+
+    // Load matches for this week with team relations
+    const matches = await this.matchRepository.find({
+      where: { weekId: week.id },
+      relations: { teams: true, winningTeam: true, losingTeam: true, games: true },
+    });
+
+    const embed = this.buildScheduleEmbed(league, season, week, matches);
+    await interaction.editReply({ embeds: [embed] });
+  }
+
+  private buildScheduleEmbed(
+    league: League,
+    season: Season,
+    week: Week,
+    matches: Match[],
+  ): EmbedBuilder {
+    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+
+    const matchLines = matches.map((match) => {
+      const isCompleted = match.winningTeamId != null;
+      if (isCompleted) {
+        // Checkmark for completed, show winner and score
+        const gamesWon = (match.games ?? []).filter(
+          (g) => g.winningTeamId === match.winningTeamId,
+        ).length;
+        const gamesLost = (match.games ?? []).filter(
+          (g) => g.winningTeamId === match.losingTeamId,
+        ).length;
+        const score = match.games?.length > 0 ? ` (${gamesWon}-${gamesLost})` : '';
+        return `\u2705 **${match.winningTeam?.name ?? 'TBD'}** def. ${match.losingTeam?.name ?? 'TBD'}${score}`;
+      } else {
+        // Hourglass for pending, show both teams
+        const teamNames = (match.teams ?? []).map((t) => t.name).join(' vs ');
+        return `\u23f3 ${teamNames || 'TBD vs TBD'}`;
+      }
+    });
+
+    const description =
+      matchLines.length > 0 ? matchLines.join('\n') : '*No matches scheduled*';
+
+    return new EmbedBuilder()
+      .setTitle(`${week.name} \u2014 ${season.name}`)
+      .setColor(0x5865f2)
+      .setURL(`${clientUrl}/league/${league.id}`)
+      .setDescription(description)
+      .setFooter({ text: `${league.name} \u2022 Updated` })
+      .setTimestamp();
   }
 
   // ---------------------------------------------------------------------------
-  // Autocomplete (stub — Plan 02)
+  // Autocomplete
   // ---------------------------------------------------------------------------
 
   private async handleAutocomplete(interaction: AutocompleteInteraction): Promise<void> {
-    await interaction.respond([]);
+    if (!interaction.guildId) {
+      await interaction.respond([]);
+      return;
+    }
+
+    const league = await this.findLeagueByGuildId(interaction.guildId).catch(() => null);
+    if (!league) {
+      await interaction.respond([]);
+      return;
+    }
+
+    const focused = interaction.options.getFocused(true);
+    const subcommand = interaction.options.getSubcommand();
+
+    try {
+      if (focused.name === 'season') {
+        await this.autocompleteSeason(interaction, league, focused.value);
+      } else if (focused.name === 'team' && subcommand === 'roster') {
+        const seasonName = interaction.options.getString('season');
+        await this.autocompleteTeam(interaction, league, focused.value, seasonName);
+      } else if (focused.name === 'week' && subcommand === 'schedule') {
+        const seasonName = interaction.options.getString('season');
+        await this.autocompleteWeek(interaction, league, focused.value, seasonName);
+      } else {
+        await interaction.respond([]);
+      }
+    } catch (err) {
+      console.error('[discord] autocomplete error', err);
+      await interaction.respond([]);
+    }
+  }
+
+  private async autocompleteSeason(
+    interaction: AutocompleteInteraction,
+    league: League,
+    typed: string,
+  ): Promise<void> {
+    const seasons = await this.seasonRepository.find({
+      where: { leagueId: league.id },
+      order: { createdAt: 'DESC' },
+      take: 25,
+    });
+    const filtered = seasons
+      .filter((s) => s.name.toLowerCase().includes(typed.toLowerCase()))
+      .slice(0, 25);
+    await interaction.respond(filtered.map((s) => ({ name: s.name, value: s.name })));
+  }
+
+  private async autocompleteTeam(
+    interaction: AutocompleteInteraction,
+    league: League,
+    typed: string,
+    seasonName: string | null,
+  ): Promise<void> {
+    // Resolve season to filter teams
+    let season: Season | null;
+    if (seasonName) {
+      season = await this.seasonRepository.findOne({
+        where: { leagueId: league.id, name: seasonName },
+      });
+    } else {
+      season = await this.seasonRepository.findOne({
+        where: { leagueId: league.id },
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    if (!season) {
+      await interaction.respond([]);
+      return;
+    }
+
+    const teams = await this.teamRepository.find({
+      where: { seasonId: season.id },
+      order: { name: 'ASC' },
+      take: 25,
+    });
+    const filtered = teams
+      .filter((t) => t.name.toLowerCase().includes(typed.toLowerCase()))
+      .slice(0, 25);
+    await interaction.respond(filtered.map((t) => ({ name: t.name, value: t.name })));
+  }
+
+  private async autocompleteWeek(
+    interaction: AutocompleteInteraction,
+    league: League,
+    typed: string,
+    seasonName: string | null,
+  ): Promise<void> {
+    let season: Season | null;
+    if (seasonName) {
+      season = await this.seasonRepository.findOne({
+        where: { leagueId: league.id, name: seasonName },
+      });
+    } else {
+      season = await this.seasonRepository.findOne({
+        where: { leagueId: league.id },
+        order: { createdAt: 'DESC' },
+      });
+    }
+
+    if (!season) {
+      await interaction.respond([]);
+      return;
+    }
+
+    const weeks = await this.weekRepository.find({
+      where: { seasonId: season.id },
+      order: { createdAt: 'DESC' },
+      take: 25,
+    });
+    const filtered = weeks
+      .filter((w) => w.name.toLowerCase().includes(typed.toLowerCase()))
+      .slice(0, 25);
+    await interaction.respond(filtered.map((w) => ({ name: w.name, value: w.name })));
   }
 
   // ---------------------------------------------------------------------------
