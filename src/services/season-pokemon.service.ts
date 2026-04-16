@@ -1,12 +1,7 @@
 import { SeasonPokemon } from '../entities/season-pokemon.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
-import {
-  FindOptionsRelations,
-  FindOptionsWhere,
-  Repository,
-  SelectQueryBuilder,
-} from 'typeorm';
+import { FindOptionsRelations, FindOptionsWhere, Repository, SelectQueryBuilder } from 'typeorm';
 import { SeasonPokemonInputDto } from '../dtos/season-pokemon.dto';
 import { ConflictError, NotFoundError } from '../errors';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
@@ -123,9 +118,12 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
           'seasonPokemonTeam',
           'seasonPokemonTeam.isActive = :sptActive',
           { sptActive: true },
-        );
+        ).leftJoinAndSelect('seasonPokemonTeam.team', 'team');
       } else {
-        qb.leftJoinAndSelect('seasonPokemon.seasonPokemonTeams', 'seasonPokemonTeam');
+        qb.leftJoinAndSelect(
+          'seasonPokemon.seasonPokemonTeams',
+          'seasonPokemonTeam',
+        ).leftJoinAndSelect('seasonPokemonTeam.team', 'team');
       }
     } else if (needsTeamJoin) {
       if (activeRelationsOnly) {
