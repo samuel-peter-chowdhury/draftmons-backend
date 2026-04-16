@@ -64,10 +64,13 @@ import { SpecialMoveCategoryService } from './services/special-move-category.ser
 import { SpecialMoveCategoryController } from './controllers/special-move-category.controller';
 import { AdminService } from './services/admin.service';
 import { AdminController } from './controllers/admin.controller';
+import { DiscordService } from './services/discord.service';
+import { DiscordController } from './controllers/discord.controller';
 
 export class App {
   public app: Application;
   private redisClient: ReturnType<typeof createClient>;
+  private discordService: DiscordService;
   private adminService: AdminService;
   private abilityService: AbilityService;
   private gameStatService: GameStatService;
@@ -201,6 +204,7 @@ export class App {
 
   private async initializeServices(): Promise<void> {
     // Initialize services
+    this.discordService = Container.get(DiscordService);
     this.adminService = Container.get(AdminService);
     this.abilityService = Container.get(AbilityService);
     this.gameStatService = Container.get(GameStatService);
@@ -348,6 +352,10 @@ export class App {
     const userController = new UserController(this.userService);
     const weekController = new WeekController(this.weekService);
 
+    // Set up Discord routes
+    const discordController = new DiscordController();
+    this.app.use('/api/discord', discordController.router);
+
     // Set up Admin routes (dedicated tight rate limit)
     this.app.use('/api/admin', adminLimiter, isAdmin, adminController.router);
 
@@ -413,9 +421,19 @@ export class App {
     this.app.get('/health', async (req, res) => {
       try {
         await AppDataSource.query('SELECT 1');
-        res.json({ status: 'ok', db: 'connected', time: new Date().toISOString() });
+        res.json({
+          status: 'ok',
+          db: 'connected',
+          discord: this.discordService.getStatus(),
+          time: new Date().toISOString(),
+        });
       } catch {
-        res.status(503).json({ status: 'error', db: 'disconnected', time: new Date().toISOString() });
+        res.status(503).json({
+          status: 'error',
+          db: 'disconnected',
+          discord: this.discordService.getStatus(),
+          time: new Date().toISOString(),
+        });
       }
     });
   }
