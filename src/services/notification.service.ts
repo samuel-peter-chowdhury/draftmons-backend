@@ -13,8 +13,7 @@ export class NotificationService {
 
   initialize(): void {
     this.eventBus.on('match.completed', async (payload: MatchCompletedPayload) => {
-      // Added in Plan 02
-      await (this.discordService as any)
+      await this.discordService
         .sendMatchNotification(payload.match)
         .catch((err: unknown) => {
           console.error('[notification] match.completed listener error', err);
@@ -22,8 +21,7 @@ export class NotificationService {
     });
 
     this.eventBus.on('draft.pick', async (payload: DraftPickPayload) => {
-      // Added in Plan 02
-      await (this.discordService as any)
+      await this.discordService
         .sendDraftPickNotification(payload.seasonPokemonTeam)
         .catch((err: unknown) => {
           console.error('[notification] draft.pick listener error', err);
