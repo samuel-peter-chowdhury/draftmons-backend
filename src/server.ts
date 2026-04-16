@@ -5,6 +5,7 @@ import { useContainer } from 'typeorm';
 import { Container } from 'typedi';
 import AppDataSource, { dataSourceOptions } from './config/database.config';
 import { registerRepositories } from './config/repository.config';
+import { DiscordService } from './services/discord.service';
 
 function validateProductionEnv(): void {
   if (APP_CONFIG.isProduction) {
@@ -48,6 +49,10 @@ async function bootstrap() {
     throw error;
   }
 
+  // Initialize Discord bot (after DB + repos so LeagueRepository is available for presence count)
+  const discordService = Container.get(DiscordService);
+  await discordService.initialize();
+
   // Create and initialize the app
   const app = new App();
   await app.initialize();
@@ -62,6 +67,8 @@ async function bootstrap() {
   const shutdown = async () => {
     console.log('📢 Shutting down server...');
     server.close(async () => {
+      // Discord FIRST -- must destroy before Redis/DB
+      await discordService.destroy();
       await app.close();
       console.log('👋 Server shut down successfully');
       process.exit(0);
