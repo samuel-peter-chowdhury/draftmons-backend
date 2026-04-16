@@ -6,6 +6,7 @@ import { Container } from 'typedi';
 import AppDataSource, { dataSourceOptions } from './config/database.config';
 import { registerRepositories } from './config/repository.config';
 import { DiscordService } from './services/discord.service';
+import { NotificationService } from './services/notification.service';
 
 function validateProductionEnv(): void {
   if (APP_CONFIG.isProduction) {
@@ -52,6 +53,10 @@ async function bootstrap() {
   // Initialize Discord bot (after DB + repos so LeagueRepository is available for presence count)
   const discordService = Container.get(DiscordService);
   await discordService.initialize();
+
+  // Initialize NotificationService (registers event listeners before Express starts)
+  const notificationService = Container.get(NotificationService);
+  notificationService.initialize();
 
   // Create and initialize the app
   const app = new App();
