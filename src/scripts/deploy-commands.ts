@@ -1,8 +1,43 @@
 import 'dotenv/config';
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 
+// IMPORTANT: This command definition must stay in sync with
+// registerGuildCommands() in discord.service.ts
 const commands = [
-  new SlashCommandBuilder().setName('league').setDescription('League commands'),
+  new SlashCommandBuilder()
+    .setName('league')
+    .setDescription('League commands')
+    .addSubcommand((sub) => sub.setName('info').setDescription('Show league information'))
+    .addSubcommand((sub) =>
+      sub
+        .setName('standings')
+        .setDescription('Show league standings')
+        .addStringOption((opt) =>
+          opt.setName('season').setDescription('Season name').setAutocomplete(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('roster')
+        .setDescription("Show a team's roster")
+        .addStringOption((opt) =>
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
+        )
+        .addStringOption((opt) =>
+          opt.setName('season').setDescription('Season name').setAutocomplete(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('schedule')
+        .setDescription('Show weekly schedule')
+        .addStringOption((opt) =>
+          opt.setName('season').setDescription('Season name').setAutocomplete(true),
+        )
+        .addStringOption((opt) =>
+          opt.setName('week').setDescription('Week name').setAutocomplete(true),
+        ),
+    ),
 ].map((cmd) => cmd.toJSON());
 
 const token = process.env.DISCORD_BOT_TOKEN;
