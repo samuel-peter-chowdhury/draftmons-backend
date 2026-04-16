@@ -11,6 +11,12 @@ export class League extends BaseApplicationEntity {
   @Column({ unique: true })
   abbreviation: string;
 
+  @Column({ type: 'varchar', length: 20, nullable: true, unique: true })
+  discordGuildId: string | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  discordChannelId: string | null;
+
   @OneToMany(() => LeagueUser, (leagueUser) => leagueUser.league)
   leagueUsers: LeagueUser[];
 
