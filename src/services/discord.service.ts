@@ -75,8 +75,6 @@ export class DiscordService {
     @Inject('TeamRepository') private teamRepository: Repository<Team>,
     @Inject('MatchRepository') private matchRepository: Repository<Match>,
     @Inject('WeekRepository') private weekRepository: Repository<Week>,
-    @Inject('SeasonPokemonTeamRepository')
-    private seasonPokemonTeamRepository: Repository<SeasonPokemonTeam>,
   ) {}
 
   async initialize(): Promise<void> {
@@ -165,10 +163,9 @@ export class DiscordService {
     if (count === undefined) {
       try {
         count = await this.leagueRepository.count({
-          where: { discordGuildId: Not(IsNull()) } as any,
+          where: { discordGuildId: Not(IsNull()) },
         });
       } catch {
-        // discordGuildId column may not exist yet (added in Plan 02)
         count = 0;
       }
     }
