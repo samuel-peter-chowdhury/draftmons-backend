@@ -328,7 +328,7 @@ export class App {
   private async initializeControllers(): Promise<void> {
     // Create and set up controllers
     const adminController = new AdminController(this.adminService);
-    const authController = new AuthController();
+    const authController = new AuthController(this.userService);
     const abilityController = new AbilityController(this.abilityService);
     const gameStatController = new GameStatController(this.gameStatService);
     const gameController = new GameController(this.gameService);
