@@ -268,8 +268,14 @@ export class DiscordService {
   private async handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!interaction.guildId) return;
 
-    // Guild lookup happens BEFORE deferring so we can send a true ephemeral reply
-    // for unlinked servers (CMD-03). The query is fast (indexed discordGuildId).
+    if (interaction.commandName !== 'league') {
+      await interaction.reply({
+        content: 'Unknown command.',
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
     const league = await this.findLeagueByGuildId(interaction.guildId).catch(() => null);
     if (!league) {
       await interaction.reply({
@@ -279,21 +285,25 @@ export class DiscordService {
       return;
     }
 
-    // Defer before any further async/DB work (CMD-02: avoid Discord 3-second timeout)
     await interaction.deferReply();
 
-    const subcommand = interaction.options.getSubcommand();
-    switch (subcommand) {
-      case 'info':
-        return this.handleInfo(interaction, league);
-      case 'standings':
-        return this.handleStandings(interaction, league);
-      case 'roster':
-        return this.handleRoster(interaction, league);
-      case 'schedule':
-        return this.handleSchedule(interaction, league);
-      default:
-        await interaction.editReply({ content: 'Unknown subcommand.' });
+    try {
+      const subcommand = interaction.options.getSubcommand();
+      switch (subcommand) {
+        case 'info':
+          return this.handleInfo(interaction, league);
+        case 'standings':
+          return this.handleStandings(interaction, league);
+        case 'roster':
+          return this.handleRoster(interaction, league);
+        case 'schedule':
+          return this.handleSchedule(interaction, league);
+        default:
+          await interaction.editReply({ content: 'Unknown subcommand.' });
+      }
+    } catch (err) {
+      console.error('[discord] Error handling subcommand:', err);
+      await interaction.editReply({ content: 'Something went wrong. Please try again.' }).catch(() => {});
     }
   }
 
