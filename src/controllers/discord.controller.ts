@@ -3,7 +3,7 @@ import { Container } from 'typedi';
 import { Repository, Not, IsNull } from 'typeorm';
 import { DiscordService } from '../services/discord.service';
 import { asyncHandler } from '../utils/error.utils';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import { isAuthenticated, AuthenticatedRequest } from '../middleware/auth.middleware';
 import { League } from '../entities/league.entity';
 import { APP_CONFIG } from '../config/app.config';
 
@@ -32,14 +32,25 @@ export class DiscordController {
       return;
     }
 
-    // Permission flags: View Channels (1<<10) | Send Messages (1<<11) | Embed Links (1<<14) | Read Message History (1<<16)
-    const permissions = (1 << 10) | (1 << 11) | (1 << 14) | (1 << 16); // 84992
+    // View Channels (1<<10) | Send Messages (1<<11) | Embed Links (1<<14) | Read Message History (1<<16) | Use Application Commands (1<<31)
+    const permissions = ((1 << 10) | (1 << 11) | (1 << 14) | (1 << 16) | (1 << 31)) >>> 0;
     const url = `https://discord.com/oauth2/authorize?client_id=${clientId}&scope=bot%20applications.commands&permissions=${permissions}`;
 
     res.json({ url });
   };
 
   private getGuilds = async (req: Request, res: Response): Promise<void> => {
+    const authReq = req as AuthenticatedRequest;
+    const discordId = authReq.user?.discordId as string | null | undefined;
+
+    if (!discordId) {
+      res.status(400).json({
+        message:
+          'Discord account not linked. Link your Discord account in your profile settings.',
+      });
+      return;
+    }
+
     if (this.discordService.getStatus() !== 'connected') {
       res.status(503).json({ message: 'Discord bot is not available' });
       return;
@@ -58,11 +69,22 @@ export class DiscordController {
 
     const guildLeagueMap = new Map(linkedLeagues.map((l) => [l.discordGuildId!, l.name]));
 
-    const result = guilds.map((g) => ({
-      id: g.id,
-      name: g.name,
-      linkedLeagueName: guildLeagueMap.get(g.id) || null,
-    }));
+    // Check membership for all guilds in parallel, then filter to user's guilds only
+    const guildArray = [...guilds.values()];
+    const membershipResults = await Promise.all(
+      guildArray.map((g) => this.discordService.checkGuildMembership(g.id, discordId)),
+    );
+
+    const result = guildArray
+      .map((g, i) => ({
+        id: g.id,
+        name: g.name,
+        linkedLeagueName: guildLeagueMap.get(g.id) || null,
+        hasManagePermission: membershipResults[i].hasManagePermission,
+        isMember: membershipResults[i].isMember,
+      }))
+      .filter((g) => g.isMember)
+      .map(({ isMember: _isMember, ...rest }) => rest);
 
     res.json(result);
   };

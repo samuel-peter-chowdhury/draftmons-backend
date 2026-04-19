@@ -143,6 +143,28 @@ export class DiscordService {
     return this.client.guilds.cache;
   }
 
+  async checkGuildMembership(
+    guildId: string,
+    discordUserId: string,
+  ): Promise<{ isMember: boolean; hasManagePermission: boolean }> {
+    if (this.status !== 'connected' || !this.client) {
+      return { isMember: false, hasManagePermission: false };
+    }
+    const guild = this.client.guilds.cache.get(guildId);
+    if (!guild) {
+      return { isMember: false, hasManagePermission: false };
+    }
+    try {
+      // REST API call — works without GUILD_MEMBERS privileged intent
+      const member = await guild.members.fetch(discordUserId);
+      const hasManagePermission = member.permissions.has('ManageGuild');
+      return { isMember: true, hasManagePermission };
+    } catch {
+      // 404 or other error = not a member
+      return { isMember: false, hasManagePermission: false };
+    }
+  }
+
   getGuildChannels(guildId: string) {
     if (this.status !== 'connected' || !this.client) {
       return null;
