@@ -26,7 +26,7 @@ export class UserOutputDto extends BaseOutputDto {
   @Expose()
   discordUsername: string;
 
-  @Expose()
+  @Expose({ groups: ['user.private'] })
   discordId: string;
 
   @Expose()

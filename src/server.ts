@@ -23,7 +23,7 @@ function validateProductionEnv(): void {
   }
 
   // Warn if Discord OAuth2 vars are missing (non-fatal — account linking will be broken)
-  const discordOAuthVars = ['DISCORD_CLIENT_SECRET', 'DISCORD_CALLBACK_URL'];
+  const discordOAuthVars = ['DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET', 'DISCORD_CALLBACK_URL'];
   const missingDiscord = discordOAuthVars.filter((key) => !process.env[key]);
   if (APP_CONFIG.isProduction && missingDiscord.length > 0) {
     console.warn(

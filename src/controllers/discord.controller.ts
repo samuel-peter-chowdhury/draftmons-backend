@@ -7,6 +7,7 @@ import { isAuthenticated, AuthenticatedRequest } from '../middleware/auth.middle
 import { League } from '../entities/league.entity';
 import { APP_CONFIG } from '../config/app.config';
 
+// Does not extend BaseController — this is an integration controller, not a CRUD resource.
 export class DiscordController {
   public router = Router({ mergeParams: true });
   private discordService: DiscordService;
@@ -90,8 +91,28 @@ export class DiscordController {
   };
 
   private getChannels = async (req: Request, res: Response): Promise<void> => {
+    const authReq = req as AuthenticatedRequest;
+    const discordId = authReq.user?.discordId as string | null | undefined;
+
+    if (!discordId) {
+      res.status(400).json({
+        message:
+          'Discord account not linked. Link your Discord account in your profile settings.',
+      });
+      return;
+    }
+
     if (this.discordService.getStatus() !== 'connected') {
       res.status(503).json({ message: 'Discord bot is not available' });
+      return;
+    }
+
+    const { isMember } = await this.discordService.checkGuildMembership(
+      req.params.guildId,
+      discordId,
+    );
+    if (!isMember) {
+      res.status(403).json({ message: 'You are not a member of this guild' });
       return;
     }
 

@@ -15,7 +15,7 @@ import {
   AutocompleteInteraction,
   MessageFlags,
 } from 'discord.js';
-import { Repository, Not, IsNull } from 'typeorm';
+import { Repository, Not, IsNull, ILike } from 'typeorm';
 import { Service, Inject } from 'typedi';
 import { League } from '../entities/league.entity';
 import { Match } from '../entities/match.entity';
@@ -23,6 +23,7 @@ import { Season } from '../entities/season.entity';
 import { SeasonPokemonTeam } from '../entities/season-pokemon-team.entity';
 import { Team } from '../entities/team.entity';
 import { Week } from '../entities/week.entity';
+import { APP_CONFIG } from '../config/app.config';
 
 export type DiscordBotStatus = 'connected' | 'disconnected' | 'disabled';
 
@@ -101,7 +102,9 @@ export class DiscordService {
     });
 
     this.client.on(Events.GuildCreate, async (guild) => {
-      await this.handleGuildCreate(guild);
+      await this.handleGuildCreate(guild).catch((err: unknown) => {
+        console.error('[discord] guildCreate handler error', err);
+      });
     });
 
     this.client.on(Events.InteractionCreate, async (interaction) => {
@@ -318,7 +321,7 @@ export class DiscordService {
     totalSeasons: number,
     teamCount: number,
   ): EmbedBuilder {
-    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+    const clientUrl = APP_CONFIG.clientUrl;
     return new EmbedBuilder()
       .setTitle(league.name)
       .setColor(0x5865f2)
@@ -374,7 +377,7 @@ export class DiscordService {
 
     // Load all completed matches in the season (winningTeamId is set)
     const matches = await this.matchRepository.find({
-      where: { week: { seasonId: season.id }, winningTeamId: Not(IsNull()) },
+      where: { week: { seasonId: season.id }, winningTeamId: Not(IsNull()), losingTeamId: Not(IsNull()) },
       relations: { week: true },
     });
 
@@ -388,7 +391,7 @@ export class DiscordService {
     teams: Team[],
     matches: Match[],
   ): EmbedBuilder {
-    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+    const clientUrl = APP_CONFIG.clientUrl;
 
     // Compute wins and losses per team from match results
     const record = new Map<number, { wins: number; losses: number }>();
@@ -446,7 +449,11 @@ export class DiscordService {
       const diff = t.wins - t.losses >= 0 ? `+${t.wins - t.losses}` : String(t.wins - t.losses);
       return `${rank}${team}${coach}${wins}${losses}${diff}`;
     });
-    return `\`\`\`\n${header}\n${divider}\n${rows.join('\n')}\n\`\`\``;
+    const maxRows = 80;
+    const displayed = rows.slice(0, maxRows);
+    const truncationNote =
+      standings.length > maxRows ? `\n*...and ${standings.length - maxRows} more teams*` : '';
+    return `\`\`\`\n${header}\n${divider}\n${displayed.join('\n')}\n\`\`\`${truncationNote}`;
   }
 
   // ---------------------------------------------------------------------------
@@ -507,7 +514,7 @@ export class DiscordService {
   }
 
   private buildRosterEmbed(league: League, season: Season, team: Team): EmbedBuilder {
-    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+    const clientUrl = APP_CONFIG.clientUrl;
     const pokemonList = (team.seasonPokemonTeams ?? [])
       .map((spt) => {
         const pokemon = spt.seasonPokemon?.pokemon;
@@ -612,7 +619,7 @@ export class DiscordService {
     week: Week,
     matches: Match[],
   ): EmbedBuilder {
-    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+    const clientUrl = APP_CONFIG.clientUrl;
 
     const matchLines = matches.map((match) => {
       const isCompleted = match.winningTeamId != null;
@@ -687,15 +694,14 @@ export class DiscordService {
     league: League,
     typed: string,
   ): Promise<void> {
+    const where: Record<string, unknown> = { leagueId: league.id };
+    if (typed) where.name = ILike(`%${typed}%`);
     const seasons = await this.seasonRepository.find({
-      where: { leagueId: league.id },
+      where,
       order: { createdAt: 'DESC' },
       take: 25,
     });
-    const filtered = seasons
-      .filter((s) => s.name.toLowerCase().includes(typed.toLowerCase()))
-      .slice(0, 25);
-    await interaction.respond(filtered.map((s) => ({ name: s.name, value: s.name })));
+    await interaction.respond(seasons.map((s) => ({ name: s.name, value: s.name })));
   }
 
   private async autocompleteTeam(
@@ -722,15 +728,14 @@ export class DiscordService {
       return;
     }
 
+    const where: Record<string, unknown> = { seasonId: season.id };
+    if (typed) where.name = ILike(`%${typed}%`);
     const teams = await this.teamRepository.find({
-      where: { seasonId: season.id },
+      where,
       order: { name: 'ASC' },
       take: 25,
     });
-    const filtered = teams
-      .filter((t) => t.name.toLowerCase().includes(typed.toLowerCase()))
-      .slice(0, 25);
-    await interaction.respond(filtered.map((t) => ({ name: t.name, value: t.name })));
+    await interaction.respond(teams.map((t) => ({ name: t.name, value: t.name })));
   }
 
   private async autocompleteWeek(
@@ -756,15 +761,14 @@ export class DiscordService {
       return;
     }
 
+    const where: Record<string, unknown> = { seasonId: season.id };
+    if (typed) where.name = ILike(`%${typed}%`);
     const weeks = await this.weekRepository.find({
-      where: { seasonId: season.id },
+      where,
       order: { createdAt: 'DESC' },
       take: 25,
     });
-    const filtered = weeks
-      .filter((w) => w.name.toLowerCase().includes(typed.toLowerCase()))
-      .slice(0, 25);
-    await interaction.respond(filtered.map((w) => ({ name: w.name, value: w.name })));
+    await interaction.respond(weeks.map((w) => ({ name: w.name, value: w.name })));
   }
 
   // ---------------------------------------------------------------------------
@@ -823,7 +827,7 @@ export class DiscordService {
     const gamesWon = games.filter((g) => g.winningTeamId === winner?.id).length;
     const gamesLost = games.filter((g) => g.winningTeamId === loser?.id).length;
     const scoreStr = games.length > 0 ? `${gamesWon} - ${gamesLost}` : '-';
-    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+    const clientUrl = APP_CONFIG.clientUrl;
     const url = `${clientUrl}/league/${season?.league?.id}/match/${match.id}`;
 
     return new EmbedBuilder()
@@ -849,7 +853,7 @@ export class DiscordService {
     const coachMention = coach?.discordId
       ? '<@' + coach.discordId + '>'
       : (coach?.firstName ?? 'Unknown');
-    const clientUrl = process.env.CLIENT_URL ?? 'http://localhost:3333';
+    const clientUrl = APP_CONFIG.clientUrl;
     const url = `${clientUrl}/league/${league?.id}/team/${team?.id}`;
 
     return new EmbedBuilder()
@@ -869,8 +873,11 @@ export class DiscordService {
     embed: EmbedBuilder,
     context: string,
   ): Promise<void> {
+    const client = this.client;
+    if (!client) return;
+
     const trySend = async (): Promise<void> => {
-      const channel = await this.client!.channels.fetch(channelId);
+      const channel = await client.channels.fetch(channelId);
       if (!channel || !channel.isTextBased()) {
         throw new Error(`Channel ${channelId} is not a valid text channel`);
       }
