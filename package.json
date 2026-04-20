@@ -8,11 +8,12 @@
     "dev": "nodemon --exec ts-node src/server.ts",
     "build": "tsc",
     "typeorm": "typeorm-ts-node-commonjs",
-    "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/$npm_config_name -d src/config/database.config.ts",
-    "migration:run": "npm run typeorm -- migration:run -d src/config/database.config.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/config/database.config.ts",
+    "migration:generate": "npm run typeorm -- migration:generate ./src/migrations/$npm_config_name -d src/config/migration.config.ts",
+    "migration:run": "npm run typeorm -- migration:run -d src/config/migration.config.ts",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/config/migration.config.ts",
     "lint": "eslint . --ext .ts",
-    "test": "jest"
+    "test": "jest",
+    "deploy-commands": "ts-node src/scripts/deploy-commands.ts"
   },
   "keywords": [
     "pokemon",
@@ -31,6 +32,7 @@
     "connect-redis": "^7.1.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "discord.js": "^14.26.3",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^8.2.1",
