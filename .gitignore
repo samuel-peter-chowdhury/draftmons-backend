@@ -53,3 +53,6 @@ coverage/
 
 # Postman collection
 *.postman_collection.json
+
+# Screenshots
+screenshots/
