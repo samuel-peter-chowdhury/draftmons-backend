@@ -27,6 +27,9 @@ export class User extends BaseApplicationEntity {
   @Column({ nullable: true })
   discordUsername: string;
 
+  @Column({ type: 'varchar', length: 20, nullable: true, unique: true })
+  discordId: string | null;
+
   @Column({ nullable: true })
   timezone: string;
 

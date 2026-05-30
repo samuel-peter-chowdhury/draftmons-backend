@@ -1,0 +1,122 @@
+import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class DiscordIntegration1776642943915 implements MigrationInterface {
+    name = 'DiscordIntegration1776642943915'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "match" DROP CONSTRAINT "FK_18bb825ca9043c817cd7817409c"`);
+        await queryRunner.query(`ALTER TABLE "match" DROP CONSTRAINT "FK_720bb4e547353517de107aeeeec"`);
+        await queryRunner.query(`ALTER TABLE "match" DROP CONSTRAINT "FK_6df4b341c6e5a10411e9c921679"`);
+        await queryRunner.query(`ALTER TABLE "type_effective" DROP CONSTRAINT "FK_d76e508ed791a4560cb6b07750c"`);
+        await queryRunner.query(`ALTER TABLE "type_effective" DROP CONSTRAINT "FK_2040b6855d9b5cd76c09fdf96af"`);
+        await queryRunner.query(`ALTER TABLE "ability" DROP CONSTRAINT "FK_33779f4774e861e1c37b9ba6bb5"`);
+        await queryRunner.query(`ALTER TABLE "move" DROP CONSTRAINT "FK_dd6997f83225bcefc9609179104"`);
+        await queryRunner.query(`ALTER TABLE "move" DROP CONSTRAINT "FK_916646416e864ec9455a344d1fb"`);
+        await queryRunner.query(`ALTER TABLE "pokemon" DROP CONSTRAINT "FK_500c56f49162b480e4c762aa5cb"`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon_team" DROP CONSTRAINT "FK_57d8967436aff21e790ac5bc976"`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon_team" DROP CONSTRAINT "FK_69c312384e33978a0e92795fc34"`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon" DROP CONSTRAINT "FK_33a299c629772cb00b70f9c1cd1"`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon" DROP CONSTRAINT "FK_01f903f7459d6adf1073468daa8"`);
+        await queryRunner.query(`ALTER TABLE "game_stat" DROP CONSTRAINT "FK_2b179043fdaa59cc8948774374c"`);
+        await queryRunner.query(`ALTER TABLE "game_stat" DROP CONSTRAINT "FK_f0cee5e077352c321ead0687503"`);
+        await queryRunner.query(`ALTER TABLE "game" DROP CONSTRAINT "FK_55fd507a9a10c9d8033e88dc7fa"`);
+        await queryRunner.query(`ALTER TABLE "game" DROP CONSTRAINT "FK_a766733772adcdf56fa83625af3"`);
+        await queryRunner.query(`ALTER TABLE "game" DROP CONSTRAINT "FK_6a89b28878c4c98021b35fd2c86"`);
+        await queryRunner.query(`ALTER TABLE "team" DROP CONSTRAINT "FK_6b53a0bc738afb4f73dcecbf262"`);
+        await queryRunner.query(`ALTER TABLE "team" DROP CONSTRAINT "FK_add64c4bdc53d926d9c0992bccc"`);
+        await queryRunner.query(`ALTER TABLE "league_user" DROP CONSTRAINT "FK_8a9bb31e511097f1fba50dbb1c2"`);
+        await queryRunner.query(`ALTER TABLE "league_user" DROP CONSTRAINT "FK_2f0fa73cd24464f8c657026f603"`);
+        await queryRunner.query(`ALTER TABLE "season" DROP CONSTRAINT "FK_af08d05f7f111c6f2a31bb88514"`);
+        await queryRunner.query(`ALTER TABLE "season" DROP CONSTRAINT "FK_4e41f913eddf4b9b711201a4362"`);
+        await queryRunner.query(`ALTER TABLE "week" DROP CONSTRAINT "FK_80850bbbb0a91abe0dab0aec8f8"`);
+        await queryRunner.query(`ALTER TABLE "user" ADD "discord_id" character varying(20)`);
+        await queryRunner.query(`ALTER TABLE "user" ADD CONSTRAINT "UQ_a695038a038c00cf65735299628" UNIQUE ("discord_id")`);
+        await queryRunner.query(`ALTER TABLE "league" ADD "discord_guild_id" character varying(20)`);
+        await queryRunner.query(`ALTER TABLE "league" ADD CONSTRAINT "UQ_e06b6daffeeb9a48c154847ff67" UNIQUE ("discord_guild_id")`);
+        await queryRunner.query(`ALTER TABLE "league" ADD "discord_channel_id" character varying(20)`);
+        await queryRunner.query(`ALTER TABLE "match" ADD CONSTRAINT "FK_18bb825ca9043c817cd7817409c" FOREIGN KEY ("week_id") REFERENCES "week"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "match" ADD CONSTRAINT "FK_720bb4e547353517de107aeeeec" FOREIGN KEY ("losing_team_id") REFERENCES "team"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "match" ADD CONSTRAINT "FK_6df4b341c6e5a10411e9c921679" FOREIGN KEY ("winning_team_id") REFERENCES "team"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "type_effective" ADD CONSTRAINT "FK_d76e508ed791a4560cb6b07750c" FOREIGN KEY ("pokemon_type_id") REFERENCES "pokemon_type"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "type_effective" ADD CONSTRAINT "FK_2040b6855d9b5cd76c09fdf96af" FOREIGN KEY ("pokemon_id") REFERENCES "pokemon"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "ability" ADD CONSTRAINT "FK_33779f4774e861e1c37b9ba6bb5" FOREIGN KEY ("generation_id") REFERENCES "generation"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "move" ADD CONSTRAINT "FK_dd6997f83225bcefc9609179104" FOREIGN KEY ("pokemon_type_id") REFERENCES "pokemon_type"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "move" ADD CONSTRAINT "FK_916646416e864ec9455a344d1fb" FOREIGN KEY ("generation_id") REFERENCES "generation"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "pokemon" ADD CONSTRAINT "FK_500c56f49162b480e4c762aa5cb" FOREIGN KEY ("generation_id") REFERENCES "generation"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon_team" ADD CONSTRAINT "FK_57d8967436aff21e790ac5bc976" FOREIGN KEY ("season_pokemon_id") REFERENCES "season_pokemon"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon_team" ADD CONSTRAINT "FK_69c312384e33978a0e92795fc34" FOREIGN KEY ("team_id") REFERENCES "team"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon" ADD CONSTRAINT "FK_33a299c629772cb00b70f9c1cd1" FOREIGN KEY ("season_id") REFERENCES "season"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon" ADD CONSTRAINT "FK_01f903f7459d6adf1073468daa8" FOREIGN KEY ("pokemon_id") REFERENCES "pokemon"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game_stat" ADD CONSTRAINT "FK_2b179043fdaa59cc8948774374c" FOREIGN KEY ("game_id") REFERENCES "game"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game_stat" ADD CONSTRAINT "FK_f0cee5e077352c321ead0687503" FOREIGN KEY ("season_pokemon_id") REFERENCES "season_pokemon"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game" ADD CONSTRAINT "FK_55fd507a9a10c9d8033e88dc7fa" FOREIGN KEY ("match_id") REFERENCES "match"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game" ADD CONSTRAINT "FK_6a89b28878c4c98021b35fd2c86" FOREIGN KEY ("losing_team_id") REFERENCES "team"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game" ADD CONSTRAINT "FK_a766733772adcdf56fa83625af3" FOREIGN KEY ("winning_team_id") REFERENCES "team"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "team" ADD CONSTRAINT "FK_6b53a0bc738afb4f73dcecbf262" FOREIGN KEY ("season_id") REFERENCES "season"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "team" ADD CONSTRAINT "FK_add64c4bdc53d926d9c0992bccc" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "league_user" ADD CONSTRAINT "FK_8a9bb31e511097f1fba50dbb1c2" FOREIGN KEY ("league_id") REFERENCES "league"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "league_user" ADD CONSTRAINT "FK_2f0fa73cd24464f8c657026f603" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season" ADD CONSTRAINT "FK_af08d05f7f111c6f2a31bb88514" FOREIGN KEY ("league_id") REFERENCES "league"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season" ADD CONSTRAINT "FK_4e41f913eddf4b9b711201a4362" FOREIGN KEY ("generation_id") REFERENCES "generation"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "week" ADD CONSTRAINT "FK_80850bbbb0a91abe0dab0aec8f8" FOREIGN KEY ("season_id") REFERENCES "season"("id") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "week" DROP CONSTRAINT "FK_80850bbbb0a91abe0dab0aec8f8"`);
+        await queryRunner.query(`ALTER TABLE "season" DROP CONSTRAINT "FK_4e41f913eddf4b9b711201a4362"`);
+        await queryRunner.query(`ALTER TABLE "season" DROP CONSTRAINT "FK_af08d05f7f111c6f2a31bb88514"`);
+        await queryRunner.query(`ALTER TABLE "league_user" DROP CONSTRAINT "FK_2f0fa73cd24464f8c657026f603"`);
+        await queryRunner.query(`ALTER TABLE "league_user" DROP CONSTRAINT "FK_8a9bb31e511097f1fba50dbb1c2"`);
+        await queryRunner.query(`ALTER TABLE "team" DROP CONSTRAINT "FK_add64c4bdc53d926d9c0992bccc"`);
+        await queryRunner.query(`ALTER TABLE "team" DROP CONSTRAINT "FK_6b53a0bc738afb4f73dcecbf262"`);
+        await queryRunner.query(`ALTER TABLE "game" DROP CONSTRAINT "FK_a766733772adcdf56fa83625af3"`);
+        await queryRunner.query(`ALTER TABLE "game" DROP CONSTRAINT "FK_6a89b28878c4c98021b35fd2c86"`);
+        await queryRunner.query(`ALTER TABLE "game" DROP CONSTRAINT "FK_55fd507a9a10c9d8033e88dc7fa"`);
+        await queryRunner.query(`ALTER TABLE "game_stat" DROP CONSTRAINT "FK_f0cee5e077352c321ead0687503"`);
+        await queryRunner.query(`ALTER TABLE "game_stat" DROP CONSTRAINT "FK_2b179043fdaa59cc8948774374c"`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon" DROP CONSTRAINT "FK_01f903f7459d6adf1073468daa8"`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon" DROP CONSTRAINT "FK_33a299c629772cb00b70f9c1cd1"`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon_team" DROP CONSTRAINT "FK_69c312384e33978a0e92795fc34"`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon_team" DROP CONSTRAINT "FK_57d8967436aff21e790ac5bc976"`);
+        await queryRunner.query(`ALTER TABLE "pokemon" DROP CONSTRAINT "FK_500c56f49162b480e4c762aa5cb"`);
+        await queryRunner.query(`ALTER TABLE "move" DROP CONSTRAINT "FK_916646416e864ec9455a344d1fb"`);
+        await queryRunner.query(`ALTER TABLE "move" DROP CONSTRAINT "FK_dd6997f83225bcefc9609179104"`);
+        await queryRunner.query(`ALTER TABLE "ability" DROP CONSTRAINT "FK_33779f4774e861e1c37b9ba6bb5"`);
+        await queryRunner.query(`ALTER TABLE "type_effective" DROP CONSTRAINT "FK_2040b6855d9b5cd76c09fdf96af"`);
+        await queryRunner.query(`ALTER TABLE "type_effective" DROP CONSTRAINT "FK_d76e508ed791a4560cb6b07750c"`);
+        await queryRunner.query(`ALTER TABLE "match" DROP CONSTRAINT "FK_6df4b341c6e5a10411e9c921679"`);
+        await queryRunner.query(`ALTER TABLE "match" DROP CONSTRAINT "FK_720bb4e547353517de107aeeeec"`);
+        await queryRunner.query(`ALTER TABLE "match" DROP CONSTRAINT "FK_18bb825ca9043c817cd7817409c"`);
+        await queryRunner.query(`ALTER TABLE "league" DROP COLUMN "discord_channel_id"`);
+        await queryRunner.query(`ALTER TABLE "league" DROP CONSTRAINT "UQ_e06b6daffeeb9a48c154847ff67"`);
+        await queryRunner.query(`ALTER TABLE "league" DROP COLUMN "discord_guild_id"`);
+        await queryRunner.query(`ALTER TABLE "user" DROP CONSTRAINT "UQ_a695038a038c00cf65735299628"`);
+        await queryRunner.query(`ALTER TABLE "user" DROP COLUMN "discord_id"`);
+        await queryRunner.query(`ALTER TABLE "week" ADD CONSTRAINT "FK_80850bbbb0a91abe0dab0aec8f8" FOREIGN KEY ("season_id") REFERENCES "season"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season" ADD CONSTRAINT "FK_4e41f913eddf4b9b711201a4362" FOREIGN KEY ("generation_id") REFERENCES "generation"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season" ADD CONSTRAINT "FK_af08d05f7f111c6f2a31bb88514" FOREIGN KEY ("league_id") REFERENCES "league"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "league_user" ADD CONSTRAINT "FK_2f0fa73cd24464f8c657026f603" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "league_user" ADD CONSTRAINT "FK_8a9bb31e511097f1fba50dbb1c2" FOREIGN KEY ("league_id") REFERENCES "league"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "team" ADD CONSTRAINT "FK_add64c4bdc53d926d9c0992bccc" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "team" ADD CONSTRAINT "FK_6b53a0bc738afb4f73dcecbf262" FOREIGN KEY ("season_id") REFERENCES "season"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game" ADD CONSTRAINT "FK_6a89b28878c4c98021b35fd2c86" FOREIGN KEY ("losing_team_id") REFERENCES "team"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game" ADD CONSTRAINT "FK_a766733772adcdf56fa83625af3" FOREIGN KEY ("winning_team_id") REFERENCES "team"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game" ADD CONSTRAINT "FK_55fd507a9a10c9d8033e88dc7fa" FOREIGN KEY ("match_id") REFERENCES "match"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game_stat" ADD CONSTRAINT "FK_f0cee5e077352c321ead0687503" FOREIGN KEY ("season_pokemon_id") REFERENCES "season_pokemon"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "game_stat" ADD CONSTRAINT "FK_2b179043fdaa59cc8948774374c" FOREIGN KEY ("game_id") REFERENCES "game"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon" ADD CONSTRAINT "FK_01f903f7459d6adf1073468daa8" FOREIGN KEY ("pokemon_id") REFERENCES "pokemon"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon" ADD CONSTRAINT "FK_33a299c629772cb00b70f9c1cd1" FOREIGN KEY ("season_id") REFERENCES "season"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon_team" ADD CONSTRAINT "FK_69c312384e33978a0e92795fc34" FOREIGN KEY ("team_id") REFERENCES "team"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "season_pokemon_team" ADD CONSTRAINT "FK_57d8967436aff21e790ac5bc976" FOREIGN KEY ("season_pokemon_id") REFERENCES "season_pokemon"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "pokemon" ADD CONSTRAINT "FK_500c56f49162b480e4c762aa5cb" FOREIGN KEY ("generation_id") REFERENCES "generation"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "move" ADD CONSTRAINT "FK_916646416e864ec9455a344d1fb" FOREIGN KEY ("generation_id") REFERENCES "generation"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "move" ADD CONSTRAINT "FK_dd6997f83225bcefc9609179104" FOREIGN KEY ("pokemon_type_id") REFERENCES "pokemon_type"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "ability" ADD CONSTRAINT "FK_33779f4774e861e1c37b9ba6bb5" FOREIGN KEY ("generation_id") REFERENCES "generation"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "type_effective" ADD CONSTRAINT "FK_2040b6855d9b5cd76c09fdf96af" FOREIGN KEY ("pokemon_id") REFERENCES "pokemon"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "type_effective" ADD CONSTRAINT "FK_d76e508ed791a4560cb6b07750c" FOREIGN KEY ("pokemon_type_id") REFERENCES "pokemon_type"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "match" ADD CONSTRAINT "FK_6df4b341c6e5a10411e9c921679" FOREIGN KEY ("winning_team_id") REFERENCES "team"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "match" ADD CONSTRAINT "FK_720bb4e547353517de107aeeeec" FOREIGN KEY ("losing_team_id") REFERENCES "team"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "match" ADD CONSTRAINT "FK_18bb825ca9043c817cd7817409c" FOREIGN KEY ("week_id") REFERENCES "week"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+    }
+
+}
