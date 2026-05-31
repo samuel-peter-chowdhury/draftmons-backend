@@ -84,6 +84,12 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
    *           type: string
    *           description: URL link to the game replay
    *           example: "https://replay.pokemonshowdown.com/gen9ou-123456789"
+   *         gameNumber:
+   *           type: integer
+   *           nullable: true
+   *           description: 1-indexed position of this game within its match
+   *           example: 1
+   *           minimum: 1
    *         isActive:
    *           type: boolean
    *           description: Whether the game is currently active
@@ -143,6 +149,12 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
    *           type: string
    *           description: URL link to the game replay
    *           example: "https://replay.pokemonshowdown.com/gen9ou-123456789"
+   *         gameNumber:
+   *           type: integer
+   *           nullable: true
+   *           description: 1-indexed position of this game within its match
+   *           example: 1
+   *           minimum: 1
    *
    *     GameUpdateInput:
    *       type: object
@@ -167,6 +179,12 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
    *           type: string
    *           description: URL link to the game replay
    *           example: "https://replay.pokemonshowdown.com/gen9ou-987654321"
+   *         gameNumber:
+   *           type: integer
+   *           nullable: true
+   *           description: 1-indexed position of this game within its match
+   *           example: 1
+   *           minimum: 1
    */
 
   /**
