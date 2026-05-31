@@ -178,20 +178,28 @@ describe('fetchReplay', () => {
   it('throws ReplayUpstreamError on 500 response, retried exactly once', async () => {
     const mockFn = mockFetch({ ok: false, status: 500 });
 
-    const promise = service.fetchReplay(VALID_URL);
-    await jest.runAllTimersAsync();
+    // Run the promise and advance all timers concurrently so the backoff sleep
+    // resolves before the promise is fully awaited.
+    await expect(
+      Promise.all([
+        service.fetchReplay(VALID_URL),
+        jest.runAllTimersAsync(),
+      ]),
+    ).rejects.toThrow(ReplayUpstreamError);
 
-    await expect(promise).rejects.toThrow(ReplayUpstreamError);
     expect(mockFn).toHaveBeenCalledTimes(2);
   });
 
   it('throws ReplayTimeoutError on AbortError, retried exactly once', async () => {
     const mockFn = mockFetchReject(abortError());
 
-    const promise = service.fetchReplay(VALID_URL);
-    await jest.runAllTimersAsync();
+    await expect(
+      Promise.all([
+        service.fetchReplay(VALID_URL),
+        jest.runAllTimersAsync(),
+      ]),
+    ).rejects.toThrow(ReplayTimeoutError);
 
-    await expect(promise).rejects.toThrow(ReplayTimeoutError);
     expect(mockFn).toHaveBeenCalledTimes(2);
   });
 
