@@ -21,6 +21,9 @@ export class Game extends BaseApplicationEntity {
   @Column({ nullable: true, unique: true })
   replayLink: string;
 
+  @Column({ nullable: true })
+  gameNumber: number;
+
   @ManyToOne(() => Match, (match) => match.games, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'match_id' })
   match: Match;
