@@ -4,3 +4,8 @@ export * from './validation.error';
 export * from './unauthorized.error';
 export * from './forbidden.error';
 export * from './conflict.error';
+export * from './replay-not-found.error';
+export * from './replay-private.error';
+export * from './replay-timeout.error';
+export * from './replay-upstream.error';
+export * from './replay-parse.error';
