@@ -469,3 +469,628 @@ describe('MatchAnalysisService.analyze — statelessness (ANLZ-10)', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Stage 5 helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a SeasonPokemon fixture with the minimum fields needed for pool resolution.
+ */
+function makeSeasonPokemon(
+  id: number,
+  pokemonName: string,
+  teamId: number,
+  seasonId = 1,
+): { id: number; seasonId: number; pokemonId: number; pokemon: { id: number; name: string }; seasonPokemonTeams: { id: number; seasonPokemonId: number; teamId: number }[] } {
+  return {
+    id,
+    seasonId,
+    pokemonId: id * 10,
+    pokemon: { id: id * 10, name: pokemonName },
+    seasonPokemonTeams: [{ id: id * 100, seasonPokemonId: id, teamId }],
+  };
+}
+
+/**
+ * Build a full ReplayAnalysis for use in stage 5 tests, with explicit
+ * player stats and winner/loser info.
+ */
+function makeStage5Analysis(
+  playerNames: string[],
+  replayId: string,
+  playerAKills: Record<string, { direct: number; passive: number }>,
+  playerADeaths: Record<string, number>,
+  playerBKills: Record<string, { direct: number; passive: number }>,
+  playerBDeaths: Record<string, number>,
+  winner: string,
+  loser: string,
+): ReplayAnalysis {
+  return {
+    players: {
+      [playerNames[0]]: { ps: playerNames[0], kills: playerAKills, deaths: playerADeaths },
+      [playerNames[1]]: { ps: playerNames[1], kills: playerBKills, deaths: playerBDeaths },
+    },
+    playerNames,
+    info: {
+      replay: `https://replay.pokemonshowdown.com/${replayId}`,
+      history: '',
+      turns: 30,
+      winner,
+      loser,
+      rules: { recoil: 'D', suicide: 'D', abilityitem: 'P', selfteam: 'N', db: 'P', forfeit: 'N' },
+      result: '1-0',
+      battleId: replayId,
+    },
+  };
+}
+
+// Pool fixtures for stage 5 tests
+const SP_PIKACHU_A = makeSeasonPokemon(1, 'Pikachu', TEAM_A.id);
+const SP_CHARIZARD_B = makeSeasonPokemon(2, 'Charizard', TEAM_B.id);
+const SP_RAPID_STRIKE_A = makeSeasonPokemon(3, 'Urshifu-Rapid-Strike', TEAM_A.id);
+const SP_SINGLE_STRIKE_A = makeSeasonPokemon(4, 'Urshifu-Single-Strike', TEAM_A.id);
+
+// ---------------------------------------------------------------------------
+// Stage 5: Pokémon resolution (ANLZ-06)
+// ---------------------------------------------------------------------------
+
+describe('MatchAnalysisService.analyze — stage 5 Pokémon resolution (ANLZ-06)', () => {
+  it('resolves a Pokémon name to the matching SeasonPokemon in the team pool', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      { Pikachu: { direct: 1, passive: 0 } },
+      {},
+      { Charizard: { direct: 1, passive: 0 } },
+      {},
+      PLAYER_A,
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    // Pool for TEAM_A (Pikachu), then TEAM_B (Charizard)
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_PIKACHU_A])
+      .mockResolvedValueOnce([SP_CHARIZARD_B]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    expect(result.errors.filter((e) => e.code === PreviewErrorCode.POKEMON_NOT_FOUND)).toHaveLength(0);
+    expect(result.errors.filter((e) => e.code === PreviewErrorCode.POKEMON_AMBIGUOUS)).toHaveLength(0);
+
+    const game = result.games[0];
+    expect(game).toBeDefined();
+    const pikachuStat = game.stats.find((s) => s.rawName === 'Pikachu');
+    expect(pikachuStat).toBeDefined();
+    expect(pikachuStat!.seasonPokemonId).toBe(1);
+    expect(pikachuStat!.name).toBe('Pikachu');
+    expect(pikachuStat!.teamId).toBe(TEAM_A.id);
+  });
+
+  it('resolves Pokémon name via normalizePokemonName + toID (strips Tera suffix)', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    // Parser uses Tera name; pool has base name
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      { 'Pikachu-Tera-Electric': { direct: 1, passive: 0 } },
+      {},
+      {},
+      {},
+      PLAYER_A,
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_PIKACHU_A])
+      .mockResolvedValueOnce([]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    // Should resolve: Pikachu-Tera-Electric normalizes to Pikachu → matches SP_PIKACHU_A
+    const game = result.games[0];
+    const stat = game.stats.find((s) => s.rawName === 'Pikachu-Tera-Electric');
+    expect(stat).toBeDefined();
+    expect(stat!.seasonPokemonId).toBe(1);
+    expect(result.errors.filter((e) => e.code === PreviewErrorCode.POKEMON_NOT_FOUND)).toHaveLength(0);
+  });
+
+  it('resolves Urshifu-Rapid-Strike and Urshifu-Single-Strike as distinct formes', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      {
+        'Urshifu-Rapid-Strike': { direct: 2, passive: 0 },
+        'Urshifu-Single-Strike': { direct: 1, passive: 0 },
+      },
+      {},
+      {},
+      {},
+      PLAYER_A,
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    // TEAM_A has BOTH formes drafted
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_RAPID_STRIKE_A, SP_SINGLE_STRIKE_A])
+      .mockResolvedValueOnce([]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    const game = result.games[0];
+    const rapidStat = game.stats.find((s) => s.rawName === 'Urshifu-Rapid-Strike');
+    const singleStat = game.stats.find((s) => s.rawName === 'Urshifu-Single-Strike');
+
+    expect(rapidStat!.seasonPokemonId).toBe(SP_RAPID_STRIKE_A.id);
+    expect(singleStat!.seasonPokemonId).toBe(SP_SINGLE_STRIKE_A.id);
+
+    // Crucial: they must resolve to DIFFERENT SeasonPokemon
+    expect(rapidStat!.seasonPokemonId).not.toBe(singleStat!.seasonPokemonId);
+
+    // No errors
+    expect(result.errors.filter((e) => e.code === PreviewErrorCode.POKEMON_NOT_FOUND)).toHaveLength(0);
+    expect(result.errors.filter((e) => e.code === PreviewErrorCode.POKEMON_AMBIGUOUS)).toHaveLength(0);
+  });
+
+  it('emits POKEMON_NOT_FOUND with team-pool candidates when Pokémon is not in draft pool', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      { Snorlax: { direct: 1, passive: 0 } },
+      {},
+      {},
+      {},
+      PLAYER_A,
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    // Team A pool has Pikachu, but not Snorlax
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_PIKACHU_A])
+      .mockResolvedValueOnce([]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    const notFound = result.errors.find(
+      (e) => e.code === PreviewErrorCode.POKEMON_NOT_FOUND,
+    );
+    expect(notFound).toBeDefined();
+    expect(notFound!.candidates).toBeDefined();
+    expect(Array.isArray(notFound!.candidates)).toBe(true);
+
+    const snorlaxStat = result.games[0].stats.find((s) => s.rawName === 'Snorlax');
+    expect(snorlaxStat!.seasonPokemonId).toBeNull();
+  });
+
+  it('emits POKEMON_AMBIGUOUS with competing candidates when normalized name hits 2+ pool entries', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    // Simulate a pool where two SeasonPokemon have the same normalized name
+    // (edge case: DB inconsistency or normalization collision)
+    const SP_URSHIFU_A1 = makeSeasonPokemon(10, 'Urshifu-Rapid-Strike', TEAM_A.id);
+    const SP_URSHIFU_A2 = makeSeasonPokemon(11, 'Urshifu-Rapid-Strike', TEAM_A.id); // duplicate name in pool
+
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      { 'Urshifu-Rapid-Strike': { direct: 1, passive: 0 } },
+      {},
+      {},
+      {},
+      PLAYER_A,
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_URSHIFU_A1, SP_URSHIFU_A2])
+      .mockResolvedValueOnce([]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    const ambiguous = result.errors.find(
+      (e) => e.code === PreviewErrorCode.POKEMON_AMBIGUOUS,
+    );
+    expect(ambiguous).toBeDefined();
+    expect(Array.isArray(ambiguous!.candidates)).toBe(true);
+    expect(ambiguous!.candidates!.length).toBe(2);
+
+    const stat = result.games[0].stats.find((s) => s.rawName === 'Urshifu-Rapid-Strike');
+    expect(stat!.seasonPokemonId).toBeNull();
+  });
+
+  it('emits POKEMON_NOT_FOUND with season-pool fallback when team is unresolved', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const analysis = makeStage5Analysis(
+      ['UnknownPlayer', PLAYER_B],
+      'gen9natdexdraft-001',
+      { Pikachu: { direct: 1, passive: 0 } },
+      {},
+      { Charizard: { direct: 1, passive: 0 } },
+      {},
+      'UnknownPlayer',
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson(['UnknownPlayer', PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    // Only TEAM_B resolves; UnknownPlayer has no team
+    mocks.teamRepo.find.mockResolvedValue([TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([]);
+    // No team pool load for unknown team, but TEAM_B still gets a pool load
+    mocks.seasonPokemonRepo.find.mockResolvedValue([SP_CHARIZARD_B]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    // Pikachu from UnknownPlayer's pool cannot resolve → POKEMON_NOT_FOUND
+    const notFound = result.errors.filter((e) => e.code === PreviewErrorCode.POKEMON_NOT_FOUND);
+    expect(notFound.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Stage 5: stat mapping (ANLZ-07)
+// ---------------------------------------------------------------------------
+
+describe('MatchAnalysisService.analyze — stage 5 stat mapping (ANLZ-07)', () => {
+  it('maps parser kills.direct → directKills, kills.passive → indirectKills, deaths → deaths', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      { Pikachu: { direct: 3, passive: 1 } },
+      { Pikachu: 1 }, // Pikachu died once
+      { Charizard: { direct: 0, passive: 2 } },
+      { Charizard: 2 },
+      PLAYER_A,
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_PIKACHU_A])
+      .mockResolvedValueOnce([SP_CHARIZARD_B]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    const game = result.games[0];
+    const pikachuStat = game.stats.find((s) => s.rawName === 'Pikachu');
+    expect(pikachuStat!.directKills).toBe(3);
+    expect(pikachuStat!.indirectKills).toBe(1);
+    expect(pikachuStat!.deaths).toBe(1);
+
+    const charizardStat = game.stats.find((s) => s.rawName === 'Charizard');
+    expect(charizardStat!.directKills).toBe(0);
+    expect(charizardStat!.indirectKills).toBe(2);
+    expect(charizardStat!.deaths).toBe(2);
+  });
+
+  it('echoes rawName and sets teamId to the player team', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      { Pikachu: { direct: 1, passive: 0 } },
+      {},
+      {},
+      {},
+      PLAYER_A,
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_PIKACHU_A])
+      .mockResolvedValueOnce([]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    const pikachuStat = result.games[0].stats.find((s) => s.rawName === 'Pikachu');
+    expect(pikachuStat!.rawName).toBe('Pikachu');
+    expect(pikachuStat!.teamId).toBe(TEAM_A.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Stage 5: per-game winner/loser/differential (ANLZ-08)
+// ---------------------------------------------------------------------------
+
+describe('MatchAnalysisService.analyze — stage 5 per-game winner/loser/differential (ANLZ-08)', () => {
+  it('sets winnerTeamId, loserTeamId from parser info.winner/loser (resolved teams)', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      { Pikachu: { direct: 1, passive: 0 } },
+      {},
+      { Charizard: { direct: 0, passive: 0 } },
+      { Charizard: 1 },
+      PLAYER_A, // PLAYER_A wins
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_PIKACHU_A])
+      .mockResolvedValueOnce([SP_CHARIZARD_B]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    const game = result.games[0];
+    expect(game.winnerTeamId).toBe(TEAM_A.id);
+    expect(game.loserTeamId).toBe(TEAM_B.id);
+  });
+
+  it('sets gameNumber to submission order (1-indexed)', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const analysis1 = makeStage5Analysis([PLAYER_A, PLAYER_B], 'gen9natdexdraft-001', { Pikachu: { direct: 1, passive: 0 } }, {}, {}, {}, PLAYER_A, PLAYER_B);
+    const analysis2 = makeStage5Analysis([PLAYER_A, PLAYER_B], 'gen9natdexdraft-002', { Pikachu: { direct: 1, passive: 0 } }, {}, {}, {}, PLAYER_B, PLAYER_A);
+
+    mocks.fetcherService.fetchReplay
+      .mockResolvedValueOnce(makeReplayJson([PLAYER_A, PLAYER_B], 'gen9natdexdraft-001'))
+      .mockResolvedValueOnce(makeReplayJson([PLAYER_A, PLAYER_B], 'gen9natdexdraft-002'));
+    mocks.parserService.parse
+      .mockResolvedValueOnce(analysis1)
+      .mockResolvedValueOnce(analysis2);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find.mockResolvedValue([SP_PIKACHU_A]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1, URL_2]);
+
+    expect(result.games[0].gameNumber).toBe(1);
+    expect(result.games[1].gameNumber).toBe(2);
+    expect(result.games).toHaveLength(2);
+  });
+
+  it('computes differential = winner brought count minus dead count', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    // PLAYER_A (winner) brought 3 Pokémon; 1 died → differential = 2
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      {
+        Pikachu: { direct: 2, passive: 0 },
+        Snorlax: { direct: 1, passive: 0 },
+        Garchomp: { direct: 0, passive: 0 },
+      },
+      { Pikachu: 1 }, // 1 death
+      { Charizard: { direct: 0, passive: 0 } },
+      { Charizard: 1 },
+      PLAYER_A,
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+
+    const SP_SNORLAX_A = makeSeasonPokemon(5, 'Snorlax', TEAM_A.id);
+    const SP_GARCHOMP_A = makeSeasonPokemon(6, 'Garchomp', TEAM_A.id);
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_PIKACHU_A, SP_SNORLAX_A, SP_GARCHOMP_A])
+      .mockResolvedValueOnce([SP_CHARIZARD_B]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    // Winner (PLAYER_A) brought 3 Pokémon (Pikachu, Snorlax, Garchomp), 1 dead → differential = 2
+    expect(result.games[0].differential).toBe(2);
+  });
+
+  it('emits GAME_INDECISIVE and sets winner/loser/differential to null when info.winner is empty', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const indecisiveAnalysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      { Pikachu: { direct: 0, passive: 0 } },
+      {},
+      { Charizard: { direct: 0, passive: 0 } },
+      {},
+      '', // empty winner → GAME_INDECISIVE
+      '',
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(indecisiveAnalysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find
+      .mockResolvedValueOnce([SP_PIKACHU_A])
+      .mockResolvedValueOnce([SP_CHARIZARD_B]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    const game = result.games[0];
+    expect(game.winnerTeamId).toBeNull();
+    expect(game.loserTeamId).toBeNull();
+    expect(game.differential).toBeNull();
+
+    const indecisiveErr = result.errors.find(
+      (e) => e.code === PreviewErrorCode.GAME_INDECISIVE,
+    );
+    expect(indecisiveErr).toBeDefined();
+    expect(indecisiveErr!.field).toMatch(/^games\[/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Stage 5: match winner / decisiveness (ANLZ-09, ANLZ-02)
+// ---------------------------------------------------------------------------
+
+describe('MatchAnalysisService.analyze — stage 5 match winner and decisiveness (ANLZ-09, ANLZ-02)', () => {
+  it('sets matchWinnerTeamId from the team with strict majority of game wins (2-1 Bo3)', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    // Game 1: PLAYER_A wins, Game 2: PLAYER_B wins, Game 3: PLAYER_A wins → TEAM_A is match winner
+    const a1 = makeStage5Analysis([PLAYER_A, PLAYER_B], 'gen9natdexdraft-001', { Pikachu: { direct: 1, passive: 0 } }, {}, {}, {}, PLAYER_A, PLAYER_B);
+    const a2 = makeStage5Analysis([PLAYER_A, PLAYER_B], 'gen9natdexdraft-002', {}, {}, { Charizard: { direct: 1, passive: 0 } }, {}, PLAYER_B, PLAYER_A);
+    const a3 = makeStage5Analysis([PLAYER_A, PLAYER_B], 'gen9natdexdraft-003', { Pikachu: { direct: 1, passive: 0 } }, {}, {}, {}, PLAYER_A, PLAYER_B);
+
+    mocks.fetcherService.fetchReplay
+      .mockResolvedValueOnce(makeReplayJson([PLAYER_A, PLAYER_B], 'gen9natdexdraft-001'))
+      .mockResolvedValueOnce(makeReplayJson([PLAYER_A, PLAYER_B], 'gen9natdexdraft-002'))
+      .mockResolvedValueOnce(makeReplayJson([PLAYER_A, PLAYER_B], 'gen9natdexdraft-003'));
+    mocks.parserService.parse
+      .mockResolvedValueOnce(a1)
+      .mockResolvedValueOnce(a2)
+      .mockResolvedValueOnce(a3);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find.mockResolvedValue([SP_PIKACHU_A, SP_CHARIZARD_B]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1, URL_2, URL_3]);
+
+    expect(result.matchWinnerTeamId).toBe(TEAM_A.id);
+    expect(result.matchLoserTeamId).toBe(TEAM_B.id);
+    expect(result.isDecisive).toBe(true);
+    expect(result.errors.filter((e) => e.code === PreviewErrorCode.SET_NOT_DECISIVE)).toHaveLength(0);
+  });
+
+  it('sets isDecisive=false and emits SET_NOT_DECISIVE when neither team has strict majority (1-1)', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue({ ...SEASON, numberOfGames: 3 });
+
+    // Only 2 replays: 1 win each → no majority → not decisive
+    const a1 = makeStage5Analysis([PLAYER_A, PLAYER_B], 'gen9natdexdraft-001', { Pikachu: { direct: 1, passive: 0 } }, {}, {}, {}, PLAYER_A, PLAYER_B);
+    const a2 = makeStage5Analysis([PLAYER_A, PLAYER_B], 'gen9natdexdraft-002', {}, {}, { Charizard: { direct: 1, passive: 0 } }, {}, PLAYER_B, PLAYER_A);
+
+    mocks.fetcherService.fetchReplay
+      .mockResolvedValueOnce(makeReplayJson([PLAYER_A, PLAYER_B], 'gen9natdexdraft-001'))
+      .mockResolvedValueOnce(makeReplayJson([PLAYER_A, PLAYER_B], 'gen9natdexdraft-002'));
+    mocks.parserService.parse
+      .mockResolvedValueOnce(a1)
+      .mockResolvedValueOnce(a2);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find.mockResolvedValue([SP_PIKACHU_A, SP_CHARIZARD_B]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1, URL_2]);
+
+    expect(result.isDecisive).toBe(false);
+    expect(result.matchWinnerTeamId).toBeNull();
+    expect(result.matchLoserTeamId).toBeNull();
+
+    const notDecisive = result.errors.find((e) => e.code === PreviewErrorCode.SET_NOT_DECISIVE);
+    expect(notDecisive).toBeDefined();
+    expect(notDecisive!.field).toBe('set');
+  });
+
+  it('games[].length equals the number of parsed replays', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const a1 = makeStage5Analysis([PLAYER_A, PLAYER_B], 'gen9natdexdraft-001', {}, {}, {}, {}, PLAYER_A, PLAYER_B);
+    const a2 = makeStage5Analysis([PLAYER_A, PLAYER_B], 'gen9natdexdraft-002', {}, {}, {}, {}, PLAYER_B, PLAYER_A);
+
+    mocks.fetcherService.fetchReplay
+      .mockResolvedValueOnce(makeReplayJson([PLAYER_A, PLAYER_B], 'gen9natdexdraft-001'))
+      .mockResolvedValueOnce(makeReplayJson([PLAYER_A, PLAYER_B], 'gen9natdexdraft-002'));
+    mocks.parserService.parse
+      .mockResolvedValueOnce(a1)
+      .mockResolvedValueOnce(a2);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find.mockResolvedValue([]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1, URL_2]);
+
+    expect(result.games).toHaveLength(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Stage 5: statelessness preserved (ANLZ-10)
+// ---------------------------------------------------------------------------
+
+describe('MatchAnalysisService.analyze — stage 5 statelessness (ANLZ-10)', () => {
+  it('never calls write methods on any repo even with stage 5 Pokémon resolution', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    const analysis = makeStage5Analysis(
+      [PLAYER_A, PLAYER_B],
+      'gen9natdexdraft-001',
+      { Pikachu: { direct: 1, passive: 0 } },
+      {},
+      { Charizard: { direct: 1, passive: 0 } },
+      {},
+      PLAYER_A,
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    mocks.seasonPokemonRepo.find.mockResolvedValue([SP_PIKACHU_A, SP_CHARIZARD_B]);
+
+    const service = buildService(mocks);
+    await service.analyze(1, [URL_1]);
+
+    const repos = [mocks.seasonRepo, mocks.userRepo, mocks.teamRepo, mocks.matchRepo, mocks.seasonPokemonRepo];
+    for (const repo of repos) {
+      for (const method of ['save', 'insert', 'update', 'delete', 'remove'] as const) {
+        expect((repo as any)[method]).toBeUndefined();
+      }
+    }
+  });
+});
