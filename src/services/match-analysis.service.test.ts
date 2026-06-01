@@ -221,8 +221,9 @@ describe('MatchAnalysisService.analyze — stage 1 duplicate replays', () => {
     expect(result.errors.some((e) => e.field === 'replays[1]' && e.code === PreviewErrorCode.REPLAY_DUPLICATE)).toBe(true);
     // First occurrence should NOT produce a duplicate error
     expect(result.errors.some((e) => e.field === 'replays[0]' && e.code === PreviewErrorCode.REPLAY_DUPLICATE)).toBe(false);
-    // fetchReplay should only be called for non-duplicate URLs
-    expect(mocks.fetcherService.fetchReplay).not.toHaveBeenCalledWith(URL_1);
+    // fetchReplay should only be called once for URL_1 (first occurrence); second occurrence is skipped
+    const url1Calls = mocks.fetcherService.fetchReplay.mock.calls.filter((c: string[]) => c[0] === URL_1);
+    expect(url1Calls).toHaveLength(1);
   });
 });
 
