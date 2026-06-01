@@ -767,6 +767,61 @@ describe('MatchAnalysisService.analyze — stage 5 Pokémon resolution (ANLZ-06)
     // Pikachu from UnknownPlayer's pool cannot resolve → POKEMON_NOT_FOUND
     const notFound = result.errors.filter((e) => e.code === PreviewErrorCode.POKEMON_NOT_FOUND);
     expect(notFound.length).toBeGreaterThanOrEqual(1);
+    // Strengthened: the unresolved-team path must carry season-pool candidates, not [].
+    expect(notFound[0].candidates!.length).toBeGreaterThan(0);
+  });
+
+  it('emits POKEMON_NOT_FOUND with FULL SEASON POOL candidates when team is unresolved', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+
+    // UnknownPlayer is unresolved (no team). Their Pokémon (Snorlax) is in NO pool.
+    const analysis = makeStage5Analysis(
+      ['UnknownPlayer', PLAYER_B],
+      'gen9natdexdraft-001',
+      { Snorlax: { direct: 1, passive: 0 } },
+      {},
+      { Charizard: { direct: 1, passive: 0 } },
+      {},
+      'UnknownPlayer',
+      PLAYER_B,
+    );
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson(['UnknownPlayer', PLAYER_B]));
+    mocks.parserService.parse.mockResolvedValue(analysis);
+    // Only TEAM_B resolves; UnknownPlayer has no team (teamId null).
+    mocks.teamRepo.find.mockResolvedValue([TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([]);
+    // The full season pool spans BOTH teams. Use mockResolvedValue (not Once) so both the
+    // TEAM_B team-pool load and the lazy season-pool load return this fixture; the
+    // assertion below proves the candidate ids come from the multi-team season pool.
+    const seasonPoolFixture = [SP_PIKACHU_A, SP_CHARIZARD_B];
+    mocks.seasonPokemonRepo.find.mockResolvedValue(seasonPoolFixture);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1]);
+
+    // Snorlax (unresolved player, not in any pool) → POKEMON_NOT_FOUND for the unknown team.
+    const snorlaxStat = result.games[0].stats.find((s) => s.rawName === 'Snorlax');
+    expect(snorlaxStat).toBeDefined();
+    expect(snorlaxStat!.teamId).toBeNull();
+    expect(snorlaxStat!.seasonPokemonId).toBeNull();
+
+    const notFoundForSnorlax = result.errors.find(
+      (e) =>
+        e.code === PreviewErrorCode.POKEMON_NOT_FOUND &&
+        (e.candidates ?? []).some((c: unknown) => (c as { name: string }).name === 'Snorlax') === false &&
+        (e.candidates ?? []).length > 0,
+    );
+    // The POKEMON_NOT_FOUND error for the unresolved-team player must carry the FULL
+    // season pool as candidates (length > 0), NOT an empty array.
+    expect(notFoundForSnorlax).toBeDefined();
+    const candidateIds = (notFoundForSnorlax!.candidates as { seasonPokemonId: number }[]).map(
+      (c) => c.seasonPokemonId,
+    );
+    expect(candidateIds.length).toBeGreaterThan(0);
+    expect(candidateIds.sort()).toEqual(
+      seasonPoolFixture.map((sp) => sp.id).sort(),
+    );
   });
 });
 
