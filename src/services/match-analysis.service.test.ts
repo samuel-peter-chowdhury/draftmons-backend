@@ -127,14 +127,23 @@ describe('MatchAnalysisService.analyze — happy path', () => {
 
     mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
     mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, PLAYER_B]));
+    // makeAnalysis produces: PLAYER_A wins, PLAYER_B loses, pikachu/charizard as Pokémon keys
     mocks.parserService.parse.mockResolvedValue(makeAnalysis([PLAYER_A, PLAYER_B]));
     mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
     mocks.matchRepo.find.mockResolvedValue([MATCH_1]);
+    // Stage 5: return empty pool (simplest — POKEMON_NOT_FOUND will be emitted but we only
+    // assert on player/match resolution, which is the focus of this test)
+    mocks.seasonPokemonRepo.find.mockResolvedValue([]);
 
     const service = buildService(mocks);
     const result = await service.analyze(1, [URL_1, URL_2, URL_3]);
 
-    expect(result.errors).toHaveLength(0);
+    // Player and match resolution is the focus of this test (stage 5 Pokémon errors expected
+    // because the pool is empty, but that doesn't block stages 1-4)
+    const nonPokemonErrors = result.errors.filter(
+      (e) => e.code !== PreviewErrorCode.POKEMON_NOT_FOUND && e.code !== PreviewErrorCode.SET_NOT_DECISIVE,
+    );
+    expect(nonPokemonErrors).toHaveLength(0);
     expect(result.matchId).toBe(50);
     expect(result.weekId).toBe(5);
     expect(result.weekName).toBe('Week 1');
@@ -143,10 +152,10 @@ describe('MatchAnalysisService.analyze — happy path', () => {
     expect(result.players[1].userId).toBe(USER_B.id);
     expect(result.players[0].teamId).toBe(TEAM_A.id);
     expect(result.players[1].teamId).toBe(TEAM_B.id);
-    expect(result.games).toEqual([]);
-    expect(result.isDecisive).toBe(false);
-    expect(result.matchWinnerTeamId).toBeNull();
-    expect(result.matchLoserTeamId).toBeNull();
+    expect(result.games).toHaveLength(3);
+    // All 3 games won by PLAYER_A → TEAM_A is match winner
+    expect(result.matchWinnerTeamId).toBe(TEAM_A.id);
+    expect(result.isDecisive).toBe(true);
   });
 });
 

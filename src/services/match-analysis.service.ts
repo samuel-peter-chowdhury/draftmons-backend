@@ -9,10 +9,12 @@ import {
   ValidationError,
 } from '../errors';
 import {
+  GamePreviewDto,
   MatchPreviewDto,
   PlayerPreviewDto,
   PreviewErrorCode,
   PreviewErrorDto,
+  StatPreviewDto,
 } from '../dtos/match-analysis.dto';
 import { Season } from '../entities/season.entity';
 import { User } from '../entities/user.entity';
@@ -23,6 +25,7 @@ import { ReplayFetcherService, ShowdownReplayJson } from './replay-fetcher.servi
 import { ReplayParserService } from './replay-parser.service';
 import { ReplayAnalysis } from '../utils/replay-parser/types';
 import { toID } from '../utils/showdown-id.utils';
+import { normalizePokemonName } from '../utils/pokemon-name.utils';
 
 // ---------------------------------------------------------------------------
 // Internal types used within the pipeline
@@ -112,13 +115,11 @@ export class MatchAnalysisService {
     preview.weekId = matchPreview.weekId;
     preview.weekName = matchPreview.weekName;
     preview.players = players;
-    preview.games = []; // populated in 03-02
-    preview.matchWinnerTeamId = null; // populated in 03-02
-    preview.matchLoserTeamId = null; // populated in 03-02
-    preview.isDecisive = false; // populated in 03-02
     preview.errors = errors;
 
-    // STAGE 5 (Pokémon + stats + winners) — implemented in 03-02
+    // STAGE 5: Pokémon resolution + stat mapping + per-game winners + match winner
+    await this.resolveStats(seasonId, parsed, players, preview, errors, pushError);
+
     return preview;
   }
 
@@ -378,5 +379,256 @@ export class MatchAnalysisService {
       candidates,
     );
     return { matchId: null, weekId: null, weekName: null };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Stage 5: Pokémon resolution + stat mapping + per-game winners + match winner
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Stage 5 entry point. Bulk-loads each team's draft pool once, then iterates
+   * over each parsed replay to build GamePreviewDto entries with StatPreviewDto
+   * per Pokémon. After all games are computed, derives match winner/loser/
+   * decisiveness.
+   *
+   * NEVER writes to the database (ANLZ-10).
+   */
+  private async resolveStats(
+    seasonId: number,
+    parsed: ParsedReplay[],
+    players: PlayerPreviewDto[],
+    preview: MatchPreviewDto,
+    errors: PreviewErrorDto[],
+    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+  ): Promise<void> {
+    // Build player-name → PlayerPreviewDto lookup (keyed by toID of raw showdown name)
+    // so we can map parser player names → team IDs.
+    const playerByIdKey = new Map<string, PlayerPreviewDto>();
+    for (const p of players) {
+      playerByIdKey.set(toID(p.rawShowdownName), p);
+    }
+
+    // Bulk-load each resolved team's draft pool ONCE (Pitfall 2 — avoid N+1).
+    // Map: teamId → SeasonPokemon[]
+    const poolByTeamId = new Map<number, SeasonPokemon[]>();
+    for (const p of players) {
+      if (p.teamId !== null && !poolByTeamId.has(p.teamId)) {
+        const pool = await this.seasonPokemonRepo.find({
+          where: { seasonId, seasonPokemonTeams: { teamId: p.teamId } },
+          relations: { pokemon: true, seasonPokemonTeams: true },
+        });
+        poolByTeamId.set(p.teamId, pool);
+      }
+    }
+
+    // Process each parsed replay in submission order (1-indexed gameNumber)
+    const games: GamePreviewDto[] = [];
+    const gameWins = new Map<number, number>(); // teamId → win count
+
+    for (let i = 0; i < parsed.length; i++) {
+      const { url, analysis } = parsed[i];
+      const gameDto = new GamePreviewDto();
+      gameDto.gameNumber = i + 1;
+      gameDto.replayUrl = url;
+      gameDto.stats = [];
+
+      // Build stats for each player in this replay
+      for (const [rawPlayerName, playerStats] of Object.entries(analysis.players)) {
+        const playerIdKey = toID(rawPlayerName);
+        const playerDto = playerByIdKey.get(playerIdKey);
+        const teamId = playerDto?.teamId ?? null;
+        const teamPool = teamId !== null ? (poolByTeamId.get(teamId) ?? []) : [];
+
+        // Build a name-key → SeasonPokemon[] map from this team's pool
+        const poolByKey = new Map<string, SeasonPokemon[]>();
+        for (const sp of teamPool) {
+          const key = toID(normalizePokemonName(sp.pokemon.name));
+          if (!poolByKey.has(key)) {
+            poolByKey.set(key, []);
+          }
+          poolByKey.get(key)!.push(sp);
+        }
+
+        // Collect all Pokémon names from kills + deaths for this player
+        const allPokemonNames = new Set([
+          ...Object.keys(playerStats.kills),
+          ...Object.keys(playerStats.deaths),
+        ]);
+
+        for (const rawPokeName of allPokemonNames) {
+          const statDto = new StatPreviewDto();
+          statDto.rawName = rawPokeName;
+          statDto.teamId = teamId;
+          statDto.directKills = playerStats.kills[rawPokeName]?.direct ?? 0;
+          statDto.indirectKills = playerStats.kills[rawPokeName]?.passive ?? 0;
+          statDto.deaths = playerStats.deaths[rawPokeName] ?? 0;
+
+          // Resolve via normalizePokemonName + toID
+          const normalizedKey = toID(normalizePokemonName(rawPokeName));
+          const poolMatches = poolByKey.get(normalizedKey) ?? [];
+
+          if (poolMatches.length === 1) {
+            // Resolved
+            statDto.seasonPokemonId = poolMatches[0].id;
+            statDto.name = poolMatches[0].pokemon.name;
+          } else if (poolMatches.length > 1) {
+            // Ambiguous — 2+ entries for same normalized key
+            statDto.seasonPokemonId = null;
+            statDto.name = null;
+            const candidates = poolMatches.map((sp) => ({
+              seasonPokemonId: sp.id,
+              name: sp.pokemon.name,
+            }));
+            pushError(
+              `games[${i}].stats`,
+              PreviewErrorCode.POKEMON_AMBIGUOUS,
+              `Pokémon "${rawPokeName}" matches ${poolMatches.length} entries in the draft pool — cannot resolve uniquely.`,
+              candidates,
+            );
+          } else {
+            // Not found — emit with team pool candidates (fallback to full pool if no team)
+            statDto.seasonPokemonId = null;
+            statDto.name = null;
+            const candidatePool =
+              teamId !== null ? teamPool : [];
+            const candidates = candidatePool.map((sp) => ({
+              seasonPokemonId: sp.id,
+              name: sp.pokemon.name,
+            }));
+            pushError(
+              `games[${i}].stats`,
+              PreviewErrorCode.POKEMON_NOT_FOUND,
+              `Pokémon "${rawPokeName}" was not found in the team's draft pool.`,
+              candidates,
+            );
+          }
+
+          gameDto.stats.push(statDto);
+        }
+      }
+
+      // Per-game winner/loser/differential
+      this.computeGameResult(i, analysis, playerByIdKey, gameDto, errors, pushError);
+
+      // Track game win for match winner computation
+      if (gameDto.winnerTeamId !== null) {
+        gameWins.set(gameDto.winnerTeamId, (gameWins.get(gameDto.winnerTeamId) ?? 0) + 1);
+      }
+
+      games.push(gameDto);
+    }
+
+    preview.games = games;
+
+    // Match winner/loser/decisiveness
+    this.computeMatchResult(games, gameWins, preview, errors, pushError);
+  }
+
+  /**
+   * Derive per-game winner, loser, and differential from the parser's
+   * info.winner / info.loser fields.
+   */
+  private computeGameResult(
+    gameIndex: number,
+    analysis: ReplayAnalysis,
+    playerByIdKey: Map<string, PlayerPreviewDto>,
+    gameDto: GamePreviewDto,
+    errors: PreviewErrorDto[],
+    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+  ): void {
+    const rawWinner = analysis.info.winner;
+    const rawLoser = analysis.info.loser;
+
+    if (!rawWinner) {
+      // GAME_INDECISIVE (Pitfall 5)
+      gameDto.winnerTeamId = null;
+      gameDto.loserTeamId = null;
+      gameDto.differential = null;
+      pushError(
+        `games[${gameIndex}]`,
+        PreviewErrorCode.GAME_INDECISIVE,
+        `Game ${gameIndex + 1} has no declared winner — may be a forfeit or tie.`,
+      );
+      return;
+    }
+
+    const winnerPlayer = playerByIdKey.get(toID(rawWinner));
+    const loserPlayer = playerByIdKey.get(toID(rawLoser));
+
+    gameDto.winnerTeamId = winnerPlayer?.teamId ?? null;
+    gameDto.loserTeamId = loserPlayer?.teamId ?? null;
+
+    // Differential: winner's brought Pokémon minus winner's dead Pokémon (Pitfall 6)
+    const winnerStats = analysis.players[rawWinner];
+    if (winnerStats) {
+      const brought = Object.keys(winnerStats.kills).length; // all Pokémon in kills map = brought
+      const dead = Object.values(winnerStats.deaths).filter((d) => d >= 1).length;
+      gameDto.differential = brought - dead;
+    } else {
+      gameDto.differential = null;
+    }
+  }
+
+  /**
+   * Compute overall match winner/loser from game-win counts, and set isDecisive.
+   * A team wins if it has STRICTLY MORE THAN HALF of the submitted (parsed) games.
+   */
+  private computeMatchResult(
+    games: GamePreviewDto[],
+    gameWins: Map<number, number>,
+    preview: MatchPreviewDto,
+    errors: PreviewErrorDto[],
+    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+  ): void {
+    const totalGames = games.length;
+    const majority = totalGames / 2; // strict majority = > half
+
+    let winnerTeamId: number | null = null;
+    let loserTeamId: number | null = null;
+
+    for (const [teamId, wins] of gameWins.entries()) {
+      if (wins > majority) {
+        winnerTeamId = teamId;
+        break;
+      }
+    }
+
+    if (winnerTeamId !== null) {
+      // Find the loser: the other resolved team
+      for (const [teamId] of gameWins.entries()) {
+        if (teamId !== winnerTeamId) {
+          loserTeamId = teamId;
+          break;
+        }
+      }
+      // If only one team in gameWins (e.g. all wins by same team, other team 0),
+      // find the loser from the preview.players list
+      if (loserTeamId === null) {
+        const winnerIdKey = winnerTeamId;
+        for (const p of preview.players) {
+          if (p.teamId !== null && p.teamId !== winnerIdKey) {
+            loserTeamId = p.teamId;
+            break;
+          }
+        }
+      }
+      preview.matchWinnerTeamId = winnerTeamId;
+      preview.matchLoserTeamId = loserTeamId;
+      preview.isDecisive = true;
+    } else {
+      // No majority
+      preview.matchWinnerTeamId = null;
+      preview.matchLoserTeamId = null;
+      preview.isDecisive = false;
+
+      // Only emit SET_NOT_DECISIVE if there are any games (not just zero games)
+      if (totalGames > 0) {
+        pushError(
+          'set',
+          PreviewErrorCode.SET_NOT_DECISIVE,
+          `No team has a strict majority of game wins (total games: ${totalGames}) — set is not decisive.`,
+        );
+      }
+    }
   }
 }
