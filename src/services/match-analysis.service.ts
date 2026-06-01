@@ -421,6 +421,21 @@ export class MatchAnalysisService {
       }
     }
 
+    // Lazily-loaded full season pool, used as candidate fallback when a player's
+    // team is unresolved (teamId null). Loaded at most once (Pitfall 2 — avoid N+1):
+    // never fetched when every player resolves to a team.
+    let seasonPool: SeasonPokemon[] | null = null;
+    const loadSeasonPool = async (): Promise<SeasonPokemon[]> => {
+      if (seasonPool === null) {
+        seasonPool =
+          (await this.seasonPokemonRepo.find({
+            where: { seasonId },
+            relations: { pokemon: true, seasonPokemonTeams: true },
+          })) ?? [];
+      }
+      return seasonPool;
+    };
+
     // Process each parsed replay in submission order (1-indexed gameNumber)
     const games: GamePreviewDto[] = [];
     const gameWins = new Map<number, number>(); // teamId → win count
@@ -486,11 +501,13 @@ export class MatchAnalysisService {
               candidates,
             );
           } else {
-            // Not found — emit with team pool candidates (fallback to full pool if no team)
+            // Not found — emit with team pool candidates, or the full season pool
+            // when the player's team is unresolved (teamId null) so the moderator
+            // still gets an actionable override list.
             statDto.seasonPokemonId = null;
             statDto.name = null;
             const candidatePool =
-              teamId !== null ? teamPool : [];
+              teamId !== null ? teamPool : await loadSeasonPool();
             const candidates = candidatePool.map((sp) => ({
               seasonPokemonId: sp.id,
               name: sp.pokemon.name,
@@ -498,7 +515,9 @@ export class MatchAnalysisService {
             pushError(
               `games[${i}].stats`,
               PreviewErrorCode.POKEMON_NOT_FOUND,
-              `Pokémon "${rawPokeName}" was not found in the team's draft pool.`,
+              teamId !== null
+                ? `Pokémon "${rawPokeName}" was not found in the team's draft pool.`
+                : `Pokémon "${rawPokeName}" was not found in the season pool.`,
               candidates,
             );
           }
