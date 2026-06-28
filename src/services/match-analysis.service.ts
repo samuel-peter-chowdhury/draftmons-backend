@@ -1,5 +1,5 @@
 import { Service, Inject } from 'typedi';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import {
   ReplayNotFoundError,
   ReplayPrivateError,
@@ -7,6 +7,8 @@ import {
   ReplayUpstreamError,
   ReplayParseError,
   ValidationError,
+  NotFoundError,
+  StructuredConflictError,
 } from '../errors';
 import {
   GamePreviewDto,
@@ -16,16 +18,20 @@ import {
   PreviewErrorDto,
   StatPreviewDto,
 } from '../dtos/match-analysis.dto';
+import { SubmitInputDto } from '../dtos/submit-input.dto';
 import { Season } from '../entities/season.entity';
 import { User } from '../entities/user.entity';
 import { Team } from '../entities/team.entity';
 import { Match } from '../entities/match.entity';
+import { Game } from '../entities/game.entity';
+import { GameStat } from '../entities/game-stat.entity';
 import { SeasonPokemon } from '../entities/season-pokemon.entity';
 import { ReplayFetcherService, ShowdownReplayJson } from './replay-fetcher.service';
 import { ReplayParserService } from './replay-parser.service';
 import { ReplayAnalysis } from '../utils/replay-parser/types';
 import { toID } from '../utils/showdown-id.utils';
 import { normalizePokemonName } from '../utils/pokemon-name.utils';
+import AppDataSource from '../config/database.config';
 
 // ---------------------------------------------------------------------------
 // Internal types used within the pipeline
@@ -56,6 +62,7 @@ export class MatchAnalysisService {
     @Inject('TeamRepository') private teamRepo: Repository<Team>,
     @Inject('MatchRepository') private matchRepo: Repository<Match>,
     @Inject('SeasonPokemonRepository') private seasonPokemonRepo: Repository<SeasonPokemon>,
+    @Inject('GameRepository') private gameRepo: Repository<Game>,
     @Inject() private fetcherService: ReplayFetcherService,
     @Inject() private parserService: ReplayParserService,
   ) {}
@@ -121,6 +128,271 @@ export class MatchAnalysisService {
     await this.resolveStats(seasonId, parsed, players, preview, errors, pushError);
 
     return preview;
+  }
+
+  // ---------------------------------------------------------------------------
+  // submit() — transactional write path (SUB-01..SUB-04)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Re-validates referenced IDs against the live DB (D-04/D-05), applies
+   * structural sanity checks (D-06), detects duplicate replay links from two
+   * sources (D-07), handles overwrite protection (D-02/D-03), and persists
+   * games + game-stats + match winner/loser atomically (SUB-01).
+   *
+   * Throws 4xx errors directly (NOT an errors[] array like analyze()).
+   * NEVER contacts Showdown (D-05).
+   */
+  async submit(
+    leagueId: number,
+    dto: SubmitInputDto,
+  ): Promise<{ matchId: number; games: Array<{ id: number; gameNumber: number; replayLink: string }> }> {
+    // ---- Pre-transaction re-validation (D-04) ----
+    // Load the match with all relations needed for validation
+    const match = await this.matchRepo.findOne({
+      where: { id: dto.matchId },
+      relations: { teams: true, week: true, games: true },
+    });
+
+    if (!match) {
+      throw new NotFoundError('Match', dto.matchId);
+    }
+
+    // Verify match belongs to the submitted seasonId via week.seasonId
+    if (match.week.seasonId !== dto.seasonId) {
+      throw new ValidationError(
+        `Match ${dto.matchId} does not belong to season ${dto.seasonId}`,
+      );
+    }
+
+    // Build set of valid teamIds from match.teams
+    const validTeamIds = new Set(match.teams.map((t) => t.id));
+
+    // Load the season to get numberOfGames for structural validation
+    const season = await this.seasonRepo.findOne({ where: { id: dto.seasonId } });
+    if (!season) {
+      throw new NotFoundError('Season', dto.seasonId);
+    }
+    const numberOfGames = season.numberOfGames ?? 3;
+
+    // Load all seasonPokemon ids for this season
+    const seasonPokemons = await this.seasonPokemonRepo.find({
+      where: { seasonId: dto.seasonId },
+      select: ['id'],
+    });
+    const validSeasonPokemonIds = new Set(seasonPokemons.map((sp) => sp.id));
+
+    // Re-validate per-game teamIds and per-stat seasonPokemonIds
+    for (let i = 0; i < dto.games.length; i++) {
+      const game = dto.games[i];
+
+      if (!validTeamIds.has(game.winningTeamId)) {
+        throw new ValidationError(
+          `games[${i}].winningTeamId ${game.winningTeamId} is not a participant team in match ${dto.matchId}`,
+        );
+      }
+      if (!validTeamIds.has(game.losingTeamId)) {
+        throw new ValidationError(
+          `games[${i}].losingTeamId ${game.losingTeamId} is not a participant team in match ${dto.matchId}`,
+        );
+      }
+
+      for (let j = 0; j < game.stats.length; j++) {
+        const stat = game.stats[j];
+        if (!validSeasonPokemonIds.has(stat.seasonPokemonId)) {
+          throw new NotFoundError('SeasonPokemon', stat.seasonPokemonId);
+        }
+      }
+    }
+
+    // ---- Structural sanity checks (D-06) ----
+    for (let i = 0; i < dto.games.length; i++) {
+      const game = dto.games[i];
+
+      if (game.winningTeamId === game.losingTeamId) {
+        throw new ValidationError(
+          `games[${i}]: winningTeamId and losingTeamId must be distinct`,
+        );
+      }
+      if (game.differential < 0) {
+        throw new ValidationError(
+          `games[${i}]: differential must be >= 0`,
+        );
+      }
+      if (game.gameNumber < 1 || game.gameNumber > numberOfGames) {
+        throw new ValidationError(
+          `games[${i}]: gameNumber ${game.gameNumber} is out of range 1..${numberOfGames}`,
+        );
+      }
+    }
+
+    // Compute overall match winner/loser from submitted game results
+    const gameWins = new Map<number, number>();
+    for (const game of dto.games) {
+      gameWins.set(game.winningTeamId, (gameWins.get(game.winningTeamId) ?? 0) + 1);
+    }
+
+    const totalGames = dto.games.length;
+    const majority = totalGames / 2;
+    let matchWinnerTeamId: number | null = null;
+    let matchLoserTeamId: number | null = null;
+
+    for (const [teamId, wins] of gameWins.entries()) {
+      if (wins > majority) {
+        matchWinnerTeamId = teamId;
+        break;
+      }
+    }
+
+    // Validate match winner/loser are among the match's teams
+    if (matchWinnerTeamId === null || !validTeamIds.has(matchWinnerTeamId)) {
+      throw new ValidationError(
+        `Computed match winner is not one of the match participant teams`,
+      );
+    }
+
+    // The loser is the other team
+    for (const teamId of validTeamIds) {
+      if (teamId !== matchWinnerTeamId) {
+        matchLoserTeamId = teamId;
+        break;
+      }
+    }
+
+    if (matchLoserTeamId === null || !validTeamIds.has(matchLoserTeamId)) {
+      throw new ValidationError(
+        `Computed match loser is not one of the match participant teams`,
+      );
+    }
+
+    // ---- Within-set duplicate-link pre-check (D-07) ----
+    const seenLinks = new Set<string>();
+    const duplicateLinks: string[] = [];
+    for (const game of dto.games) {
+      if (seenLinks.has(game.replayLink)) {
+        duplicateLinks.push(game.replayLink);
+      }
+      seenLinks.add(game.replayLink);
+    }
+
+    if (duplicateLinks.length > 0) {
+      throw new StructuredConflictError('Duplicate replay link in submission', {
+        duplicateLinks,
+      });
+    }
+
+    // ---- Overwrite handling (D-02/D-03) ----
+    // Keyed off presence of Game rows, NOT match.winningTeamId (D-02)
+    const existingGames = match.games ?? [];
+
+    if (existingGames.length > 0 && dto.confirmOverwrite !== true) {
+      // Build structured existing-game summary with stats for the 409 detail
+      const existingGameIds = existingGames.map((g) => g.id);
+      const existingGameStats = await this.gameRepo
+        .createQueryBuilder('game')
+        .leftJoinAndSelect('game.gameStats', 'gameStat')
+        .where('game.id IN (:...ids)', { ids: existingGameIds })
+        .getMany();
+
+      const existingGamesSummary = existingGameStats.map((g) => ({
+        id: g.id,
+        gameNumber: g.gameNumber,
+        replayLink: g.replayLink,
+        winningTeamId: g.winningTeamId,
+        losingTeamId: g.losingTeamId,
+        differential: g.differential,
+        stats: (g.gameStats ?? []).map((gs) => ({
+          seasonPokemonId: gs.seasonPokemonId,
+          directKills: gs.directKills,
+          indirectKills: gs.indirectKills,
+          deaths: gs.deaths,
+        })),
+      }));
+
+      throw new StructuredConflictError('Match already has results — confirm overwrite', {
+        existingGames: existingGamesSummary,
+      });
+    }
+
+    // ---- Transactional write (SUB-01) ----
+    const createdGames = await AppDataSource.transaction(async (manager) => {
+      const gameRepo = manager.getRepository(Game);
+      const gameStatRepo = manager.getRepository(GameStat);
+      const matchRepo = manager.getRepository(Match);
+
+      // Overwrite: delete existing stats then games then reset match result (D-03)
+      if (existingGames.length > 0 && dto.confirmOverwrite === true) {
+        const existingGameIds = existingGames.map((g) => g.id);
+        await gameStatRepo.delete({ gameId: In(existingGameIds) });
+        await gameRepo.delete({ matchId: dto.matchId });
+        // Reset match winner/loser
+        await matchRepo.update(dto.matchId, {
+          winningTeamId: null as any,
+          losingTeamId: null as any,
+        });
+      }
+
+      // Write new games and their stats
+      const savedGames: Game[] = [];
+
+      for (const gameDto of dto.games) {
+        const newGame = gameRepo.create({
+          matchId: dto.matchId,
+          winningTeamId: gameDto.winningTeamId,
+          losingTeamId: gameDto.losingTeamId,
+          differential: gameDto.differential,
+          replayLink: gameDto.replayLink,
+          gameNumber: gameDto.gameNumber,
+        });
+
+        let savedGame: Game;
+        try {
+          savedGame = await gameRepo.save(newGame);
+        } catch (err: any) {
+          const isUniqueViolation =
+            err?.code === '23505' ||
+            (typeof err?.message === 'string' &&
+              err.message.toLowerCase().includes('duplicate'));
+          if (isUniqueViolation) {
+            throw new StructuredConflictError('Duplicate replay link', {
+              duplicateLinks: [gameDto.replayLink],
+            });
+          }
+          throw err;
+        }
+
+        // Write game stats for this game
+        for (const statDto of gameDto.stats) {
+          const newStat = gameStatRepo.create({
+            gameId: savedGame.id,
+            seasonPokemonId: statDto.seasonPokemonId,
+            directKills: statDto.directKills,
+            indirectKills: statDto.indirectKills,
+            deaths: statDto.deaths,
+          });
+          await gameStatRepo.save(newStat);
+        }
+
+        savedGames.push(savedGame);
+      }
+
+      // Set match winner/loser
+      await matchRepo.update(dto.matchId, {
+        winningTeamId: matchWinnerTeamId!,
+        losingTeamId: matchLoserTeamId!,
+      });
+
+      return savedGames;
+    });
+
+    return {
+      matchId: dto.matchId,
+      games: createdGames.map((g) => ({
+        id: g.id,
+        gameNumber: g.gameNumber,
+        replayLink: g.replayLink,
+      })),
+    };
   }
 
   // ---------------------------------------------------------------------------

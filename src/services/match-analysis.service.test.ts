@@ -96,7 +96,8 @@ function makeMocks() {
   const teamRepo = { find: jest.fn(), findOne: jest.fn() };
   const matchRepo = { find: jest.fn(), findOne: jest.fn() };
   const seasonPokemonRepo = { find: jest.fn(), findOne: jest.fn() };
-  return { fetcherService, parserService, seasonRepo, userRepo, teamRepo, matchRepo, seasonPokemonRepo };
+  const gameRepo = { find: jest.fn(), findOne: jest.fn(), createQueryBuilder: jest.fn() };
+  return { fetcherService, parserService, seasonRepo, userRepo, teamRepo, matchRepo, seasonPokemonRepo, gameRepo };
 }
 
 function buildService(mocks: ReturnType<typeof makeMocks>): MatchAnalysisService {
@@ -106,12 +107,14 @@ function buildService(mocks: ReturnType<typeof makeMocks>): MatchAnalysisService
   Container.set('TeamRepository', mocks.teamRepo);
   Container.set('MatchRepository', mocks.matchRepo);
   Container.set('SeasonPokemonRepository', mocks.seasonPokemonRepo);
+  Container.set('GameRepository', mocks.gameRepo);
   return new MatchAnalysisService(
     mocks.seasonRepo as any,
     mocks.userRepo as any,
     mocks.teamRepo as any,
     mocks.matchRepo as any,
     mocks.seasonPokemonRepo as any,
+    mocks.gameRepo as any,
     mocks.fetcherService as any,
     mocks.parserService as any,
   );
