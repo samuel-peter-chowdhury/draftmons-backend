@@ -66,11 +66,14 @@ import { AdminService } from './services/admin.service';
 import { AdminController } from './controllers/admin.controller';
 import { DiscordService } from './services/discord.service';
 import { DiscordController } from './controllers/discord.controller';
+import { MatchAnalysisService } from './services/match-analysis.service';
+import { MatchUploadController } from './controllers/match-upload.controller';
 
 export class App {
   public app: Application;
   private redisClient: ReturnType<typeof createClient>;
   private discordService: DiscordService;
+  private matchAnalysisService: MatchAnalysisService;
   private adminService: AdminService;
   private abilityService: AbilityService;
   private gameStatService: GameStatService;
@@ -205,6 +208,7 @@ export class App {
   private async initializeServices(): Promise<void> {
     // Initialize services
     this.discordService = Container.get(DiscordService);
+    this.matchAnalysisService = Container.get(MatchAnalysisService);
     this.adminService = Container.get(AdminService);
     this.abilityService = Container.get(AbilityService);
     this.gameStatService = Container.get(GameStatService);
@@ -356,6 +360,9 @@ export class App {
     const discordController = new DiscordController();
     this.app.use('/api/discord', discordController.router);
 
+    // Set up Match Upload routes (bespoke action controller)
+    const matchUploadController = new MatchUploadController(this.matchAnalysisService);
+
     // Set up Admin routes (dedicated tight rate limit)
     this.app.use('/api/admin', adminLimiter, isAdmin, adminController.router);
 
@@ -416,6 +423,7 @@ export class App {
       seasonPokemonTeamController.router,
     );
     this.app.use('/api/league/:leagueId/week', isAuthReadLeagueModWrite(), weekController.router);
+    this.app.use('/api/league/:leagueId/match-upload', isAuthReadLeagueModWrite(), matchUploadController.router);
 
     // Health check route
     this.app.get('/health', async (req, res) => {
