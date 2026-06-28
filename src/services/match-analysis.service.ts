@@ -8,6 +8,7 @@ import {
   ReplayParseError,
   ValidationError,
   NotFoundError,
+  ForbiddenError,
   StructuredConflictError,
 } from '../errors';
 import {
@@ -173,6 +174,17 @@ export class MatchAnalysisService {
     if (!season) {
       throw new NotFoundError('Season', dto.seasonId);
     }
+
+    // Cross-league authorization (CR-01): the route's :leagueId authorizes the
+    // caller as a moderator of that league only. The season must belong to it,
+    // otherwise a league-A moderator could write to a league-B match by passing
+    // a league-B seasonId in the body (threat T-04-07).
+    if (season.leagueId !== leagueId) {
+      throw new ForbiddenError(
+        `Season ${dto.seasonId} does not belong to league ${leagueId}`,
+      );
+    }
+
     const numberOfGames = season.numberOfGames ?? 3;
 
     // Load all seasonPokemon ids for this season

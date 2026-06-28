@@ -1,6 +1,11 @@
 import 'reflect-metadata';
 import { Container } from 'typedi';
-import { NotFoundError, ValidationError, StructuredConflictError } from '../errors';
+import {
+  NotFoundError,
+  ValidationError,
+  ForbiddenError,
+  StructuredConflictError,
+} from '../errors';
 import { MatchAnalysisService } from './match-analysis.service';
 import { SubmitInputDto, SubmitGameInputDto, SubmitStatInputDto } from '../dtos/submit-input.dto';
 
@@ -60,7 +65,7 @@ const SP_2 = 302; // seasonPokemonId for Charizard
 
 const WEEK_1 = { id: 5, name: 'Week 1', seasonId: SEASON_ID };
 
-const SEASON = { id: SEASON_ID, numberOfGames: 3 };
+const SEASON = { id: SEASON_ID, numberOfGames: 3, leagueId: LEAGUE_ID };
 
 const TEAM_A = { id: TEAM_A_ID, name: 'Team Pikachu', seasonId: SEASON_ID };
 const TEAM_B = { id: TEAM_B_ID, name: 'Team Starmie', seasonId: SEASON_ID };
@@ -513,6 +518,20 @@ describe('MatchAnalysisService.submit — re-validation failures', () => {
     const service = buildService(mocks);
 
     await expect(service.submit(LEAGUE_ID, makeDto())).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it('throws ForbiddenError when the season belongs to a different league (cross-league write)', async () => {
+    const mocks = makeMocks();
+    mocks.matchRepo.findOne.mockResolvedValue(MATCH_NO_GAMES);
+    // Season exists and matches the body seasonId, but belongs to another league.
+    mocks.seasonRepo.findOne.mockResolvedValue({ ...SEASON, leagueId: LEAGUE_ID + 1 });
+    mocks.seasonPokemonRepo.find.mockResolvedValue([{ id: SP_1 }, { id: SP_2 }]);
+
+    const service = buildService(mocks);
+
+    await expect(service.submit(LEAGUE_ID, makeDto())).rejects.toBeInstanceOf(ForbiddenError);
+    // The destructive write must never start for a cross-league attempt.
+    expect(AppDataSource.transaction).not.toHaveBeenCalled();
   });
 
   it('throws ValidationError when winningTeamId is not a participant team', async () => {
