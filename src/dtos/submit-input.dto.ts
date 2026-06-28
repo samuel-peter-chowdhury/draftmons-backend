@@ -1,4 +1,13 @@
-import { IsArray, IsBoolean, IsInt, IsNumber, IsUrl, Min, ValidateNested } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsNumber,
+  IsUrl,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { BaseInputDto } from './base.dto';
 
@@ -43,6 +52,7 @@ export class SubmitGameInputDto {
   differential: number;
 
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => SubmitStatInputDto)
   stats: SubmitStatInputDto[];
@@ -63,6 +73,7 @@ export class SubmitInputDto extends BaseInputDto {
   confirmOverwrite: boolean;
 
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => SubmitGameInputDto)
   games: SubmitGameInputDto[];
