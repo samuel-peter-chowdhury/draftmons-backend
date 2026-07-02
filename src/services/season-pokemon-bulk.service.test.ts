@@ -19,6 +19,7 @@ const mockManagerSeasonPokemonRepo = {
   findOne: jest.fn(),
   create: jest.fn(),
   save: jest.fn(),
+  upsert: jest.fn(),
 };
 
 const mockManager = {
@@ -134,6 +135,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockManagerSeasonPokemonRepo.create.mockImplementation((data: any) => ({ ...data }));
   mockManagerSeasonPokemonRepo.save.mockImplementation(async (row: any) => ({ ...row, id: row.id ?? 999 }));
+  mockManagerSeasonPokemonRepo.upsert.mockResolvedValue(undefined);
   AppDataSource.transaction.mockImplementation(async (cb: (m: any) => Promise<any>) => cb(mockManager));
 });
 
@@ -146,14 +148,6 @@ describe('SeasonPokemonService.bulkUpsert — API-01 happy path', () => {
     const mocks = makeMocks();
     mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
     mockPokemonLookupByName(mocks, { Pikachu: PIKACHU, Charizard: CHARIZARD });
-
-    // Pikachu already exists in season_pokemon; Charizard does not.
-    mockManagerSeasonPokemonRepo.findOne.mockImplementation(async ({ where }: any) => {
-      if (where.pokemonId === PIKACHU.id) {
-        return { id: 500, seasonId: SEASON_ID, pokemonId: PIKACHU.id, pointValue: 5 };
-      }
-      return null;
-    });
 
     const service = buildService(mocks);
     const dto = makeDto({
@@ -171,13 +165,14 @@ describe('SeasonPokemonService.bulkUpsert — API-01 happy path', () => {
 
     expect(AppDataSource.transaction).toHaveBeenCalledTimes(1);
 
-    // Update path: existing row's pointValue set + saved
-    expect(mockManagerSeasonPokemonRepo.save).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 500, pointValue: 12 }),
-    );
-    // Create path: new row created + saved
-    expect(mockManagerSeasonPokemonRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({ seasonId: SEASON_ID, pokemonId: CHARIZARD.id, pointValue: 15 }),
+    // Both the create and update case go through the SAME atomic upsert call.
+    expect(mockManagerSeasonPokemonRepo.upsert).toHaveBeenCalledTimes(1);
+    expect(mockManagerSeasonPokemonRepo.upsert).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ seasonId: SEASON_ID, pokemonId: PIKACHU.id, pointValue: 12 }),
+        expect.objectContaining({ seasonId: SEASON_ID, pokemonId: CHARIZARD.id, pointValue: 15 }),
+      ]),
+      ['seasonId', 'pokemonId'],
     );
   });
 });
@@ -191,7 +186,6 @@ describe('SeasonPokemonService.bulkUpsert — API-02 Pokémon not found', () => 
     const mocks = makeMocks();
     mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
     mockPokemonLookupByName(mocks, { Pikachu: PIKACHU });
-    mockManagerSeasonPokemonRepo.findOne.mockResolvedValue(null);
 
     const service = buildService(mocks);
     const dto = makeDto({
@@ -208,9 +202,11 @@ describe('SeasonPokemonService.bulkUpsert — API-02 Pokémon not found', () => 
     expect(results[0].code).toBe(BulkUpsertErrorCode.POKEMON_NOT_FOUND);
     expect(results[1].status).toBe(BulkUpsertEntryStatus.SUCCESS);
 
-    // The valid sibling entry was still written
-    expect(mockManagerSeasonPokemonRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({ pokemonId: PIKACHU.id }),
+    // The unresolved Missingno entry never reaches toPersist — upsert rows
+    // contain ONLY the resolved Pikachu row.
+    expect(mockManagerSeasonPokemonRepo.upsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ seasonId: SEASON_ID, pokemonId: PIKACHU.id, pointValue: 5 })],
+      ['seasonId', 'pokemonId'],
     );
   });
 });
@@ -281,7 +277,6 @@ describe('SeasonPokemonService.bulkUpsert — D-07/D-07b duplicate names', () =>
     const mocks = makeMocks();
     mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
     mockPokemonLookup(mocks, PIKACHU);
-    mockManagerSeasonPokemonRepo.findOne.mockResolvedValue(null);
 
     const service = buildService(mocks);
     const dto = makeDto({
@@ -296,10 +291,11 @@ describe('SeasonPokemonService.bulkUpsert — D-07/D-07b duplicate names', () =>
     expect(results[0].status).toBe(BulkUpsertEntryStatus.SUCCESS);
     expect(results[1].status).toBe(BulkUpsertEntryStatus.SUCCESS);
 
-    // Only ONE row written for this (seasonId, pokemonId) pair — the last value.
-    expect(mockManagerSeasonPokemonRepo.create).toHaveBeenCalledTimes(1);
-    expect(mockManagerSeasonPokemonRepo.create).toHaveBeenCalledWith(
-      expect.objectContaining({ pokemonId: PIKACHU.id, pointValue: 9 }),
+    // Only ONE row upserted for this (seasonId, pokemonId) pair — the last value.
+    expect(mockManagerSeasonPokemonRepo.upsert).toHaveBeenCalledTimes(1);
+    expect(mockManagerSeasonPokemonRepo.upsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ seasonId: SEASON_ID, pokemonId: PIKACHU.id, pointValue: 9 })],
+      ['seasonId', 'pokemonId'],
     );
   });
 });
@@ -443,5 +439,32 @@ describe('SeasonPokemonService.bulkUpsert — CR-01 blank pointValue normalizati
 
     expect(errors).toHaveLength(0);
     expect(dtoObj.entries[0].pointValue).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WR-01: persistence uses atomic Repository.upsert() instead of a manual
+// find-then-insert-or-update, eliminating the check-then-act race against
+// @Unique(['seasonId','pokemonId']).
+// ---------------------------------------------------------------------------
+
+describe('SeasonPokemonService.bulkUpsert — WR-01 atomic upsert persistence', () => {
+  it('Test G: never calls findOne/create/save for persistence, only upsert, when at least one entry is valid', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+    mockPokemonLookup(mocks, PIKACHU);
+
+    const service = buildService(mocks);
+    const dto = makeDto({ entries: [makeEntryInput({ name: 'Pikachu', pointValue: 7 })] });
+
+    await service.bulkUpsert(LEAGUE_ID, dto);
+
+    expect(mockManagerSeasonPokemonRepo.findOne).not.toHaveBeenCalled();
+    expect(mockManagerSeasonPokemonRepo.create).not.toHaveBeenCalled();
+    expect(mockManagerSeasonPokemonRepo.save).not.toHaveBeenCalled();
+    expect(mockManagerSeasonPokemonRepo.upsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ seasonId: SEASON_ID, pokemonId: PIKACHU.id, pointValue: 7 })],
+      ['seasonId', 'pokemonId'],
+    );
   });
 });

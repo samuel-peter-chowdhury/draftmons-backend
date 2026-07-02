@@ -112,22 +112,17 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
     await AppDataSource.transaction(async (manager) => {
       const repo = manager.getRepository(SeasonPokemon);
 
-      for (const [pokemonId, pointValue] of toPersist.entries()) {
-        const existing = await repo.findOne({
-          where: { seasonId: dto.seasonId, pokemonId },
-        });
+      const rows = Array.from(toPersist, ([pokemonId, pointValue]) => ({
+        seasonId: dto.seasonId,
+        pokemonId,
+        pointValue,
+      }));
 
-        if (existing) {
-          existing.pointValue = pointValue;
-          await repo.save(existing);
-        } else {
-          const created = repo.create({
-            seasonId: dto.seasonId,
-            pokemonId,
-            pointValue,
-          });
-          await repo.save(created);
-        }
+      // Atomic upsert avoids the check-then-act race against
+      // @Unique(['seasonId','pokemonId']) under concurrent bulk-upsert
+      // requests (WR-01, 06-REVIEW.md).
+      if (rows.length > 0) {
+        await repo.upsert(rows, ['seasonId', 'pokemonId']);
       }
     });
 
