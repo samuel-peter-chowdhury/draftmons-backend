@@ -1,5 +1,5 @@
 import { ArrayMaxSize, IsArray, IsInt, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
-import { Expose, Type } from 'class-transformer';
+import { Expose, Transform, Type } from 'class-transformer';
 import { BaseInputDto } from './base.dto';
 
 // ---------------------------------------------------------------------------
@@ -29,9 +29,15 @@ export class BulkUpsertEntryInputDto {
   // MUST be @IsOptional() — a missing/blank pointValue must surface as a
   // per-entry INVALID_POINT_VALUE failure (D-06), not a whole-request 400
   // from validateDto()'s non-skipMissingProperties class-validator call
-  // (Pitfall 1). The "must be present, integer, 0..maxPointValue" rule is
-  // enforced per-entry in the service, where the live season.maxPointValue
-  // is available.
+  // (Pitfall 1). class-validator's @IsOptional() only special-cases strict
+  // null/undefined, NOT an empty string — so a blank ('') or null pointValue
+  // (the most likely "blank CSV cell" shape) is normalized to undefined by
+  // @Transform BEFORE validate() runs, which makes @IsOptional() actually
+  // short-circuit @IsInt() for those values (CR-01, 06-REVIEW.md /
+  // 06-VERIFICATION.md). The "must be present, integer, 0..maxPointValue"
+  // rule is enforced per-entry in the service, where the live
+  // season.maxPointValue is available.
+  @Transform(({ value }) => (value === '' || value === null ? undefined : value))
   @IsOptional()
   @IsInt()
   pointValue?: number;

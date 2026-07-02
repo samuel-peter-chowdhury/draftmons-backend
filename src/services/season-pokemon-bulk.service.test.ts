@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { Container } from 'typedi';
 import { ForbiddenError, NotFoundError } from '../errors';
 import { SeasonPokemonService } from './season-pokemon.service';
@@ -379,5 +381,67 @@ describe('SeasonPokemonService.bulkUpsert — season not found', () => {
 
     await expect(service.bulkUpsert(LEAGUE_ID, dto)).rejects.toThrow(NotFoundError);
     expect(AppDataSource.transaction).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CR-01: blank/null pointValue is normalized to undefined BEFORE
+// class-validator runs, so validateDto() never rejects the whole request —
+// the blank entry still surfaces as a per-entry INVALID_POINT_VALUE failure
+// while a sibling valid entry succeeds in the same call.
+// ---------------------------------------------------------------------------
+
+describe('SeasonPokemonService.bulkUpsert — CR-01 blank pointValue normalization', () => {
+  it('Test A: plainToInstance + validate() returns zero errors for pointValue: "", and normalizes it to undefined', async () => {
+    const dtoObj = plainToInstance(BulkUpsertInputDto, {
+      seasonId: 1,
+      entries: [
+        { name: 'Pikachu', pointValue: '' },
+        { name: 'Charizard', pointValue: 10 },
+      ],
+    });
+
+    const errors = await validate(dtoObj);
+
+    expect(errors).toHaveLength(0);
+    expect(dtoObj.entries[0].pointValue).toBeUndefined();
+  });
+
+  it('Test B: a plainToInstance-transformed blank pointValue isolates as per-entry FAILURE/INVALID_POINT_VALUE while the sibling entry still succeeds', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+    mockPokemonLookupByName(mocks, { Pikachu: PIKACHU, Charizard: CHARIZARD });
+    mockManagerSeasonPokemonRepo.findOne.mockResolvedValue(null);
+
+    const dtoObj = plainToInstance(BulkUpsertInputDto, {
+      seasonId: SEASON_ID,
+      entries: [
+        { name: 'Pikachu', pointValue: '' },
+        { name: 'Charizard', pointValue: 10 },
+      ],
+    });
+
+    const errors = await validate(dtoObj);
+    expect(errors).toHaveLength(0);
+
+    const service = buildService(mocks);
+    const results = await service.bulkUpsert(LEAGUE_ID, dtoObj);
+
+    expect(results).toHaveLength(2);
+    expect(results[0].status).toBe(BulkUpsertEntryStatus.FAILURE);
+    expect(results[0].code).toBe(BulkUpsertErrorCode.INVALID_POINT_VALUE);
+    expect(results[1].status).toBe(BulkUpsertEntryStatus.SUCCESS);
+  });
+
+  it('Test C: plainToInstance + validate() also normalizes pointValue: null to undefined with zero errors', async () => {
+    const dtoObj = plainToInstance(BulkUpsertInputDto, {
+      seasonId: 1,
+      entries: [{ name: 'Pikachu', pointValue: null }],
+    });
+
+    const errors = await validate(dtoObj);
+
+    expect(errors).toHaveLength(0);
+    expect(dtoObj.entries[0].pointValue).toBeUndefined();
   });
 });
