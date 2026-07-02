@@ -68,6 +68,7 @@ import { DiscordService } from './services/discord.service';
 import { DiscordController } from './controllers/discord.controller';
 import { MatchAnalysisService } from './services/match-analysis.service';
 import { MatchUploadController } from './controllers/match-upload.controller';
+import { SeasonPokemonBulkController } from './controllers/season-pokemon-bulk.controller';
 
 export class App {
   public app: Application;
@@ -363,6 +364,9 @@ export class App {
     // Set up Match Upload routes (bespoke action controller)
     const matchUploadController = new MatchUploadController(this.matchAnalysisService);
 
+    // Set up Season Pokemon Bulk Upsert routes (bespoke action controller)
+    const seasonPokemonBulkController = new SeasonPokemonBulkController(this.seasonPokemonService);
+
     // Set up Admin routes (dedicated tight rate limit)
     this.app.use('/api/admin', adminLimiter, isAdmin, adminController.router);
 
@@ -424,6 +428,11 @@ export class App {
     );
     this.app.use('/api/league/:leagueId/week', isAuthReadLeagueModWrite(), weekController.router);
     this.app.use('/api/league/:leagueId/match-upload', isAuthReadLeagueModWrite(), matchUploadController.router);
+    this.app.use(
+      '/api/league/:leagueId/season-pokemon-bulk',
+      isAuthReadLeagueModWrite(),
+      seasonPokemonBulkController.router,
+    );
 
     // Health check route
     this.app.get('/health', async (req, res) => {
