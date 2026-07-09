@@ -64,10 +64,17 @@ import { SpecialMoveCategoryService } from './services/special-move-category.ser
 import { SpecialMoveCategoryController } from './controllers/special-move-category.controller';
 import { AdminService } from './services/admin.service';
 import { AdminController } from './controllers/admin.controller';
+import { DiscordService } from './services/discord.service';
+import { DiscordController } from './controllers/discord.controller';
+import { MatchAnalysisService } from './services/match-analysis.service';
+import { MatchUploadController } from './controllers/match-upload.controller';
+import { SeasonPokemonBulkController } from './controllers/season-pokemon-bulk.controller';
 
 export class App {
   public app: Application;
   private redisClient: ReturnType<typeof createClient>;
+  private discordService: DiscordService;
+  private matchAnalysisService: MatchAnalysisService;
   private adminService: AdminService;
   private abilityService: AbilityService;
   private gameStatService: GameStatService;
@@ -201,6 +208,8 @@ export class App {
 
   private async initializeServices(): Promise<void> {
     // Initialize services
+    this.discordService = Container.get(DiscordService);
+    this.matchAnalysisService = Container.get(MatchAnalysisService);
     this.adminService = Container.get(AdminService);
     this.abilityService = Container.get(AbilityService);
     this.gameStatService = Container.get(GameStatService);
@@ -324,7 +333,7 @@ export class App {
   private async initializeControllers(): Promise<void> {
     // Create and set up controllers
     const adminController = new AdminController(this.adminService);
-    const authController = new AuthController();
+    const authController = new AuthController(this.userService);
     const abilityController = new AbilityController(this.abilityService);
     const gameStatController = new GameStatController(this.gameStatService);
     const gameController = new GameController(this.gameService);
@@ -347,6 +356,16 @@ export class App {
     const typeEffectiveController = new TypeEffectiveController(this.typeEffectiveService);
     const userController = new UserController(this.userService);
     const weekController = new WeekController(this.weekService);
+
+    // Set up Discord routes
+    const discordController = new DiscordController();
+    this.app.use('/api/discord', discordController.router);
+
+    // Set up Match Upload routes (bespoke action controller)
+    const matchUploadController = new MatchUploadController(this.matchAnalysisService);
+
+    // Set up Season Pokemon Bulk Upsert routes (bespoke action controller)
+    const seasonPokemonBulkController = new SeasonPokemonBulkController(this.seasonPokemonService);
 
     // Set up Admin routes (dedicated tight rate limit)
     this.app.use('/api/admin', adminLimiter, isAdmin, adminController.router);
@@ -408,14 +427,30 @@ export class App {
       seasonPokemonTeamController.router,
     );
     this.app.use('/api/league/:leagueId/week', isAuthReadLeagueModWrite(), weekController.router);
+    this.app.use('/api/league/:leagueId/match-upload', isAuthReadLeagueModWrite(), matchUploadController.router);
+    this.app.use(
+      '/api/league/:leagueId/season-pokemon-bulk',
+      isAuthReadLeagueModWrite(),
+      seasonPokemonBulkController.router,
+    );
 
     // Health check route
     this.app.get('/health', async (req, res) => {
       try {
         await AppDataSource.query('SELECT 1');
-        res.json({ status: 'ok', db: 'connected', time: new Date().toISOString() });
+        res.json({
+          status: 'ok',
+          db: 'connected',
+          discord: this.discordService.getStatus(),
+          time: new Date().toISOString(),
+        });
       } catch {
-        res.status(503).json({ status: 'error', db: 'disconnected', time: new Date().toISOString() });
+        res.status(503).json({
+          status: 'error',
+          db: 'disconnected',
+          discord: this.discordService.getStatus(),
+          time: new Date().toISOString(),
+        });
       }
     });
   }

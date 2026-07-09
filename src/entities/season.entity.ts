@@ -38,6 +38,9 @@ export class Season extends BaseApplicationEntity {
   @Column()
   maxPointValue: number;
 
+  @Column({ default: 3 })
+  numberOfGames: number;
+
   @Column()
   leagueId: number;
 

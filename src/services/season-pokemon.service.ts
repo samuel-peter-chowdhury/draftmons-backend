@@ -1,14 +1,17 @@
 import { SeasonPokemon } from '../entities/season-pokemon.entity';
+import { Season } from '../entities/season.entity';
+import { Pokemon } from '../entities/pokemon.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
-import {
-  FindOptionsRelations,
-  FindOptionsWhere,
-  Repository,
-  SelectQueryBuilder,
-} from 'typeorm';
+import { FindOptionsRelations, FindOptionsWhere, Repository, SelectQueryBuilder } from 'typeorm';
 import { SeasonPokemonInputDto } from '../dtos/season-pokemon.dto';
-import { ConflictError, NotFoundError } from '../errors';
+import {
+  BulkUpsertEntryResultDto,
+  BulkUpsertEntryStatus,
+  BulkUpsertErrorCode,
+  BulkUpsertInputDto,
+} from '../dtos/season-pokemon-bulk.dto';
+import { ConflictError, ForbiddenError, NotFoundError } from '../errors';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import {
   SeasonPokemonSearchFilters,
@@ -17,14 +20,113 @@ import {
   applySearchPagination,
   SEASON_POKEMON_SORT_FIELD_MAP,
 } from '../utils/pokemon-search.utils';
+import AppDataSource from '../config/database.config';
 
 @Service()
 export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokemonInputDto> {
   constructor(
     @Inject('SeasonPokemonRepository')
     private SeasonPokemonRepository: Repository<SeasonPokemon>,
+    @Inject('SeasonRepository')
+    private seasonRepository: Repository<Season>,
+    @Inject('PokemonRepository')
+    private pokemonRepository: Repository<Pokemon>,
   ) {
     super(SeasonPokemonRepository, 'SeasonPokemon');
+  }
+
+  /**
+   * Creates-or-updates many SeasonPokemon rows in a single transaction,
+   * validating each entry independently so one bad row never blocks the
+   * others (API-01, API-02). Restricted server-side to the season's own
+   * league (API-03 / T-06-01), independent of route-level authorization.
+   */
+  async bulkUpsert(
+    leagueId: number,
+    dto: BulkUpsertInputDto,
+  ): Promise<BulkUpsertEntryResultDto[]> {
+    const season = await this.seasonRepository.findOne({ where: { id: dto.seasonId } });
+    if (!season) {
+      throw new NotFoundError('Season', dto.seasonId);
+    }
+
+    // Cross-league authorization (T-06-01): the route's :leagueId authorizes
+    // the caller as a moderator of that league only. The season must belong
+    // to it, otherwise a league-A moderator could write to a league-B tier
+    // list by passing a league-B seasonId in the body.
+    if (season.leagueId !== leagueId) {
+      throw new ForbiddenError(`Season ${dto.seasonId} does not belong to league ${leagueId}`);
+    }
+
+    // ---- VALIDATION PASS (accumulate, never throw for per-entry issues) ----
+    const results: BulkUpsertEntryResultDto[] = [];
+    // pokemonId -> pointValue to persist; later entries overwrite earlier
+    // ones so "last one wins" for duplicate names (D-07).
+    const toPersist = new Map<number, number>();
+
+    for (const entry of dto.entries) {
+      const result = new BulkUpsertEntryResultDto();
+      result.name = entry.name;
+      result.pointValue = entry.pointValue;
+
+      const pokemon = await this.pokemonRepository
+        .createQueryBuilder('pokemon')
+        .where('LOWER(pokemon.name) = LOWER(:name)', { name: entry.name.trim() })
+        .andWhere('pokemon.generationId = :generationId', { generationId: season.generationId })
+        .getOne();
+
+      if (!pokemon) {
+        result.status = BulkUpsertEntryStatus.FAILURE;
+        result.code = BulkUpsertErrorCode.POKEMON_NOT_FOUND;
+        result.message = `Pokémon "${entry.name}" was not found in this season's generation.`;
+        results.push(result);
+        continue;
+      }
+
+      const pointValue = entry.pointValue;
+      const isValidPointValue =
+        pointValue !== undefined &&
+        pointValue !== null &&
+        Number.isInteger(pointValue) &&
+        pointValue >= 0 &&
+        pointValue <= season.maxPointValue;
+
+      if (!isValidPointValue) {
+        result.status = BulkUpsertEntryStatus.FAILURE;
+        result.code = BulkUpsertErrorCode.INVALID_POINT_VALUE;
+        result.message = `pointValue must be an integer between 0 and ${season.maxPointValue} (got ${pointValue}).`;
+        results.push(result);
+        continue;
+      }
+
+      result.status = BulkUpsertEntryStatus.SUCCESS;
+      results.push(result);
+
+      // D-07/D-07b: dedup happens AFTER validation, keyed by resolved
+      // pokemonId — every valid occurrence still reports success above,
+      // but only the LAST valid occurrence's pointValue gets persisted.
+      toPersist.set(pokemon.id, pointValue as number);
+    }
+
+    // ---- PERSIST in one transaction (API-01) ----
+    await AppDataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(SeasonPokemon);
+
+      const rows = Array.from(toPersist, ([pokemonId, pointValue]) => ({
+        seasonId: dto.seasonId,
+        pokemonId,
+        pointValue,
+      }));
+
+      // Atomic upsert avoids the check-then-act race against
+      // @Unique(['seasonId','pokemonId']) under concurrent bulk-upsert
+      // requests (WR-01, 06-REVIEW.md).
+      if (rows.length > 0) {
+        await repo.upsert(rows, ['seasonId', 'pokemonId']);
+      }
+    });
+
+    return results;
   }
 
   async delete(where: FindOptionsWhere<SeasonPokemon>): Promise<boolean> {
@@ -123,9 +225,12 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
           'seasonPokemonTeam',
           'seasonPokemonTeam.isActive = :sptActive',
           { sptActive: true },
-        );
+        ).leftJoinAndSelect('seasonPokemonTeam.team', 'team');
       } else {
-        qb.leftJoinAndSelect('seasonPokemon.seasonPokemonTeams', 'seasonPokemonTeam');
+        qb.leftJoinAndSelect(
+          'seasonPokemon.seasonPokemonTeams',
+          'seasonPokemonTeam',
+        ).leftJoinAndSelect('seasonPokemonTeam.team', 'team');
       }
     } else if (needsTeamJoin) {
       if (activeRelationsOnly) {

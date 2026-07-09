@@ -1,4 +1,4 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Transform, Type } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
 import { LeagueUserOutputDto } from './league-user.dto';
@@ -25,6 +25,13 @@ export class UserOutputDto extends BaseOutputDto {
 
   @Expose()
   discordUsername: string;
+
+  @Expose({ groups: ['user.private'] })
+  discordId: string;
+
+  @Expose()
+  @Transform(({ obj }) => !!obj.discordId)
+  hasDiscordLinked: boolean;
 
   @Expose()
   timezone: string;
@@ -68,6 +75,11 @@ export class UserInputDto extends BaseInputDto {
   @IsOptional()
   @IsString()
   discordUsername: string;
+
+  @Expose()
+  @IsOptional()
+  @IsString()
+  discordId: string;
 
   @Expose()
   @IsOptional()

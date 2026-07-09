@@ -104,6 +104,10 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
    *           type: integer
    *           description: Maximum point value for a single Pokemon
    *           example: 20
+   *         numberOfGames:
+   *           type: integer
+   *           description: Best-of-X format — must be a positive odd number (1-9). Defaults to 3.
+   *           example: 3
    *         leagueId:
    *           type: integer
    *           description: ID of the associated league
@@ -190,6 +194,12 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
    *           description: Maximum point value for a single Pokemon
    *           example: 20
    *           minimum: 1
+   *         numberOfGames:
+   *           type: integer
+   *           description: Best-of-X format — must be a positive odd number (1-9). Defaults to 3.
+   *           example: 3
+   *           minimum: 1
+   *           maximum: 9
    *         leagueId:
    *           type: integer
    *           description: ID of the associated league
@@ -232,6 +242,12 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
    *           description: Maximum point value for a single Pokemon
    *           example: 20
    *           minimum: 1
+   *         numberOfGames:
+   *           type: integer
+   *           description: Best-of-X format — must be a positive odd number (1-9). Defaults to 3.
+   *           example: 3
+   *           minimum: 1
+   *           maximum: 9
    *         leagueId:
    *           type: integer
    *           description: ID of the associated league

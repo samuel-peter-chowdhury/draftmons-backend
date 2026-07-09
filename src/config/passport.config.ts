@@ -53,7 +53,7 @@ export const configurePassport = (userService: UserService): void => {
     try {
       const user = await userService.findOne({ id } as any, { leagueUsers: true } as any);
       const userOutputDto = plainToInstance(UserOutputDto, user, {
-        groups: ['user.full'],
+        groups: ['user.full', 'user.private'],
         excludeExtraneousValues: true,
       });
       done(null, userOutputDto);

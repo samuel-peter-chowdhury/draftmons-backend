@@ -1,6 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { GameStatOutputDto } from './game-stat.dto';
 import { MatchOutputDto } from './match.dto';
 import { TeamOutputDto } from './team.dto';
@@ -20,6 +20,9 @@ export class GameOutputDto extends BaseOutputDto {
 
   @Expose()
   replayLink: string;
+
+  @Expose()
+  gameNumber: number;
 
   @Expose({ groups: ['game.full', 'team.full'] })
   @Type(() => MatchOutputDto)
@@ -59,4 +62,10 @@ export class GameInputDto extends BaseInputDto {
   @IsOptional()
   @IsString()
   replayLink: string;
+
+  @Expose()
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  gameNumber?: number;
 }
