@@ -44,7 +44,7 @@ export const mockSeasons: MockSeasonConfig[] = [
   {
     name: 'Season 1',
     leagueIndex: 0,
-    generationId: 9,
+    generationId: 10,
     status: SeasonStatus.PLAYOFFS,
     pointLimit: 100,
     maxPointValue: 12,
@@ -56,7 +56,7 @@ export const mockSeasons: MockSeasonConfig[] = [
   {
     name: 'Season 1',
     leagueIndex: 1,
-    generationId: 0,
+    generationId: 1,
     status: SeasonStatus.REGULAR_SEASON,
     pointLimit: 100,
     maxPointValue: 12,
@@ -68,7 +68,7 @@ export const mockSeasons: MockSeasonConfig[] = [
   {
     name: 'Season 2',
     leagueIndex: 0,
-    generationId: 9,
+    generationId: 10,
     status: SeasonStatus.PRE_DRAFT,
     pointLimit: 100,
     maxPointValue: 12,

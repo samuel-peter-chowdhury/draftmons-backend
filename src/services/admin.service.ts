@@ -39,7 +39,7 @@ import {
 } from '../data/mock.data';
 
 const LATEST_GEN = 9;
-const NAT_DEX_GENERATION_ID = 0;
+const NAT_DEX_GENERATION_ID = 1;
 const NAT_DEX_MOVE_START_GEN = 3;
 
 @Service()
@@ -545,22 +545,7 @@ export class AdminService {
   }
 
   private async initializeGenerations(): Promise<void> {
-    // Insert ID 0 (Nat Dex) via raw SQL because TypeORM's QueryBuilder
-    // treats 0 as falsy and omits it from the INSERT, falling back to the sequence.
-    const natDex = generationData.find((g) => g.id === 0);
-    const rest = generationData.filter((g) => g.id !== 0);
-
-    if (natDex) {
-      await AppDataSource.query(`INSERT INTO generation (id, name) VALUES ($1, $2)`, [
-        natDex.id,
-        natDex.name,
-      ]);
-    }
-
-    if (rest.length) {
-      await AppDataSource.createQueryBuilder().insert().into(Generation).values(rest).execute();
-    }
-
+await AppDataSource.createQueryBuilder().insert().into(Generation).values(generationData).execute();
     await this.resetSequence('generation');
   }
 
@@ -630,8 +615,8 @@ export class AdminService {
   }
 
   /**
-   * Initializes items for each generation 1-9 from @pkmn/dex,
-   * then creates a "nat dex" set (generation 0) containing all unique
+   * Initializes items for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10),
+   * then creates a "nat dex" set (gen ID 1) containing all unique
    * items with descriptions from the latest generation they appear in.
    */
   private async initializeItems(): Promise<void> {
@@ -644,7 +629,7 @@ export class AdminService {
 
       for (const item of items) {
         const description = (item as any).desc || (item as any).shortDesc || '';
-        allItems.push({ name: (item as any).name, description, generationId: gen });
+        allItems.push({ name: (item as any).name, description, generationId: gen + 1 });
         natDexMap.set((item as any).name, description);
       }
     }
@@ -659,8 +644,8 @@ export class AdminService {
   }
 
   /**
-   * Initializes abilities for each generation 1-9 from @pkmn/dex,
-   * then creates a "nat dex" set (generation 10) containing all unique
+   * Initializes abilities for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10),
+   * then creates a "nat dex" set (gen ID 1) containing all unique
    * abilities with descriptions from the latest generation they appear in.
    */
   private async initializeAbilities(): Promise<void> {
@@ -678,7 +663,7 @@ export class AdminService {
         }));
 
       for (const ability of abilities) {
-        allAbilities.push({ ...ability, generationId: gen });
+        allAbilities.push({ ...ability, generationId: gen + 1 });
         // Later generations overwrite earlier ones, keeping the most recent description
         natDexMap.set(ability.name, ability.description);
       }
@@ -694,8 +679,8 @@ export class AdminService {
   }
 
   /**
-   * Initializes moves for each generation 1-9 from @pkmn/dex,
-   * then creates a "nat dex" set (generation 10) containing all unique
+   * Initializes moves for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10),
+   * then creates a "nat dex" set (gen ID 1) containing all unique
    * moves with data from the latest generation they appear in.
    * Also populates the move_special_move_categories join table.
    */
@@ -735,7 +720,7 @@ export class AdminService {
           description: m.desc || m.shortDesc || '',
         };
 
-        allMoves.push({ ...moveData, generationId: gen });
+        allMoves.push({ ...moveData, generationId: gen + 1 });
         natDexMap.set(m.name, moveData);
       }
     }
@@ -792,8 +777,8 @@ export class AdminService {
   }
 
   /**
-   * Initializes Pokemon for each generation 1-9 from @pkmn/dex,
-   * then creates a "nat dex" set (generation 10) containing all unique
+   * Initializes Pokemon for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10),
+   * then creates a "nat dex" set (gen ID 1) containing all unique
    * Pokemon with data from the latest generation they appear in.
    * Also populates the pokemon_pokemon_types, pokemon_abilities,
    * and pokemon_moves join tables.
@@ -887,10 +872,10 @@ export class AdminService {
           sprite: '',
         };
 
-        allPokemonInserts.push({ ...pokemonInsert, generationId: gen });
+        allPokemonInserts.push({ ...pokemonInsert, generationId: gen + 1 });
         allPokemonMeta.push({
           name: species.name,
-          generationId: gen,
+          generationId: gen + 1,
           typeNames: species.types,
           abilityNames,
           moveNames: genMoveNames,
@@ -1160,11 +1145,11 @@ export class AdminService {
    * Returns the generation-appropriate type effectiveness chart.
    * Gen 1: excludes dark, fairy, steel.
    * Gen 2-5: excludes fairy.
-   * Gen 6+ and Nat Dex (0): full 18-type chart.
+   * Gen 6+ and Nat Dex (1): full 18-type chart.
    */
   private getTypeEffectiveChart(generationId: number): Record<string, Record<string, number>> {
-    if (generationId === 1) return typeEffectiveData.gen1;
-    if (generationId >= 2 && generationId <= 5) return typeEffectiveData.gen2to5;
+    if (generationId === 2) return typeEffectiveData.gen1;
+    if (generationId >= 3 && generationId <= 6) return typeEffectiveData.gen2to5;
     return typeEffectiveData.gen6to9;
   }
 
