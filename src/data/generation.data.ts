@@ -9,4 +9,5 @@ export const generationData = [
   { name: 'SM' },
   { name: 'SS' },
   { name: 'SV' },
+  { name: 'Champions' }
 ];
