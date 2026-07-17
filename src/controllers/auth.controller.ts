@@ -3,10 +3,13 @@ import passport from 'passport';
 import crypto from 'crypto';
 import { asyncHandler } from '../utils/error.utils';
 import { isAuthenticated, AuthenticatedRequest } from '../middleware/auth.middleware';
+import { validateDto } from '../middleware/validation.middleware';
 import { plainToInstance } from 'class-transformer';
-import { UserOutputDto } from '../dtos/user.dto';
+import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
+import { DevLoginInputDto } from '../dtos/dev-login.dto';
 import { APP_CONFIG } from '../config/app.config';
 import { UserService } from '../services/user.service';
+import { ForbiddenError } from '../errors';
 
 export class AuthController {
   public router = Router();
@@ -156,6 +159,9 @@ export class AuthController {
     this.router.get('/status', this.getAuthStatus);
     this.router.post('/logout', isAuthenticated, this.logout);
 
+    // Dev-only login (bypasses Google OAuth); handler 403s outside development
+    this.router.post('/dev-login', validateDto(DevLoginInputDto), this.devLogin);
+
     // Discord unlink route
     this.router.delete('/discord', isAuthenticated, this.unlinkDiscord);
   }
@@ -175,6 +181,40 @@ export class AuthController {
       });
     }
   });
+
+  devLogin = asyncHandler(
+    async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      if (APP_CONFIG.isProduction) {
+        return next(new ForbiddenError('Not available in production'));
+      }
+
+      const { email, isAdmin } = req.body as DevLoginInputDto;
+      const userInputDto = plainToInstance(UserInputDto, {
+        email,
+        firstName: 'Dev',
+        lastName: 'Tester',
+        isAdmin: isAdmin ?? false,
+      });
+      const user = await this.userService.findOrCreate({ email }, userInputDto, {
+        leagueUsers: true,
+      });
+
+      await new Promise<void>((resolve, reject) => {
+        req.login(user, (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+
+      res.json({
+        isAuthenticated: true,
+        user: plainToInstance(UserOutputDto, user, {
+          excludeExtraneousValues: true,
+          groups: ['user.full', 'user.private'],
+        }),
+      });
+    },
+  );
 
   logout = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     await new Promise<void>((resolve, reject) => {
@@ -336,6 +376,40 @@ export class AuthController {
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/AuthStatus'
+   */
+
+  /**
+   * @swagger
+   * /api/auth/dev-login:
+   *   post:
+   *     tags:
+   *       - Authentication
+   *     summary: Dev-only login (bypasses Google OAuth)
+   *     description: Finds or creates a user by email and logs them in directly, without going through Google OAuth. Returns 403 outside of development (`NODE_ENV=production`). Intended for local dev and automated browser verification only.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - email
+   *             properties:
+   *               email:
+   *                 type: string
+   *                 format: email
+   *               isAdmin:
+   *                 type: boolean
+   *                 description: Only applied when the user is first created.
+   *     responses:
+   *       200:
+   *         description: Logged in successfully
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/AuthStatus'
+   *       403:
+   *         description: Not available in production
    */
 
   /**
