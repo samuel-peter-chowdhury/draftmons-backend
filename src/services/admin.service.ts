@@ -1,5 +1,5 @@
 import { Service } from 'typedi';
-import { Dex } from '@pkmn/dex';
+import { Dex, ID, ModData } from '@pkmn/dex';
 import { faker } from '@faker-js/faker';
 import AppDataSource from '../config/database.config';
 import { Generation } from '../entities/generation.entity';
@@ -41,6 +41,23 @@ import {
 const LATEST_GEN = 9;
 const NAT_DEX_GENERATION_ID = 1;
 const NAT_DEX_MOVE_START_GEN = 3;
+// Pokémon Champions is a gen-9 overlay mod (from @pkmn/mods), not a numbered
+// generation. It is seeded under its own generation ID, appended after the
+// numbered generations (which occupy IDs 2-10).
+const CHAMPIONS_GENERATION_ID = 11;
+
+/**
+ * A single dex data source to seed. Numbered generations carry their gen
+ * number (1-9); the Champions mod carries `gen: null`, which signals callers
+ * to take its already-curated learnset wholesale rather than filtering learnset
+ * sources by generation.
+ */
+interface DexSource {
+  gen: number | null;
+  generationId: number;
+  // @pkmn/dex's ModdedDex is loosely typed here to match existing usage.
+  dex: any;
+}
 
 @Service()
 export class AdminService {
@@ -615,21 +632,21 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
   }
 
   /**
-   * Initializes items for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10),
-   * then creates a "nat dex" set (gen ID 1) containing all unique
-   * items with descriptions from the latest generation they appear in.
+   * Initializes items for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10)
+   * plus the Champions mod (gen ID 11, which re-legalizes Mega Stones), then creates a
+   * "nat dex" set (gen ID 1) containing all unique items with descriptions from the
+   * latest source they appear in.
    */
   private async initializeItems(): Promise<void> {
     const allItems: { name: string; description: string; generationId: number }[] = [];
     const natDexMap = new Map<string, string>();
 
-    for (let gen = 1; gen <= LATEST_GEN; gen++) {
-      const dex = Dex.forGen(gen as any);
+    for (const { generationId, dex } of await this.getDexSources()) {
       const items = dex.items.all().filter((i: any) => !i.isNonstandard);
 
       for (const item of items) {
         const description = (item as any).desc || (item as any).shortDesc || '';
-        allItems.push({ name: (item as any).name, description, generationId: gen + 1 });
+        allItems.push({ name: (item as any).name, description, generationId });
         natDexMap.set((item as any).name, description);
       }
     }
@@ -644,26 +661,25 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
   }
 
   /**
-   * Initializes abilities for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10),
-   * then creates a "nat dex" set (gen ID 1) containing all unique
-   * abilities with descriptions from the latest generation they appear in.
+   * Initializes abilities for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10)
+   * plus the Champions mod (gen ID 11), then creates a "nat dex" set (gen ID 1) containing
+   * all unique abilities with descriptions from the latest source they appear in.
    */
   private async initializeAbilities(): Promise<void> {
     const allAbilities: { name: string; description: string; generationId: number }[] = [];
     const natDexMap = new Map<string, string>();
 
-    for (let gen = 1; gen <= LATEST_GEN; gen++) {
-      const dex = Dex.forGen(gen as any);
+    for (const { generationId, dex } of await this.getDexSources()) {
       const abilities = dex.abilities
         .all()
-        .filter((a) => !a.isNonstandard && a.name !== 'No Ability')
-        .map((a) => ({
+        .filter((a: any) => !a.isNonstandard && a.name !== 'No Ability')
+        .map((a: any) => ({
           name: a.name,
           description: a.desc || a.shortDesc || '',
         }));
 
       for (const ability of abilities) {
-        allAbilities.push({ ...ability, generationId: gen + 1 });
+        allAbilities.push({ ...ability, generationId });
         // Later generations overwrite earlier ones, keeping the most recent description
         natDexMap.set(ability.name, ability.description);
       }
@@ -679,9 +695,9 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
   }
 
   /**
-   * Initializes moves for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10),
-   * then creates a "nat dex" set (gen ID 1) containing all unique
-   * moves with data from the latest generation they appear in.
+   * Initializes moves for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10)
+   * plus the Champions mod (gen ID 11), then creates a "nat dex" set (gen ID 1) containing
+   * all unique moves with data from the latest source they appear in.
    * Also populates the move_special_move_categories join table.
    */
   private async initializeMoves(): Promise<void> {
@@ -701,9 +717,8 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
     const allMoves: (MoveData & { generationId: number })[] = [];
     const natDexMap = new Map<string, MoveData>();
 
-    for (let gen = 1; gen <= LATEST_GEN; gen++) {
-      const dex = Dex.forGen(gen as any);
-      const moves = dex.moves.all().filter((m) => !m.isNonstandard);
+    for (const { generationId, dex } of await this.getDexSources()) {
+      const moves = dex.moves.all().filter((m: any) => !m.isNonstandard);
 
       for (const m of moves) {
         const pokemonTypeId = pokemonTypeMap.get(m.type.toLowerCase());
@@ -720,7 +735,7 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
           description: m.desc || m.shortDesc || '',
         };
 
-        allMoves.push({ ...moveData, generationId: gen + 1 });
+        allMoves.push({ ...moveData, generationId });
         natDexMap.set(m.name, moveData);
       }
     }
@@ -777,10 +792,10 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
   }
 
   /**
-   * Initializes Pokemon for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10),
-   * then creates a "nat dex" set (gen ID 1) containing all unique
-   * Pokemon with data from the latest generation they appear in.
-   * Also populates the pokemon_pokemon_types, pokemon_abilities,
+   * Initializes Pokemon for each generation 1-9 from @pkmn/dex (set in DB to gen IDs 2-10)
+   * plus the Champions mod (gen ID 11, which re-legalizes Mega Evolutions), then creates a
+   * "nat dex" set (gen ID 1) containing all unique Pokemon with data from the latest source
+   * they appear in. Also populates the pokemon_pokemon_types, pokemon_abilities,
    * and pokemon_moves join tables.
    */
   private async initializePokemon(): Promise<void> {
@@ -822,13 +837,12 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
     const natDexMap = new Map<string, NatDexPokemonData>();
     const natDexMoveAccumulator = new Map<string, Set<string>>();
 
-    for (let gen = 1; gen <= LATEST_GEN; gen++) {
-      const dex = Dex.forGen(gen as any);
-      const allSpecies = dex.species.all().filter((s) => !s.isNonstandard);
+    for (const { gen, generationId, dex } of await this.getDexSources()) {
+      const allSpecies = dex.species.all().filter((s: any) => !s.isNonstandard);
 
       // Process all pokemon in this generation concurrently
       const results = await Promise.all(
-        allSpecies.map(async (species) => {
+        allSpecies.map(async (species: any) => {
           // Extract ability names
           const abilityNames: string[] = [];
           for (const [, abilityName] of Object.entries(species.abilities)) {
@@ -840,12 +854,20 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
             }
           }
 
-          // Collect learnset and extract moves
+          // Collect learnset and extract moves.
+          // Champions (gen === null) ships an already-curated gen-9 learnset, so
+          // take every move it lists; numbered gens filter learnset sources by
+          // the generation the move is actually learnable in.
           const learnsetSources = await this.collectLearnsets(dex, species);
-          const genMoveNames = this.extractMoveNamesForGen(dex, learnsetSources, gen);
-          // Unfiltered moves for nat dex accumulation (only needed for gens 3+)
+          const genMoveNames =
+            gen === null
+              ? this.extractAllMoveNames(dex, learnsetSources)
+              : this.extractMoveNamesForGen(dex, learnsetSources, gen);
+          // Unfiltered moves for nat dex accumulation (gens 3+ and Champions)
           const allMoveNames =
-            gen >= NAT_DEX_MOVE_START_GEN ? this.extractAllMoveNames(dex, learnsetSources) : [];
+            gen === null || gen >= NAT_DEX_MOVE_START_GEN
+              ? this.extractAllMoveNames(dex, learnsetSources)
+              : [];
 
           return {
             species,
@@ -872,10 +894,10 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
           sprite: '',
         };
 
-        allPokemonInserts.push({ ...pokemonInsert, generationId: gen + 1 });
+        allPokemonInserts.push({ ...pokemonInsert, generationId });
         allPokemonMeta.push({
           name: species.name,
-          generationId: gen + 1,
+          generationId,
           typeNames: species.types,
           abilityNames,
           moveNames: genMoveNames,
@@ -889,8 +911,9 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
           moveNames: [],
         });
 
-        // Accumulate nat dex moves across gens 3-9 for a comprehensive pool
-        if (gen >= NAT_DEX_MOVE_START_GEN) {
+        // Accumulate nat dex moves across gens 3-9 and Champions for a
+        // comprehensive pool. `allMoveNames` is only populated for these sources.
+        if (gen === null || gen >= NAT_DEX_MOVE_START_GEN) {
           let moveSet = natDexMoveAccumulator.get(species.name);
           if (!moveSet) {
             moveSet = new Set();
@@ -1125,6 +1148,29 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
       moveNames.push(move.name);
     }
     return moveNames;
+  }
+
+  /**
+   * Returns the ordered list of dex data sources to seed.
+   * Numbered generations 1-9 map to generation IDs 2-10 (ID 1 is reserved for
+   * the Nat Dex rollup). The Champions mod (@pkmn/mods) is appended last as a
+   * gen-9 overlay stored under CHAMPIONS_GENERATION_ID. Champions carries
+   * `gen: null` since it is not a numbered generation; its data (curated
+   * roster, re-legalized Mega Evolutions and Mega Stones) rolls into the Nat
+   * Dex accumulators like any other generation because it is processed last.
+   */
+  private async getDexSources(): Promise<DexSource[]> {
+    const sources: DexSource[] = [];
+    for (let gen = 1; gen <= LATEST_GEN; gen++) {
+      sources.push({ gen, generationId: gen + 1, dex: Dex.forGen(gen as any) });
+    }
+    const championsData = (await import('@pkmn/mods/champions')) as unknown as ModData;
+    sources.push({
+      gen: null,
+      generationId: CHAMPIONS_GENERATION_ID,
+      dex: Dex.mod('champions' as ID, championsData),
+    });
+    return sources;
   }
 
   /**
