@@ -1,6 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
-import { IsNumber } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional } from 'class-validator';
 import { SeasonPokemonOutputDto } from './season-pokemon.dto';
 import { TeamOutputDto } from './team.dto';
 
@@ -28,4 +28,9 @@ export class SeasonPokemonTeamInputDto extends BaseInputDto {
   @Expose()
   @IsNumber()
   teamId: number;
+
+  @Expose()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

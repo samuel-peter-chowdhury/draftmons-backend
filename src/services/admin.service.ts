@@ -173,6 +173,9 @@ export class AdminService {
       pointLimit: s.pointLimit,
       maxPointValue: s.maxPointValue,
       ...(s.rules !== null && { rules: s.rules }),
+      minRosterSize: s.minRosterSize,
+      maxRosterSize: s.maxRosterSize,
+      allowMultiTeamPokemon: s.allowMultiTeamPokemon,
       leagueId: leagueIds[s.leagueIndex],
       generationId: s.generationId,
     }));
