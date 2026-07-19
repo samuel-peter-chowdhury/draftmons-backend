@@ -1,6 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
-import { IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { IsOdd } from '../validators/is-odd.validator';
 import { LeagueOutputDto } from './league.dto';
 import { SeasonPokemonOutputDto } from './season-pokemon.dto';
@@ -27,6 +27,15 @@ export class SeasonOutputDto extends BaseOutputDto {
 
   @Expose()
   numberOfGames: number;
+
+  @Expose()
+  minRosterSize: number;
+
+  @Expose()
+  maxRosterSize: number;
+
+  @Expose()
+  allowMultiTeamPokemon: boolean;
 
   @Expose()
   leagueId: number;
@@ -84,6 +93,20 @@ export class SeasonInputDto extends BaseInputDto {
   @Max(9)
   @IsOdd()
   numberOfGames?: number;
+
+  @Expose()
+  @IsInt()
+  @Min(1)
+  minRosterSize: number;
+
+  @Expose()
+  @IsInt()
+  @Min(1)
+  maxRosterSize: number;
+
+  @Expose()
+  @IsBoolean()
+  allowMultiTeamPokemon: boolean;
 
   @Expose()
   @IsNumber()

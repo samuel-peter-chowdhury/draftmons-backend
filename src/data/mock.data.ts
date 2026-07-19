@@ -35,6 +35,9 @@ export interface MockSeasonConfig {
   pointLimit: number;
   maxPointValue: number;
   rules: string | null;
+  minRosterSize: number;
+  maxRosterSize: number;
+  allowMultiTeamPokemon: boolean;
   userIndices: number[];
   teamNames: string[];
   weekNames: string[];
@@ -49,6 +52,9 @@ export const mockSeasons: MockSeasonConfig[] = [
     pointLimit: 100,
     maxPointValue: 12,
     rules: 'Standard Gen 9 OU rules. Sleep clause, evasion clause, species clause.',
+    minRosterSize: 8,
+    maxRosterSize: 10,
+    allowMultiTeamPokemon: false,
     userIndices: [0, 1, 2, 3],
     teamNames: ['Kanto Crushers', 'Cerulean Surfers', 'Pallet Pioneers', 'Pewter Punishers'],
     weekNames: ['Week 1', 'Week 2', 'Week 3'],
@@ -61,6 +67,9 @@ export const mockSeasons: MockSeasonConfig[] = [
     pointLimit: 100,
     maxPointValue: 12,
     rules: 'National Dex OU rules. Sleep clause, evasion clause, species clause.',
+    minRosterSize: 8,
+    maxRosterSize: 10,
+    allowMultiTeamPokemon: true,
     userIndices: [4, 5, 6, 7],
     teamNames: ['Saffron Strikers', 'Viridian Victors', 'Lavender Legends', 'Cinnabar Flames'],
     weekNames: ['Week 1', 'Week 2'],
@@ -73,6 +82,9 @@ export const mockSeasons: MockSeasonConfig[] = [
     pointLimit: 100,
     maxPointValue: 12,
     rules: null,
+    minRosterSize: 8,
+    maxRosterSize: 10,
+    allowMultiTeamPokemon: false,
     userIndices: [],
     teamNames: [],
     weekNames: [],

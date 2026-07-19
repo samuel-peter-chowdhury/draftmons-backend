@@ -42,6 +42,15 @@ export class Season extends BaseApplicationEntity {
   numberOfGames: number;
 
   @Column()
+  minRosterSize: number;
+
+  @Column()
+  maxRosterSize: number;
+
+  @Column({ default: false })
+  allowMultiTeamPokemon: boolean;
+
+  @Column()
   leagueId: number;
 
   @Column()
