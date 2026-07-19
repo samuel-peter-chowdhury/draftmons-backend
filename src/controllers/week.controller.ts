@@ -24,11 +24,11 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
   }
 
   protected getFullTransformGroup(): string[] {
-    return ['week.full'];
+    return ['week.full', 'match.full', 'game.full'];
   }
 
   protected getAllowedSortFields(): string[] {
-    return ['id', 'createdAt', 'updatedAt'];
+    return ['id', 'weekNumber', 'createdAt', 'updatedAt'];
   }
 
   protected async getWhere(
@@ -42,7 +42,18 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
   }
 
   protected getFullRelations(): FindOptionsRelations<Week> | undefined {
-    return { season: true, matches: true };
+    return {
+      season: true,
+      matches: {
+        teams: true,
+        losingTeam: true,
+        winningTeam: true,
+        games: {
+          losingTeam: true,
+          winningTeam: true,
+        },
+      },
+    };
   }
 
   /**
@@ -58,6 +69,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *       required:
    *         - id
    *         - name
+   *         - weekNumber
    *         - seasonId
    *         - isActive
    *         - createdAt
@@ -71,6 +83,10 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *           type: string
    *           description: Name of the week
    *           example: "Week 1"
+   *         weekNumber:
+   *           type: integer
+   *           description: Explicit ordering number for the week within its season
+   *           example: 1
    *         seasonId:
    *           type: integer
    *           description: ID of the associated season
@@ -108,6 +124,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *       type: object
    *       required:
    *         - name
+   *         - weekNumber
    *         - seasonId
    *       properties:
    *         name:
@@ -116,6 +133,11 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *           example: "Week 1"
    *           minLength: 1
    *           maxLength: 100
+   *         weekNumber:
+   *           type: integer
+   *           description: Explicit ordering number for the week within its season
+   *           example: 1
+   *           minimum: 1
    *         seasonId:
    *           type: integer
    *           description: ID of the associated season
@@ -131,6 +153,11 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *           example: "Week 1"
    *           minLength: 1
    *           maxLength: 100
+   *         weekNumber:
+   *           type: integer
+   *           description: Explicit ordering number for the week within its season
+   *           example: 1
+   *           minimum: 1
    *         seasonId:
    *           type: integer
    *           description: ID of the associated season
@@ -197,12 +224,14 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *                 value:
    *                   - id: 1
    *                     name: "Week 1"
+   *                     weekNumber: 1
    *                     seasonId: 1
    *                     isActive: true
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
    *                   - id: 2
    *                     name: "Week 2"
+   *                     weekNumber: 2
    *                     seasonId: 1
    *                     isActive: true
    *                     createdAt: "2024-01-08T00:00:00.000Z"
@@ -259,6 +288,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *                 value:
    *                   id: 1
    *                   name: "Week 1"
+   *                   weekNumber: 1
    *                   seasonId: 1
    *                   isActive: true
    *                   createdAt: "2024-01-01T00:00:00.000Z"
@@ -268,6 +298,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *                 value:
    *                   id: 1
    *                   name: "Week 1"
+   *                   weekNumber: 1
    *                   seasonId: 1
    *                   isActive: true
    *                   createdAt: "2024-01-01T00:00:00.000Z"
@@ -309,6 +340,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *               summary: Create a regular season week
    *               value:
    *                 name: "Week 3"
+   *                 weekNumber: 3
    *                 seasonId: 1
    *             playoffWeek:
    *               summary: Create a playoff week
@@ -330,6 +362,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *             example:
    *               id: 4
    *               name: "Week 3"
+   *               weekNumber: 3
    *               seasonId: 1
    *               isActive: true
    *               createdAt: "2024-01-20T10:00:00.000Z"
@@ -392,6 +425,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *               summary: Update only the week name
    *               value:
    *                 name: "Week 1 - Opening Battles"
+   *                 weekNumber: 1
    *             changeSeason:
    *               summary: Move week to different season
    *               value:
@@ -400,6 +434,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *               summary: Update multiple fields
    *               value:
    *                 name: "Week 1 - Revised"
+   *                 weekNumber: 1
    *                 seasonId: 2
    *     responses:
    *       200:
@@ -413,6 +448,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *             example:
    *               id: 1
    *               name: "Week 1 - Opening Battles"
+   *               weekNumber: 1
    *               seasonId: 1
    *               isActive: true
    *               createdAt: "2024-01-01T00:00:00.000Z"
@@ -565,12 +601,14 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *                 value:
    *                   - id: 1
    *                     name: "Week 1"
+   *                     weekNumber: 1
    *                     seasonId: 1
    *                     isActive: true
    *                     createdAt: "2024-01-01T00:00:00.000Z"
    *                     updatedAt: "2024-01-15T12:30:00.000Z"
    *                   - id: 2
    *                     name: "Week 2"
+   *                     weekNumber: 2
    *                     seasonId: 1
    *                     isActive: true
    *                     createdAt: "2024-01-08T00:00:00.000Z"
@@ -635,6 +673,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *                 value:
    *                   id: 1
    *                   name: "Week 1"
+   *                   weekNumber: 1
    *                   seasonId: 1
    *                   isActive: true
    *                   createdAt: "2024-01-01T00:00:00.000Z"
@@ -644,6 +683,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *                 value:
    *                   id: 1
    *                   name: "Week 1"
+   *                   weekNumber: 1
    *                   seasonId: 1
    *                   isActive: true
    *                   createdAt: "2024-01-01T00:00:00.000Z"
@@ -694,6 +734,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *               summary: Create a regular season week
    *               value:
    *                 name: "Week 3"
+   *                 weekNumber: 3
    *                 seasonId: 1
    *             playoffWeek:
    *               summary: Create a playoff week
@@ -715,6 +756,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *             example:
    *               id: 4
    *               name: "Week 3"
+   *               weekNumber: 3
    *               seasonId: 1
    *               isActive: true
    *               createdAt: "2024-01-20T10:00:00.000Z"
@@ -785,6 +827,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *               summary: Update only the week name
    *               value:
    *                 name: "Week 1 - Opening Battles"
+   *                 weekNumber: 1
    *             changeSeason:
    *               summary: Move week to different season
    *               value:
@@ -793,6 +836,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *               summary: Update multiple fields
    *               value:
    *                 name: "Week 1 - Revised"
+   *                 weekNumber: 1
    *                 seasonId: 2
    *     responses:
    *       200:
@@ -806,6 +850,7 @@ export class WeekController extends BaseController<Week, WeekInputDto, WeekOutpu
    *             example:
    *               id: 1
    *               name: "Week 1 - Opening Battles"
+   *               weekNumber: 1
    *               seasonId: 1
    *               isActive: true
    *               createdAt: "2024-01-01T00:00:00.000Z"

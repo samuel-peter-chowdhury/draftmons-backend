@@ -235,14 +235,14 @@ export class AdminService {
    * Returns a map of seasonId -> week IDs in insertion order.
    */
   private async createMockWeeks(seasonIds: number[]): Promise<Map<number, number[]>> {
-    const weeks: { name: string; seasonId: number }[] = [];
+    const weeks: { name: string; weekNumber: number; seasonId: number }[] = [];
 
     for (let i = 0; i < mockSeasons.length; i++) {
       const config = mockSeasons[i];
       const seasonId = seasonIds[i];
-      for (const weekName of config.weekNames) {
-        weeks.push({ name: weekName, seasonId });
-      }
+      config.weekNames.forEach((weekName, weekNumber) => {
+        weeks.push({ name: weekName, weekNumber, seasonId });
+      });
     }
 
     if (weeks.length === 0) return new Map();

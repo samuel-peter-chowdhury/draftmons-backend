@@ -5,9 +5,13 @@ import { Match } from './match.entity';
 
 @Entity('week')
 @Unique(['name', 'seasonId'])
+@Unique(['weekNumber', 'seasonId'])
 export class Week extends BaseApplicationEntity {
   @Column()
   name: string;
+
+  @Column()
+  weekNumber: number;
 
   @Column()
   seasonId: number;
