@@ -9,6 +9,9 @@ export class WeekOutputDto extends BaseOutputDto {
   name: string;
 
   @Expose()
+  weekNumber: number;
+
+  @Expose()
   seasonId: number;
 
   @Expose({ groups: ['week.full'] })
@@ -24,6 +27,10 @@ export class WeekInputDto extends BaseInputDto {
   @Expose()
   @IsString()
   name: string;
+
+  @Expose()
+  @IsNumber()
+  weekNumber: number;
 
   @Expose()
   @IsNumber()
