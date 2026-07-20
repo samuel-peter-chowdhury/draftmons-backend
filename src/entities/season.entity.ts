@@ -42,6 +42,9 @@ export class Season extends BaseApplicationEntity {
   numberOfGames: number;
 
   @Column()
+  numberOfWeeks: number;
+
+  @Column()
   minRosterSize: number;
 
   @Column()

@@ -1,6 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
-import { IsNumber, IsOptional } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsNumber, IsOptional } from 'class-validator';
 import { GameOutputDto } from './game.dto';
 import { WeekOutputDto } from './week.dto';
 import { TeamOutputDto } from './team.dto';
@@ -50,4 +50,12 @@ export class MatchInputDto extends BaseInputDto {
   @IsOptional()
   @IsNumber()
   winningTeamId: number;
+
+  @Expose()
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @IsInt({ each: true })
+  teamIds?: number[];
 }

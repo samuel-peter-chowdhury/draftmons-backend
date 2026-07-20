@@ -27,6 +27,9 @@ export class Team extends BaseApplicationEntity {
   @Column()
   userId: number;
 
+  @Column({ type: 'int', nullable: true })
+  skillLevel: number | null;
+
   @ManyToOne(() => Season, (season) => season.teams, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'season_id' })
   season: Season;
