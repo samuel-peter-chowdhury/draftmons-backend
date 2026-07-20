@@ -34,6 +34,33 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
     this.router.delete('/:id', isLeagueModerator(), this.delete);
   }
 
+  getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const isFull = req.query.full === 'true';
+    const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+    const paginationOptions = await this.getPaginationOptions(req);
+    const sortOptions = await this.getSortOptions(req);
+    const group = isFull ? this.getFullTransformGroup() : undefined;
+
+    const paginatedEntities = await this.leagueService.search(
+      req,
+      relations,
+      paginationOptions,
+      sortOptions,
+    );
+
+    const response = {
+      data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
+        groups: group,
+        excludeExtraneousValues: true,
+      }),
+      total: paginatedEntities.total,
+      page: paginatedEntities.page,
+      pageSize: paginatedEntities.pageSize,
+      totalPages: paginatedEntities.totalPages,
+    };
+    res.json(response);
+  });
+
   createWithModerator = asyncHandler(
     async (req: AuthenticatedRequest, res: Response): Promise<void> => {
       const league = await AppDataSource.transaction(async (manager) => {
@@ -285,6 +312,11 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
    *           items:
    *             type: integer
    *         description: Find leagues in these IDs
+   *       - in: query
+   *         name: nameLike
+   *         schema:
+   *           type: string
+   *         description: Search for leagues whose name or abbreviation contains this value (case-insensitive)
    *     responses:
    *       200:
    *         description: List of leagues retrieved successfully
