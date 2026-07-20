@@ -29,6 +29,9 @@ export class SeasonOutputDto extends BaseOutputDto {
   numberOfGames: number;
 
   @Expose()
+  numberOfWeeks: number;
+
+  @Expose()
   minRosterSize: number;
 
   @Expose()
@@ -93,6 +96,11 @@ export class SeasonInputDto extends BaseInputDto {
   @Max(9)
   @IsOdd()
   numberOfGames?: number;
+
+  @Expose()
+  @IsInt()
+  @Min(1)
+  numberOfWeeks: number;
 
   @Expose()
   @IsInt()
