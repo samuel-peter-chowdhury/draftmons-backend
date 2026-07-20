@@ -6,7 +6,12 @@ import { validateDto, validatePartialDto } from '../middleware/validation.middle
 import { TeamBuildSetInputDto, TeamBuildSetOutputDto } from '../dtos/team-build-set.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import {
+  isAuthenticated,
+  isTeamBuildBodyOwner,
+  isTeamBuildSetOwner,
+  AuthenticatedRequest,
+} from '../middleware/auth.middleware';
 
 export class TeamBuildSetController extends BaseController<
   TeamBuildSet,
@@ -21,16 +26,23 @@ export class TeamBuildSetController extends BaseController<
   }
 
   private initializeRoutes(): void {
-    this.router.get('/', this.getAll);
-    this.router.get('/:id', this.getById);
-    this.router.post('/', isAuthenticated, validateDto(TeamBuildSetInputDto), this.create);
+    this.router.get('/', isAuthenticated, this.getAll);
+    this.router.get('/:id', isAuthenticated, isTeamBuildSetOwner(), this.getById);
+    this.router.post(
+      '/',
+      isAuthenticated,
+      validateDto(TeamBuildSetInputDto),
+      isTeamBuildBodyOwner(),
+      this.create,
+    );
     this.router.put(
       '/:id',
       isAuthenticated,
+      isTeamBuildSetOwner(),
       validatePartialDto(TeamBuildSetInputDto),
       this.update,
     );
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.delete('/:id', isAuthenticated, isTeamBuildSetOwner(), this.delete);
   }
 
   protected getFullTransformGroup(): string[] {
@@ -44,7 +56,15 @@ export class TeamBuildSetController extends BaseController<
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<TeamBuildSet> | FindOptionsWhere<TeamBuildSet>[] | undefined> {
-    return plainToInstance(TeamBuildSetInputDto, req.query, { excludeExtraneousValues: true });
+    const filters = plainToInstance(TeamBuildSetInputDto, req.query, {
+      excludeExtraneousValues: true,
+    }) as FindOptionsWhere<TeamBuildSet>;
+    const user = (req as AuthenticatedRequest).user;
+    // Sets are private: non-admins only see sets belonging to their own builds.
+    if (user?.isAdmin) {
+      return filters;
+    }
+    return { ...filters, teamBuild: { userId: user.id } };
   }
 
   protected getBaseRelations(): FindOptionsRelations<TeamBuildSet> | undefined {

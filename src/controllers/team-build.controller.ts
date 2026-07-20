@@ -1,4 +1,4 @@
-import { Request, Router } from 'express';
+import { Request, Response, NextFunction, Router } from 'express';
 import { TeamBuildService } from '../services/team-build.service';
 import { BaseController } from './base.controller';
 import { TeamBuild } from '../entities/team-build.entity';
@@ -6,7 +6,11 @@ import { validateDto, validatePartialDto } from '../middleware/validation.middle
 import { TeamBuildInputDto, TeamBuildOutputDto } from '../dtos/team-build.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
-import { isAuthenticated } from '../middleware/auth.middleware';
+import {
+  isAuthenticated,
+  isTeamBuildOwner,
+  AuthenticatedRequest,
+} from '../middleware/auth.middleware';
 
 export class TeamBuildController extends BaseController<
   TeamBuild,
@@ -21,12 +25,35 @@ export class TeamBuildController extends BaseController<
   }
 
   private initializeRoutes(): void {
-    this.router.get('/', this.getAll);
-    this.router.get('/:id', this.getById);
-    this.router.post('/', isAuthenticated, validateDto(TeamBuildInputDto), this.create);
-    this.router.put('/:id', isAuthenticated, validatePartialDto(TeamBuildInputDto), this.update);
-    this.router.delete('/:id', isAuthenticated, this.delete);
+    this.router.get('/', isAuthenticated, this.getAll);
+    this.router.get('/:id', isAuthenticated, isTeamBuildOwner(), this.getById);
+    this.router.post(
+      '/',
+      isAuthenticated,
+      this.setOwnUserId,
+      validateDto(TeamBuildInputDto),
+      this.create,
+    );
+    this.router.put(
+      '/:id',
+      isAuthenticated,
+      isTeamBuildOwner(),
+      validatePartialDto(TeamBuildInputDto),
+      this.update,
+    );
+    this.router.delete('/:id', isAuthenticated, isTeamBuildOwner(), this.delete);
   }
+
+  // Force ownership to the session user before validation so it can never be
+  // spoofed via the request body (even by admins).
+  private setOwnUserId = (
+    req: AuthenticatedRequest,
+    _res: Response,
+    next: NextFunction,
+  ): void => {
+    req.body.userId = req.user.id;
+    next();
+  };
 
   protected getFullTransformGroup(): string[] {
     return ['teamBuild.full'];
@@ -39,7 +66,16 @@ export class TeamBuildController extends BaseController<
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<TeamBuild> | FindOptionsWhere<TeamBuild>[] | undefined> {
-    return plainToInstance(TeamBuildInputDto, req.query, { excludeExtraneousValues: true });
+    const filters = plainToInstance(TeamBuildInputDto, req.query, {
+      excludeExtraneousValues: true,
+    }) as FindOptionsWhere<TeamBuild>;
+    const user = (req as AuthenticatedRequest).user;
+    // Builds are private: non-admins only ever see their own, regardless of
+    // any userId filter passed in the query.
+    if (user?.isAdmin) {
+      return filters;
+    }
+    return { ...filters, userId: user.id };
   }
 
   protected getBaseRelations(): FindOptionsRelations<TeamBuild> | undefined {
@@ -57,6 +93,9 @@ export class TeamBuildController extends BaseController<
         pokemon: {
           pokemonTypes: true,
           abilities: true,
+          typeEffectiveness: {
+            pokemonType: true,
+          },
         },
         item: true,
         ability: true,

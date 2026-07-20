@@ -31,6 +31,12 @@ export class ItemController extends BaseController<Item, ItemInputDto, ItemOutpu
     return ['id', 'name', 'generationId', 'createdAt', 'updatedAt'];
   }
 
+  // A generation can have a few hundred items; allow fetching the full list in
+  // one page for item-picker UIs (mirrors SeasonPokemonController's override).
+  protected getMaxPageSize(): number {
+    return 10000;
+  }
+
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Item> | FindOptionsWhere<Item>[] | undefined> {
