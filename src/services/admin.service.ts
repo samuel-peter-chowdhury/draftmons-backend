@@ -65,11 +65,16 @@ export class AdminService {
    * Wipes all data from the database except admin users.
    * Truncates all non-user tables with RESTART IDENTITY CASCADE,
    * then deletes non-admin users.
+   * When `preservePokemonData` is true, the tables populated by
+   * `initializePokemonData` (and their join tables, via CASCADE) are left intact.
    */
-  async wipeAllData(): Promise<void> {
+  async wipeAllData(preservePokemonData: boolean = false): Promise<void> {
     const entities = AppDataSource.entityMetadatas;
     const tableNames = entities
       .filter((entity) => entity.tableName !== 'user')
+      .filter(
+        (entity) => !preservePokemonData || !AdminService.POKEMON_DATA_TABLES.has(entity.tableName),
+      )
       .map((entity) => `"${entity.tableName}"`)
       .join(', ');
     await AppDataSource.query(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE`);
@@ -1227,11 +1232,11 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
   }
 
   /**
-   * Resets the auto-increment sequence for a table to the current max ID.
-   * Required after inserting rows with explicit IDs to prevent conflicts
-   * on subsequent inserts without explicit IDs.
+   * Tables populated by `initializePokemonData`. Used to guard `resetSequence`
+   * against arbitrary table names, and to let `wipeAllData` selectively
+   * preserve Pokemon data.
    */
-  private static readonly ALLOWED_RESET_TABLES = new Set([
+  private static readonly POKEMON_DATA_TABLES = new Set([
     'generation',
     'pokemon_type',
     'special_move_category',
@@ -1243,8 +1248,13 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
     'type_effective',
   ]);
 
+  /**
+   * Resets the auto-increment sequence for a table to the current max ID.
+   * Required after inserting rows with explicit IDs to prevent conflicts
+   * on subsequent inserts without explicit IDs.
+   */
   private async resetSequence(tableName: string): Promise<void> {
-    if (!AdminService.ALLOWED_RESET_TABLES.has(tableName)) {
+    if (!AdminService.POKEMON_DATA_TABLES.has(tableName)) {
       throw new Error(`resetSequence called with disallowed table name: ${tableName}`);
     }
     await AppDataSource.query(
