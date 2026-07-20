@@ -94,6 +94,11 @@ export class TeamBuildSetService extends BaseService<TeamBuildSet, TeamBuildSetI
         );
       }
     }
+
+    // 7. Check the same move isn't used in more than one slot (ignoring nulls)
+    if (new Set(moveIds).size !== moveIds.length) {
+      throw new ValidationError('The same move cannot be selected in more than one move slot');
+    }
   }
 
   async create(data: TeamBuildSetInputDto): Promise<TeamBuildSet> {

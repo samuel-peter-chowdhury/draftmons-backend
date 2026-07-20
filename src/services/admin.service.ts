@@ -1246,6 +1246,10 @@ await AppDataSource.createQueryBuilder().insert().into(Generation).values(genera
     'move',
     'pokemon',
     'type_effective',
+    'pokemon_pokemon_types',
+    'pokemon_moves',
+    'pokemon_abilities',
+    'move_special_move_categories',
   ]);
 
   /**

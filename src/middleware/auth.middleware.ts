@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { UnauthorizedError, ForbiddenError, ValidationError } from '../errors';
+import { UnauthorizedError, ForbiddenError, ValidationError, NotFoundError } from '../errors';
 import { LeagueUser } from '../entities/league-user.entity';
+import AppDataSource from '../config/database.config';
+import { TeamBuild } from '../entities/team-build.entity';
+import { TeamBuildSet } from '../entities/team-build-set.entity';
 
 // Interface for authenticated request with user
 export interface AuthenticatedRequest extends Request {
@@ -166,5 +169,87 @@ export const isLeagueMember = (leagueIdParam: string = 'id') => {
     }
 
     return next(new ForbiddenError('League membership required'));
+  };
+};
+
+// Check if user owns the referenced TeamBuild (or is admin). TeamBuilds are
+// private to their owner; global admins may still read/write any build.
+export const isTeamBuildOwner = (idParam: string = 'id') => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.isAuthenticated()) {
+      return next(new UnauthorizedError('Please log in to access this resource'));
+    }
+
+    const id = parseInt(req.params[idParam]);
+    if (isNaN(id)) {
+      return next(new ValidationError('Invalid team build ID'));
+    }
+
+    const teamBuild = await AppDataSource.getRepository(TeamBuild).findOne({ where: { id } });
+    if (!teamBuild) {
+      return next(new NotFoundError('TeamBuild', id));
+    }
+
+    if (req.user?.isAdmin || teamBuild.userId === req.user?.id) {
+      return next();
+    }
+
+    return next(new ForbiddenError('You do not have access to this team build'));
+  };
+};
+
+// Check if user owns the TeamBuild referenced in the request body (or is admin).
+// Used for TeamBuildSet creation, where ownership derives from body.teamBuildId.
+export const isTeamBuildBodyOwner = (bodyParam: string = 'teamBuildId') => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.isAuthenticated()) {
+      return next(new UnauthorizedError('Please log in to access this resource'));
+    }
+
+    const teamBuildId = parseInt(req.body?.[bodyParam]);
+    if (isNaN(teamBuildId)) {
+      return next(new ValidationError('Invalid team build ID'));
+    }
+
+    const teamBuild = await AppDataSource.getRepository(TeamBuild).findOne({
+      where: { id: teamBuildId },
+    });
+    if (!teamBuild) {
+      return next(new NotFoundError('TeamBuild', teamBuildId));
+    }
+
+    if (req.user?.isAdmin || teamBuild.userId === req.user?.id) {
+      return next();
+    }
+
+    return next(new ForbiddenError('You do not have access to this team build'));
+  };
+};
+
+// Check if user owns the referenced TeamBuildSet's parent TeamBuild (or is admin).
+export const isTeamBuildSetOwner = (idParam: string = 'id') => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.isAuthenticated()) {
+      return next(new UnauthorizedError('Please log in to access this resource'));
+    }
+
+    const id = parseInt(req.params[idParam]);
+    if (isNaN(id)) {
+      return next(new ValidationError('Invalid team build set ID'));
+    }
+
+    const teamBuildSet = await AppDataSource.getRepository(TeamBuildSet).findOne({
+      where: { id },
+      relations: { teamBuild: true },
+    });
+    if (!teamBuildSet) {
+      return next(new NotFoundError('TeamBuildSet', id));
+    }
+
+    if (req.user?.isAdmin || teamBuildSet.teamBuild?.userId === req.user?.id) {
+      return next();
+    }
+
+    return next(new ForbiddenError('You do not have access to this team build set'));
   };
 };
