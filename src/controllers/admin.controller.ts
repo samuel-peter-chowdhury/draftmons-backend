@@ -34,8 +34,12 @@ export class AdminController {
   });
 
   wipeAllData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    await this.adminService.wipeAllData();
-    res.status(200).json({ message: 'All data has been wiped successfully (admin users preserved)' });
+    const preservePokemonData = req.query.preservePokemonData === 'true';
+    await this.adminService.wipeAllData(preservePokemonData);
+    const message = preservePokemonData
+      ? 'All data has been wiped successfully (admin users and Pokemon data preserved)'
+      : 'All data has been wiped successfully (admin users preserved)';
+    res.status(200).json({ message });
   });
 
   initializePokemonData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -88,9 +92,19 @@ export class AdminController {
    *       resetting auto-increment sequences. Then deletes all non-admin users.
    *       Only admin user accounts are preserved.
    *       Uses CASCADE to handle foreign key constraints automatically.
+   *       If `preservePokemonData` is true, the tables populated by `/api/admin/initialize-pokemon`
+   *       (generations, types, natures, items, abilities, moves, Pokemon, type effectiveness, and
+   *       their join tables) are left intact, and only remaining data is wiped.
    *       **WARNING: This action is irreversible and will destroy all non-admin data.**
    *     security:
    *       - sessionAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: preservePokemonData
+   *         schema:
+   *           type: boolean
+   *           default: false
+   *         description: When true, preserves all Pokemon-related data instead of wiping it.
    *     responses:
    *       200:
    *         description: All data wiped successfully
