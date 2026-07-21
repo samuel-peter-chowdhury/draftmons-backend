@@ -28,6 +28,7 @@
   "dependencies": {
     "@pkmn/dex": "^0.10.11",
     "@pkmn/mods": "^0.10.11",
+    "@vercel/blob": "^2.6.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "connect-redis": "^7.1.0",

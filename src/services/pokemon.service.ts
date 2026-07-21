@@ -1,8 +1,9 @@
-import { Repository, FindOptionsRelations, SelectQueryBuilder } from 'typeorm';
+import { Repository, FindOptionsRelations, FindOptionsWhere, SelectQueryBuilder } from 'typeorm';
 import { Pokemon } from '../entities/pokemon.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
 import { PokemonInputDto } from '../dtos/pokemon.dto';
+import { deleteOwnedBlob } from '../utils/blob.utils';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import {
   PokemonSearchFilters,
@@ -19,6 +20,22 @@ export class PokemonService extends BaseService<Pokemon, PokemonInputDto> {
     private pokemonRepository: Repository<Pokemon>,
   ) {
     super(pokemonRepository, 'Pokemon');
+  }
+
+  async update(
+    where: FindOptionsWhere<Pokemon>,
+    data: Partial<PokemonInputDto>,
+    relations?: FindOptionsRelations<Pokemon>,
+  ): Promise<Pokemon> {
+    // `sprite` is a manual override URL — it may be a foreign host (e.g. the
+    // Bulbagarden Starmie-Mega override) or a prior Blob upload. deleteOwnedBlob
+    // only ever deletes the latter, so foreign overrides are never touched.
+    const oldSprite = data.sprite !== undefined ? (await this.findOne(where)).sprite : undefined;
+    const updated = await super.update(where, data, relations);
+    if (oldSprite && oldSprite !== updated.sprite) {
+      await deleteOwnedBlob(oldSprite);
+    }
+    return updated;
   }
 
   async search(

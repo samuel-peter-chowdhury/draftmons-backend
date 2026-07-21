@@ -17,6 +17,7 @@ import { LeagueUserService } from '../services/league-user.service';
 import { LeagueUserInputDto } from '../dtos/league-user.dto';
 import { LeagueUser } from '../entities/league-user.entity';
 import AppDataSource from '../config/database.config';
+import { createImageUploadTokenHandler } from '../utils/blob.utils';
 
 export class LeagueController extends BaseController<League, LeagueInputDto, LeagueOutputDto> {
   public router = Router();
@@ -32,6 +33,14 @@ export class LeagueController extends BaseController<League, LeagueInputDto, Lea
     this.router.post('/', isAuthenticated, validateDto(LeagueInputDto), this.createWithModerator);
     this.router.put('/:id', isLeagueModerator(), validatePartialDto(LeagueInputDto), this.update);
     this.router.delete('/:id', isLeagueModerator(), this.delete);
+    // Issues a short-lived Blob upload token for a league logo. Gated inline by
+    // isLeagueModerator() to match this controller's own PUT/DELETE (the
+    // /api/league mount has no blanket write middleware).
+    this.router.post(
+      '/:id/logo-upload-token',
+      isLeagueModerator(),
+      createImageUploadTokenHandler((req) => `logos/league/${parseInt(req.params.id)}/`),
+    );
   }
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {

@@ -1,6 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
-import { IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, IsUrl, Max, Min } from 'class-validator';
 import { SeasonOutputDto } from './season.dto';
 import { SeasonPokemonTeamOutputDto } from './season-pokemon-team.dto';
 import { GameOutputDto } from './game.dto';
@@ -19,6 +19,9 @@ export class TeamOutputDto extends BaseOutputDto {
 
   @Expose()
   skillLevel: number | null;
+
+  @Expose()
+  logoUrl: string | null;
 
   @Expose({ groups: ['team.full'] })
   @Type(() => SeasonOutputDto)
@@ -72,4 +75,9 @@ export class TeamInputDto extends BaseInputDto {
   @Min(1)
   @Max(100)
   skillLevel?: number;
+
+  @Expose()
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  logoUrl?: string | null;
 }

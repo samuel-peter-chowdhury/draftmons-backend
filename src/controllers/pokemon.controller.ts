@@ -8,6 +8,7 @@ import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
 import { parsePokemonSearchFilters, POKEMON_SORT_FIELD_MAP } from '../utils/pokemon-search.utils';
+import { createImageUploadTokenHandler } from '../utils/blob.utils';
 
 export class PokemonController extends BaseController<Pokemon, PokemonInputDto, PokemonOutputDto> {
   public router = Router();
@@ -23,6 +24,12 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
     this.router.post('/', validateDto(PokemonInputDto), this.create);
     this.router.put('/:id', validatePartialDto(PokemonInputDto), this.update);
     this.router.delete('/:id', this.delete);
+    // Issues a short-lived Blob upload token for a Pokemon sprite override.
+    // Inherits the admin-write gate from the /api/pokemon mount (isAuthReadAdminWrite).
+    this.router.post(
+      '/:id/sprite-upload-token',
+      createImageUploadTokenHandler((req) => `sprites/pokemon/${parseInt(req.params.id)}/`),
+    );
   }
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {

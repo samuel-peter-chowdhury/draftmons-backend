@@ -33,6 +33,9 @@ export class User extends BaseApplicationEntity {
   @Column({ nullable: true })
   timezone: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  avatarUrl: string | null;
+
   @OneToMany(() => LeagueUser, (leagueUser) => leagueUser.user)
   leagueUsers: LeagueUser[];
 

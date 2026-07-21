@@ -10,6 +10,7 @@ import { plainToInstance } from 'class-transformer';
 import { tr } from '@faker-js/faker/.';
 import AppDataSource from '../config/database.config';
 import { ForbiddenError } from '../errors';
+import { createImageUploadTokenHandler } from '../utils/blob.utils';
 
 export class TeamController extends BaseController<Team, TeamInputDto, TeamOutputDto> {
   public router = Router();
@@ -25,6 +26,15 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
     this.router.post('/', validateDto(TeamInputDto), this.create);
     this.router.put('/:id', validatePartialDto(TeamInputDto), this.update);
     this.router.delete('/:id', this.delete);
+    // Issues a short-lived Blob upload token for a team logo. Added once; it
+    // inherits whichever gate the request arrives through — admin-only via the
+    // /api/team mount (isAuthReadAdminWrite) or league-mod via the
+    // /api/league/:leagueId/team mount (isAuthReadLeagueModWrite) — exactly like
+    // the PUT/DELETE routes above.
+    this.router.post(
+      '/:id/logo-upload-token',
+      createImageUploadTokenHandler((req) => `logos/team/${parseInt(req.params.id)}/`),
+    );
   }
 
   protected getFullTransformGroup(): string[] {
@@ -38,7 +48,8 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<Team> | FindOptionsWhere<Team>[] | undefined> {
-    return plainToInstance(TeamInputDto, req.query, { excludeExtraneousValues: true });
+    const where: any = plainToInstance(TeamInputDto, req.query, { excludeExtraneousValues: true });
+    return where;
   }
 
   protected getBaseRelations(): FindOptionsRelations<Team> | undefined {

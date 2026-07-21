@@ -1,8 +1,9 @@
-import { Brackets, FindOptionsRelations, Repository } from 'typeorm';
+import { Brackets, FindOptionsRelations, FindOptionsWhere, Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
 import { UserInputDto } from '../dtos/user.dto';
+import { deleteOwnedBlob } from '../utils/blob.utils';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import { Request } from 'express';
 
@@ -17,6 +18,20 @@ export class UserService extends BaseService<User, UserInputDto> {
     private userRepository: Repository<User>,
   ) {
     super(userRepository, 'User');
+  }
+
+  async update(
+    where: FindOptionsWhere<User>,
+    data: Partial<UserInputDto>,
+    relations?: FindOptionsRelations<User>,
+  ): Promise<User> {
+    const oldAvatarUrl =
+      data.avatarUrl !== undefined ? (await this.findOne(where)).avatarUrl : undefined;
+    const updated = await super.update(where, data, relations);
+    if (oldAvatarUrl && oldAvatarUrl !== updated.avatarUrl) {
+      await deleteOwnedBlob(oldAvatarUrl);
+    }
+    return updated;
   }
 
   async search(
