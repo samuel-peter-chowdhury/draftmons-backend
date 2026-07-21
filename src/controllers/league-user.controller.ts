@@ -49,6 +49,19 @@ export class LeagueUserController extends BaseController<
     return { league: true, user: true };
   }
 
+  protected getLeagueScopeWhere(req: Request): FindOptionsWhere<LeagueUser> | undefined {
+    const leagueId = parseInt(req.params.leagueId);
+    return isNaN(leagueId) ? undefined : { leagueId };
+  }
+
+  protected async enforceLeagueScope(req: Request): Promise<void> {
+    const leagueId = parseInt(req.params.leagueId);
+    if (isNaN(leagueId)) {
+      return;
+    }
+    (req.body as LeagueUserInputDto).leagueId = leagueId;
+  }
+
   /**
    * @swagger
    * tags:

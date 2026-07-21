@@ -172,7 +172,7 @@ export class App {
   private async initializeRedis(): Promise<void> {
     // Initialize Redis for session storage
     this.redisClient = createClient({
-      url: `redis://${APP_CONFIG.redis.host}:${APP_CONFIG.redis.port}`,
+      url: `rediss://${APP_CONFIG.redis.host}:${APP_CONFIG.redis.port}`,
       password: APP_CONFIG.redis.password || undefined,
     });
 

@@ -70,6 +70,8 @@ export abstract class BaseController<
   });
 
   create = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    await this.enforceLeagueScope(req);
+
     const entity = await this.service.create(req.body);
 
     res.status(201).json(
@@ -84,6 +86,9 @@ export abstract class BaseController<
     if (isNaN(id)) {
       throw new AppValidationError('Invalid ID format');
     }
+
+    await this.assertLeagueScope(req, id);
+    await this.enforceLeagueScope(req);
 
     const isFull = req.query.full === 'true';
     const where = { id } as FindOptionsWhere<E>;
@@ -106,12 +111,38 @@ export abstract class BaseController<
       throw new AppValidationError('Invalid ID format');
     }
 
+    await this.assertLeagueScope(req, id);
+
     const where = { id } as FindOptionsWhere<E>;
 
     await this.service.delete(where);
 
     res.status(204).send();
   });
+
+  // Re-derives the additional relation-based `where` constraints (e.g. { season: { leagueId } })
+  // used to confirm an existing entity belongs to the league in req.params.leagueId before
+  // update/delete proceed. Returns undefined when the route isn't league-nested or the subclass
+  // doesn't need scoping (e.g. standalone, admin-only resources).
+  protected getLeagueScopeWhere(req: Request): Partial<FindOptionsWhere<E>> | undefined {
+    return undefined;
+  }
+
+  // Validates (and may overwrite) league-scoping foreign keys on req.body before create/update,
+  // so a request against /api/league/:leagueId/... can never write data into a different league.
+  // No-op by default; override in league-nested controllers.
+  protected async enforceLeagueScope(req: Request): Promise<void> {
+    return;
+  }
+
+  private async assertLeagueScope(req: Request, id: number): Promise<void> {
+    const scopeWhere = this.getLeagueScopeWhere(req);
+    if (!scopeWhere) {
+      return;
+    }
+    // Throws NotFoundError if the entity doesn't belong to the scoped league.
+    await this.service.findOne({ id, ...scopeWhere } as FindOptionsWhere<E>);
+  }
 
   protected getMaxPageSize(): number {
     return 100;

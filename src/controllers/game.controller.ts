@@ -2,10 +2,13 @@ import { Request, Router } from 'express';
 import { GameService } from '../services/game.service';
 import { BaseController } from './base.controller';
 import { Game } from '../entities/game.entity';
+import { Match } from '../entities/match.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { GameInputDto, GameOutputDto } from '../dtos/game.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import AppDataSource from '../config/database.config';
+import { ForbiddenError } from '../errors';
 
 export class GameController extends BaseController<Game, GameInputDto, GameOutputDto> {
   public router = Router();
@@ -39,6 +42,30 @@ export class GameController extends BaseController<Game, GameInputDto, GameOutpu
 
   protected getBaseRelations(): FindOptionsRelations<Game> | undefined {
     return undefined;
+  }
+
+  protected getLeagueScopeWhere(req: Request): FindOptionsWhere<Game> | undefined {
+    const leagueId = parseInt(req.params.leagueId);
+    return isNaN(leagueId)
+      ? undefined
+      : ({ match: { week: { season: { leagueId } } } } as FindOptionsWhere<Game>);
+  }
+
+  protected async enforceLeagueScope(req: Request): Promise<void> {
+    const leagueId = parseInt(req.params.leagueId);
+    if (isNaN(leagueId)) {
+      return;
+    }
+    const matchId = (req.body as GameInputDto).matchId;
+    if (matchId === undefined) {
+      return;
+    }
+    const match = await AppDataSource.getRepository(Match).findOne({
+      where: { id: matchId, week: { season: { leagueId } } },
+    });
+    if (!match) {
+      throw new ForbiddenError(`Match ${matchId} does not belong to league ${leagueId}`);
+    }
   }
 
   protected getFullRelations(): FindOptionsRelations<Game> | undefined {

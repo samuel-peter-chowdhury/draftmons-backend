@@ -2,11 +2,14 @@ import { Request, Router } from 'express';
 import { TeamService } from '../services/team.service';
 import { BaseController } from './base.controller';
 import { Team } from '../entities/team.entity';
+import { Season } from '../entities/season.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { TeamInputDto, TeamOutputDto } from '../dtos/team.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { tr } from '@faker-js/faker/.';
+import AppDataSource from '../config/database.config';
+import { ForbiddenError } from '../errors';
 
 export class TeamController extends BaseController<Team, TeamInputDto, TeamOutputDto> {
   public router = Router();
@@ -40,6 +43,28 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
 
   protected getBaseRelations(): FindOptionsRelations<Team> | undefined {
     return undefined;
+  }
+
+  protected getLeagueScopeWhere(req: Request): FindOptionsWhere<Team> | undefined {
+    const leagueId = parseInt(req.params.leagueId);
+    return isNaN(leagueId) ? undefined : ({ season: { leagueId } } as FindOptionsWhere<Team>);
+  }
+
+  protected async enforceLeagueScope(req: Request): Promise<void> {
+    const leagueId = parseInt(req.params.leagueId);
+    if (isNaN(leagueId)) {
+      return;
+    }
+    const seasonId = (req.body as TeamInputDto).seasonId;
+    if (seasonId === undefined) {
+      return;
+    }
+    const season = await AppDataSource.getRepository(Season).findOne({
+      where: { id: seasonId, leagueId },
+    });
+    if (!season) {
+      throw new ForbiddenError(`Season ${seasonId} does not belong to league ${leagueId}`);
+    }
   }
 
   protected getFullRelations(): FindOptionsRelations<Team> | undefined {
