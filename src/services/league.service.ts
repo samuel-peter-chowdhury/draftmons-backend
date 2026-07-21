@@ -4,6 +4,7 @@ import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
 import { LeagueInputDto } from '../dtos/league.dto';
 import { ConflictError } from '../errors';
+import { deleteOwnedBlob } from '../utils/blob.utils';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import { Request } from 'express';
 import { getQueryIntArray } from '../utils/request.utils';
@@ -70,6 +71,19 @@ export class LeagueService extends BaseService<League, LeagueInputDto> {
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     };
+  }
+
+  async update(
+    where: FindOptionsWhere<League>,
+    data: Partial<LeagueInputDto>,
+    relations?: FindOptionsRelations<League>,
+  ): Promise<League> {
+    const oldLogoUrl = data.logoUrl !== undefined ? (await this.findOne(where)).logoUrl : undefined;
+    const updated = await super.update(where, data, relations);
+    if (oldLogoUrl && oldLogoUrl !== updated.logoUrl) {
+      await deleteOwnedBlob(oldLogoUrl);
+    }
+    return updated;
   }
 
   async delete(where: FindOptionsWhere<League>): Promise<boolean> {

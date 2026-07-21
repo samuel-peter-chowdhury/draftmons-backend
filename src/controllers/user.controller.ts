@@ -8,6 +8,7 @@ import { UserInputDto, UserOutputDto } from '../dtos/user.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
+import { createImageUploadTokenHandler } from '../utils/blob.utils';
 
 export class UserController extends BaseController<User, UserInputDto, UserOutputDto> {
   public router = Router();
@@ -33,6 +34,15 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
       isAdminOrUser(),
       validatePartialDto(UserInputDto),
       this.update,
+    );
+
+    // Issues a short-lived Blob upload token for a user avatar. Gated inline to
+    // match this controller's own PUT (own-profile-or-admin).
+    this.router.post(
+      '/:id/avatar-upload-token',
+      isAuthenticated,
+      isAdminOrUser(),
+      createImageUploadTokenHandler((req) => `avatars/user/${parseInt(req.params.id)}/`),
     );
   }
 
@@ -74,9 +84,10 @@ export class UserController extends BaseController<User, UserInputDto, UserOutpu
   protected async getWhere(
     req: Request,
   ): Promise<FindOptionsWhere<User> | FindOptionsWhere<User>[] | undefined> {
-    return plainToInstance(UserInputDto, req.query, {
+    const where: any = plainToInstance(UserInputDto, req.query, {
       excludeExtraneousValues: true,
     });
+    return where;
   }
 
   protected getBaseRelations(): FindOptionsRelations<User> | undefined {

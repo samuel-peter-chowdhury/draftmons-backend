@@ -1,6 +1,6 @@
 import { Expose, Transform, Type } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, IsUrl } from 'class-validator';
 import { LeagueUserOutputDto } from './league-user.dto';
 import { TeamOutputDto } from './team.dto';
 
@@ -35,6 +35,9 @@ export class UserOutputDto extends BaseOutputDto {
 
   @Expose()
   timezone: string;
+
+  @Expose()
+  avatarUrl: string | null;
 
   @Expose({ groups: ['user.full'] })
   @Type(() => LeagueUserOutputDto)
@@ -85,6 +88,11 @@ export class UserInputDto extends BaseInputDto {
   @IsOptional()
   @IsString()
   timezone: string;
+
+  @Expose()
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  avatarUrl?: string | null;
 }
 
 export class AdminUserRoleDto {
