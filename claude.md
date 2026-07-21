@@ -587,6 +587,8 @@ The application manages competitive Pokemon leagues with:
 
 ## Build and Deployment
 
+> **Production deployment (Railway + Neon + Upstash) is documented in [`DEPLOYMENT.md`](./DEPLOYMENT.md)** — as-built URLs, required env vars, migration procedure, and the cross-domain session fix. Read it before changing deploy config or auth env vars.
+
 ### Development
 ```bash
 npm run dev  # Start with nodemon and ts-node
