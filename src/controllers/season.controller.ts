@@ -43,6 +43,19 @@ export class SeasonController extends BaseController<Season, SeasonInputDto, Sea
     };
   }
 
+  protected getLeagueScopeWhere(req: Request): FindOptionsWhere<Season> | undefined {
+    const leagueId = parseInt(req.params.leagueId);
+    return isNaN(leagueId) ? undefined : { leagueId };
+  }
+
+  protected async enforceLeagueScope(req: Request): Promise<void> {
+    const leagueId = parseInt(req.params.leagueId);
+    if (isNaN(leagueId)) {
+      return;
+    }
+    (req.body as SeasonInputDto).leagueId = leagueId;
+  }
+
   protected getFullRelations(): FindOptionsRelations<Season> | undefined {
     return {
       generation: true,

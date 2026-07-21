@@ -8,6 +8,20 @@ import { registerRepositories } from './config/repository.config';
 import { DiscordService } from './services/discord.service';
 import { NotificationService } from './services/notification.service';
 
+// Express and the in-process Discord bot share this process. An uncaught error
+// anywhere in that surface (a discord.js internal throw, a missed .catch(), a
+// passport strategy callback) would otherwise crash Node in an undefined state
+// and take the whole API down with it. Log and exit so Railway can restart cleanly.
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught exception — shutting down:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('💥 Unhandled promise rejection — shutting down:', reason);
+  process.exit(1);
+});
+
 function validateProductionEnv(): void {
   if (APP_CONFIG.isProduction) {
     const required = [

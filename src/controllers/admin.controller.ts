@@ -1,11 +1,12 @@
-import { Request, Response, Router } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { AdminService } from '../services/admin.service';
 import { UserService } from '../services/user.service';
 import { asyncHandler } from '../utils/error.utils';
 import { validateDto } from '../middleware/validation.middleware';
 import { AdminUserRoleDto } from '../dtos/user.dto';
-import { ValidationError } from '../errors';
+import { ValidationError, ForbiddenError } from '../errors';
 import { Container } from 'typedi';
+import { APP_CONFIG } from '../config/app.config';
 
 export class AdminController {
   public router = Router();
@@ -33,7 +34,11 @@ export class AdminController {
     res.json(user);
   });
 
-  wipeAllData = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  wipeAllData = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (APP_CONFIG.isProduction) {
+      return next(new ForbiddenError('Not available in production'));
+    }
+
     const preservePokemonData = req.query.preservePokemonData === 'true';
     await this.adminService.wipeAllData(preservePokemonData);
     const message = preservePokemonData

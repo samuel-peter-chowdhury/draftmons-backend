@@ -2,10 +2,13 @@ import { Request, Router } from 'express';
 import { GameStatService } from '../services/game-stat.service';
 import { BaseController } from './base.controller';
 import { GameStat } from '../entities/game-stat.entity';
+import { Game } from '../entities/game.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { GameStatInputDto, GameStatOutputDto } from '../dtos/game-stat.dto';
 import { FindOptionsWhere, FindOptionsRelations, In } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import AppDataSource from '../config/database.config';
+import { ForbiddenError } from '../errors';
 
 export class GameStatController extends BaseController<
   GameStat,
@@ -61,6 +64,30 @@ export class GameStatController extends BaseController<
 
   protected getBaseRelations(): FindOptionsRelations<GameStat> | undefined {
     return undefined;
+  }
+
+  protected getLeagueScopeWhere(req: Request): FindOptionsWhere<GameStat> | undefined {
+    const leagueId = parseInt(req.params.leagueId);
+    return isNaN(leagueId)
+      ? undefined
+      : ({ game: { match: { week: { season: { leagueId } } } } } as FindOptionsWhere<GameStat>);
+  }
+
+  protected async enforceLeagueScope(req: Request): Promise<void> {
+    const leagueId = parseInt(req.params.leagueId);
+    if (isNaN(leagueId)) {
+      return;
+    }
+    const gameId = (req.body as GameStatInputDto).gameId;
+    if (gameId === undefined) {
+      return;
+    }
+    const game = await AppDataSource.getRepository(Game).findOne({
+      where: { id: gameId, match: { week: { season: { leagueId } } } },
+    });
+    if (!game) {
+      throw new ForbiddenError(`Game ${gameId} does not belong to league ${leagueId}`);
+    }
   }
 
   protected getFullRelations(): FindOptionsRelations<GameStat> | undefined {

@@ -2,12 +2,14 @@ import { Request, Response, Router } from 'express';
 import { SeasonPokemonService } from '../services/season-pokemon.service';
 import { BaseController } from './base.controller';
 import { SeasonPokemon } from '../entities/season-pokemon.entity';
+import { Season } from '../entities/season.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { SeasonPokemonInputDto, SeasonPokemonOutputDto } from '../dtos/season-pokemon.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
-import { ValidationError as AppValidationError } from '../errors';
+import { ValidationError as AppValidationError, ForbiddenError } from '../errors';
+import AppDataSource from '../config/database.config';
 import {
   parseSeasonPokemonSearchFilters,
   SEASON_POKEMON_SORT_FIELD_MAP,
@@ -110,6 +112,30 @@ export class SeasonPokemonController extends BaseController<
 
   protected getBaseRelations(): FindOptionsRelations<SeasonPokemon> | undefined {
     return undefined;
+  }
+
+  protected getLeagueScopeWhere(req: Request): FindOptionsWhere<SeasonPokemon> | undefined {
+    const leagueId = parseInt(req.params.leagueId);
+    return isNaN(leagueId)
+      ? undefined
+      : ({ season: { leagueId } } as FindOptionsWhere<SeasonPokemon>);
+  }
+
+  protected async enforceLeagueScope(req: Request): Promise<void> {
+    const leagueId = parseInt(req.params.leagueId);
+    if (isNaN(leagueId)) {
+      return;
+    }
+    const seasonId = (req.body as SeasonPokemonInputDto).seasonId;
+    if (seasonId === undefined) {
+      return;
+    }
+    const season = await AppDataSource.getRepository(Season).findOne({
+      where: { id: seasonId, leagueId },
+    });
+    if (!season) {
+      throw new ForbiddenError(`Season ${seasonId} does not belong to league ${leagueId}`);
+    }
   }
 
   protected getFullRelations(): FindOptionsRelations<SeasonPokemon> | undefined {

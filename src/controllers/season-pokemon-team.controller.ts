@@ -2,6 +2,8 @@ import { Request, Router } from 'express';
 import { SeasonPokemonTeamService } from '../services/season-pokemon-team.service';
 import { BaseController } from './base.controller';
 import { SeasonPokemonTeam } from '../entities/season-pokemon-team.entity';
+import { Team } from '../entities/team.entity';
+import { SeasonPokemon } from '../entities/season-pokemon.entity';
 import { validateDto, validatePartialDto } from '../middleware/validation.middleware';
 import { isAuthenticated } from '../middleware/auth.middleware';
 import {
@@ -10,6 +12,8 @@ import {
 } from '../dtos/season-pokemon-team.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import AppDataSource from '../config/database.config';
+import { ForbiddenError } from '../errors';
 
 export class SeasonPokemonTeamController extends BaseController<
   SeasonPokemonTeam,
@@ -54,6 +58,41 @@ export class SeasonPokemonTeamController extends BaseController<
 
   protected getBaseRelations(): FindOptionsRelations<SeasonPokemonTeam> | undefined {
     return undefined;
+  }
+
+  protected getLeagueScopeWhere(req: Request): FindOptionsWhere<SeasonPokemonTeam> | undefined {
+    const leagueId = parseInt(req.params.leagueId);
+    return isNaN(leagueId)
+      ? undefined
+      : ({ team: { season: { leagueId } } } as FindOptionsWhere<SeasonPokemonTeam>);
+  }
+
+  protected async enforceLeagueScope(req: Request): Promise<void> {
+    const leagueId = parseInt(req.params.leagueId);
+    if (isNaN(leagueId)) {
+      return;
+    }
+    const { teamId, seasonPokemonId } = req.body as SeasonPokemonTeamInputDto;
+
+    if (teamId !== undefined) {
+      const team = await AppDataSource.getRepository(Team).findOne({
+        where: { id: teamId, season: { leagueId } },
+      });
+      if (!team) {
+        throw new ForbiddenError(`Team ${teamId} does not belong to league ${leagueId}`);
+      }
+    }
+
+    if (seasonPokemonId !== undefined) {
+      const seasonPokemon = await AppDataSource.getRepository(SeasonPokemon).findOne({
+        where: { id: seasonPokemonId, season: { leagueId } },
+      });
+      if (!seasonPokemon) {
+        throw new ForbiddenError(
+          `SeasonPokemon ${seasonPokemonId} does not belong to league ${leagueId}`,
+        );
+      }
+    }
   }
 
   protected getFullRelations(): FindOptionsRelations<SeasonPokemonTeam> | undefined {
