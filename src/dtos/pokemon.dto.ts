@@ -1,12 +1,14 @@
 import { Expose, Type, Transform } from 'class-transformer';
 import { BaseOutputDto, BaseInputDto } from './base.dto';
-import { IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString, IsUrl, ValidateIf } from 'class-validator';
 import { MoveOutputDto } from './move.dto';
 import { AbilityOutputDto } from './ability.dto';
 import { GenerationOutputDto } from './generation.dto';
 import { PokemonTypeOutputDto } from './pokemon-type.dto';
 import { TypeEffectiveOutputDto } from './type-effective.dto';
 import { SeasonPokemonOutputDto } from './season-pokemon.dto';
+import { toID } from '../utils/showdown-id.utils';
+import { Dex } from '@pkmn/dex';
 
 export class PokemonOutputDto extends BaseOutputDto {
   @Expose()
@@ -47,6 +49,7 @@ export class PokemonOutputDto extends BaseOutputDto {
 
   @Expose()
   @Transform(({ obj }) => {
+    if (obj.sprite) return obj.sprite; // manual override — see below
     if (!obj.name) {
       return '';
     }
@@ -56,7 +59,26 @@ export class PokemonOutputDto extends BaseOutputDto {
       .toLowerCase();
     return `https://www.smogon.com/dex/media/sprites/xy/${sanitizedName}.gif`;
   })
-  spriteUrl: string;
+  spriteGifUrl: string;
+
+  @Expose()
+  @Transform(({ obj }) => {
+    if (obj.sprite) return obj.sprite; // manual override — see below
+    if (!obj.name) return '';
+    // Showdown's sprite CDN keeps a hyphen between base species and forme for
+    // true alternate formes (charizard-megax, rayquaza-mega, darmanitan-galar)
+    // but not for species whose hyphen is part of the base name itself
+    // (ho-oh, porygon-z, nidoran-f) — @pkmn/dex's `forme` field is what
+    // distinguishes the two; toID(obj.name) alone can't (verified live against
+    // play.pokemonshowdown.com — see spec's Edge Cases section).
+    const species = Dex.species.get(obj.name);
+    const slug = species.forme
+      ? `${toID(species.baseSpecies)}-${toID(species.forme)}`
+      : toID(obj.name);
+    if (!slug) return '';
+    return `https://play.pokemonshowdown.com/sprites/home-centered/${slug}.png`;
+  })
+  spritePngUrl: string;
 
   @Expose()
   generationId: number;
@@ -133,6 +155,8 @@ export class PokemonInputDto extends BaseInputDto {
 
   @Expose()
   @IsString()
+  @ValidateIf((o) => o.sprite !== '')
+  @IsUrl({ protocols: ['https'], require_protocol: true })
   sprite: string;
 
   @Expose()
