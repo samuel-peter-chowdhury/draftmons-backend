@@ -45,6 +45,8 @@ export class TeamBuildSetService extends BaseService<TeamBuildSet, TeamBuildSetI
     const pokemon = await this.pokemonRepository.findOne({
       where: { id: pokemonId },
       relations: { abilities: true, moves: true },
+      // 'query' strategy avoids the abilities × moves Cartesian product (Neon egress). See base.service.ts.
+      relationLoadStrategy: 'query',
     });
     if (!pokemon) {
       throw new ValidationError(`Pokemon with id ${pokemonId} not found`);
