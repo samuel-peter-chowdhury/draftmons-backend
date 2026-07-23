@@ -20,6 +20,7 @@ import {
   applySearchPagination,
   SEASON_POKEMON_SORT_FIELD_MAP,
 } from '../utils/pokemon-search.utils';
+import { hydrateRelations } from '../utils/relation-hydration.utils';
 import AppDataSource from '../config/database.config';
 
 @Service()
@@ -151,17 +152,28 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
   ): Promise<PaginatedResponse<SeasonPokemon>> {
     const { page, pageSize } = paginationOptions ?? { page: 1, pageSize: 25 };
 
-    let qb = this.buildQueryBuilder(
-      loadFullRelations,
-      activeRelationsOnly,
-      filters.teamId !== undefined,
-    );
+    // Phase 1: select the page's ids only. The `pokemon` join is a plain leftJoin
+    // (not leftJoinAndSelect) so sorting/filtering on pokemon.* columns still works
+    // without hydrating — no Cartesian row multiplication from gameStats/teams.
+    let qb = this.buildFilterQueryBuilder(activeRelationsOnly, filters.teamId !== undefined);
 
     qb = applySeasonPokemonSearchFilters(qb, filters);
     qb = applySearchSorting(qb, sortOptions, SEASON_POKEMON_SORT_FIELD_MAP);
     qb = applySearchPagination(qb, page, pageSize);
 
-    const [data, total] = await qb.getManyAndCount();
+    const [rows, total] = await qb.getManyAndCount();
+
+    // Phase 2: hydrate the page's relation graph via separate queries.
+    const relations = this.buildRelations(loadFullRelations);
+    const data = await hydrateRelations(
+      this.repository,
+      rows.map((r) => r.id),
+      relations,
+    );
+
+    if (loadFullRelations && activeRelationsOnly) {
+      this.filterActiveTeams(data);
+    }
 
     return {
       data,
@@ -170,6 +182,37 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     };
+  }
+
+  /**
+   * The relation graph a SeasonPokemon search/findOne hydrates. Base search always
+   * loads `pokemon` (the list UI needs it); full also loads season, nested pokemon
+   * relations, gameStats, and team assignments.
+   */
+  private buildRelations(loadFullRelations: boolean): FindOptionsRelations<SeasonPokemon> {
+    if (!loadFullRelations) {
+      return { pokemon: true };
+    }
+    return {
+      season: true,
+      pokemon: { pokemonTypes: true, abilities: true, generation: true },
+      gameStats: true,
+      seasonPokemonTeams: { team: true },
+    };
+  }
+
+  /**
+   * `activeRelationsOnly` mode originally filtered the `seasonPokemonTeams` join to
+   * `isActive = true`. TypeORM's `relations` option can't express a per-relation WHERE,
+   * and seasonPokemonTeams is sparse (a handful of rows per season), so we hydrate all
+   * of them and drop the inactive ones in Node — content-equivalent, negligible egress.
+   */
+  private filterActiveTeams(rows: SeasonPokemon[]): void {
+    for (const sp of rows) {
+      if (sp.seasonPokemonTeams) {
+        sp.seasonPokemonTeams = sp.seasonPokemonTeams.filter((spt) => spt.isActive);
+      }
+    }
   }
 
   async findOne(
@@ -181,7 +224,9 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
       return super.findOne(where, relations);
     }
 
-    const qb = this.buildQueryBuilder(true, true);
+    // Two-phase single-row load: find the id with the filter-only builder, then hydrate
+    // the full active relation graph via separate queries (consistent with search()).
+    const qb = this.buildFilterQueryBuilder(true, false);
     const whereRecord = where as Record<string, unknown>;
 
     if (whereRecord.id !== undefined) {
@@ -194,45 +239,33 @@ export class SeasonPokemonService extends BaseService<SeasonPokemon, SeasonPokem
       qb.andWhere('seasonPokemon.pokemonId = :pokemonId', { pokemonId: whereRecord.pokemonId });
     }
 
-    const entity = await qb.getOne();
+    const found = await qb.getOne();
 
-    if (!entity) {
+    if (!found) {
       throw new NotFoundError(this.entityName, JSON.stringify(where));
     }
+
+    const [entity] = await hydrateRelations(this.repository, [found.id], this.buildRelations(true));
+    this.filterActiveTeams([entity]);
 
     return entity;
   }
 
-  private buildQueryBuilder(
-    loadFullRelations: boolean,
+  /**
+   * Builds the phase-1 (id-selection) query: filters/sorting on `pokemon.*` need the
+   * `pokemon` join, but as a plain `leftJoin` (no select) so it never multiplies rows.
+   * The `seasonPokemonTeams` join is filter-only (for the `teamId` filter) and only
+   * added when needed — hydration of these relations happens separately in phase 2.
+   */
+  private buildFilterQueryBuilder(
     activeRelationsOnly: boolean,
     needsTeamJoin?: boolean,
   ): SelectQueryBuilder<SeasonPokemon> {
     const qb = this.repository
       .createQueryBuilder('seasonPokemon')
-      .leftJoinAndSelect('seasonPokemon.pokemon', 'pokemon');
+      .leftJoin('seasonPokemon.pokemon', 'pokemon');
 
-    if (loadFullRelations) {
-      qb.leftJoinAndSelect('seasonPokemon.season', 'season')
-        .leftJoinAndSelect('pokemon.pokemonTypes', 'pokemonType')
-        .leftJoinAndSelect('pokemon.abilities', 'ability')
-        .leftJoinAndSelect('pokemon.generation', 'generation')
-        .leftJoinAndSelect('seasonPokemon.gameStats', 'gameStat');
-
-      if (activeRelationsOnly) {
-        qb.leftJoinAndSelect(
-          'seasonPokemon.seasonPokemonTeams',
-          'seasonPokemonTeam',
-          'seasonPokemonTeam.isActive = :sptActive',
-          { sptActive: true },
-        ).leftJoinAndSelect('seasonPokemonTeam.team', 'team');
-      } else {
-        qb.leftJoinAndSelect(
-          'seasonPokemon.seasonPokemonTeams',
-          'seasonPokemonTeam',
-        ).leftJoinAndSelect('seasonPokemonTeam.team', 'team');
-      }
-    } else if (needsTeamJoin) {
+    if (needsTeamJoin) {
       if (activeRelationsOnly) {
         qb.leftJoin(
           'seasonPokemon.seasonPokemonTeams',

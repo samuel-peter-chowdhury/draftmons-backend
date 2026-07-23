@@ -5,8 +5,8 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import passport from 'passport';
-import { createClient } from 'redis';
 import RedisStore from 'connect-redis';
+import { initializeRedisClient, disconnectRedisClient } from './config/redis.config';
 import swaggerUi from 'swagger-ui-express';
 import { errorMiddleware } from './middleware/error.middleware';
 import { APP_CONFIG } from './config/app.config';
@@ -72,7 +72,6 @@ import { SeasonPokemonBulkController } from './controllers/season-pokemon-bulk.c
 
 export class App {
   public app: Application;
-  private redisClient: ReturnType<typeof createClient>;
   private discordService: DiscordService;
   private matchAnalysisService: MatchAnalysisService;
   private adminService: AdminService;
@@ -170,14 +169,10 @@ export class App {
   }
 
   private async initializeRedis(): Promise<void> {
-    // Initialize Redis for session storage
-    this.redisClient = createClient({
-      url: `rediss://${APP_CONFIG.redis.host}:${APP_CONFIG.redis.port}`,
-      password: APP_CONFIG.redis.password || undefined,
-    });
-
+    // Shared Redis client (also used by the reference-data cache — see redis.config.ts).
+    let redisClient;
     try {
-      await this.redisClient.connect();
+      redisClient = await initializeRedisClient();
       console.log('📦 Redis connected successfully');
     } catch (error) {
       console.error('❌ Redis connection failed:', error);
@@ -186,7 +181,7 @@ export class App {
 
     // Session middleware with Redis store
     const redisStore = new RedisStore({
-      client: this.redisClient,
+      client: redisClient,
       prefix: 'draftmons:session:',
     });
 
@@ -462,9 +457,7 @@ export class App {
 
   public async close(): Promise<void> {
     // Close database and Redis connections
-    if (this.redisClient) {
-      await this.redisClient.disconnect();
-    }
+    await disconnectRedisClient();
     await AppDataSource.destroy();
   }
 }

@@ -7,8 +7,13 @@ import { PokemonInputDto, PokemonOutputDto } from '../dtos/pokemon.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { asyncHandler } from '../utils/error.utils';
-import { parsePokemonSearchFilters, POKEMON_SORT_FIELD_MAP } from '../utils/pokemon-search.utils';
+import {
+  parsePokemonSearchFilters,
+  POKEMON_SORT_FIELD_MAP,
+  PokemonSearchFilters,
+} from '../utils/pokemon-search.utils';
 import { createImageUploadTokenHandler } from '../utils/blob.utils';
+import { getOrSetCached } from '../utils/cache.utils';
 
 export class PokemonController extends BaseController<Pokemon, PokemonInputDto, PokemonOutputDto> {
   public router = Router();
@@ -35,30 +40,68 @@ export class PokemonController extends BaseController<Pokemon, PokemonInputDto, 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const isFull = req.query.full === 'true';
     const filters = parsePokemonSearchFilters(req);
-    const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
-    const paginationOptions = await this.getPaginationOptions(req);
-    const sortOptions = await this.getSortOptions(req);
-    const group = isFull ? this.getFullTransformGroup() : undefined;
+    // Only the per-generation base dex (used by RapidPlacementView / dex lookups) is
+    // cached; any other filter, `full=true`, etc. returns null → bypass. Cached envelope
+    // is byte-identical to a miss (see BaseController.getAll's caching note).
+    const cacheKey = this.getDexCacheKey(req, filters);
 
-    const paginatedEntities = await this.pokemonService.search(
-      filters,
-      relations,
-      paginationOptions,
-      sortOptions,
-    );
+    const buildResponse = async () => {
+      const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+      const paginationOptions = await this.getPaginationOptions(req);
+      const sortOptions = await this.getSortOptions(req);
+      const group = isFull ? this.getFullTransformGroup() : undefined;
 
-    const response = {
-      data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
-        groups: group,
-        excludeExtraneousValues: true,
-      }),
-      total: paginatedEntities.total,
-      page: paginatedEntities.page,
-      pageSize: paginatedEntities.pageSize,
-      totalPages: paginatedEntities.totalPages,
+      const paginatedEntities = await this.pokemonService.search(
+        filters,
+        relations,
+        paginationOptions,
+        sortOptions,
+      );
+
+      return {
+        data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
+          groups: group,
+          excludeExtraneousValues: true,
+        }),
+        total: paginatedEntities.total,
+        page: paginatedEntities.page,
+        pageSize: paginatedEntities.pageSize,
+        totalPages: paginatedEntities.totalPages,
+      };
     };
+
+    const response = await getOrSetCached(cacheKey, buildResponse);
     res.json(response);
   });
+
+  // Cache key for the per-generation base dex, or null (bypass) for any request whose
+  // only-active-filter isn't exactly `generationIds` or that requests full relations.
+  private getDexCacheKey(req: Request, filters: PokemonSearchFilters): string | null {
+    if (req.query.full === 'true') return null;
+
+    const activeFilterKeys = Object.entries(filters)
+      .filter(([, value]) => {
+        if (value === undefined || value === null) return false;
+        if (typeof value === 'string') return value.trim() !== '';
+        if (Array.isArray(value)) return value.length > 0;
+        return true;
+      })
+      .map(([key]) => key);
+
+    if (activeFilterKeys.length !== 1 || activeFilterKeys[0] !== 'generationIds') return null;
+
+    // Only cache a SINGLE-generation dex so write-through invalidation by generation id
+    // (prefix `pokemon:dex:generation:<id>:`) is exact — a multi-gen entry couldn't be
+    // reliably invalidated when one of its generations changes.
+    const generationIds = filters.generationIds ?? [];
+    if (generationIds.length !== 1) return null;
+
+    const page = req.query.page ?? '';
+    const pageSize = req.query.pageSize ?? '';
+    const sortBy = req.query.sortBy ?? '';
+    const sortOrder = req.query.sortOrder ?? '';
+    return `pokemon:dex:generation:${generationIds[0]}:page=${page}:pageSize=${pageSize}:sortBy=${sortBy}:sortOrder=${sortOrder}`;
+  }
 
   protected getFullTransformGroup(): string[] {
     return ['pokemon.full'];

@@ -5,6 +5,7 @@ import { Service, Inject } from 'typedi';
 import { UserInputDto } from '../dtos/user.dto';
 import { deleteOwnedBlob } from '../utils/blob.utils';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
+import { hydrateRelations } from '../utils/relation-hydration.utils';
 import { Request } from 'express';
 
 @Service()
@@ -45,14 +46,9 @@ export class UserService extends BaseService<User, UserInputDto> {
     const { page, pageSize } = paginationOptions ? paginationOptions : { page: 1, pageSize: 25 };
     const skip = (page - 1) * pageSize;
 
+    // Phase 1: filter/sort/paginate for the page's ids only — no hydration joins
+    // (they multiply rows). Phase 2 hydrates relations via separate queries below.
     let queryBuilder = this.repository.createQueryBuilder('user');
-
-    // Add relations if needed
-    if (relations) {
-      Object.keys(relations).forEach((relation) => {
-        queryBuilder = queryBuilder.leftJoinAndSelect(`user.${relation}`, relation);
-      });
-    }
 
     // Add the name and email search conditions only if nameLike is provided
     if (nameLike) {
@@ -81,7 +77,11 @@ export class UserService extends BaseService<User, UserInputDto> {
 
     queryBuilder = queryBuilder.skip(skip).take(pageSize);
 
-    const [data, total] = await queryBuilder.getManyAndCount();
+    const [rows, total] = await queryBuilder.getManyAndCount();
+
+    const data = relations
+      ? await hydrateRelations(this.repository, rows.map((r) => r.id), relations)
+      : rows;
 
     return {
       data,

@@ -1,9 +1,10 @@
 import { PokemonType } from '../entities/pokemon-type.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsRelations, FindOptionsWhere, Repository } from 'typeorm';
 import { PokemonTypeInputDto } from '../dtos/pokemon-type.dto';
 import { ConflictError } from '../errors';
+import { invalidate, referenceListInvalidationPrefix } from '../utils/cache.utils';
 
 @Service()
 export class PokemonTypeService extends BaseService<PokemonType, PokemonTypeInputDto> {
@@ -12,6 +13,24 @@ export class PokemonTypeService extends BaseService<PokemonType, PokemonTypeInpu
     private PokemonTypeRepository: Repository<PokemonType>,
   ) {
     super(PokemonTypeRepository, 'PokemonType');
+  }
+
+  // Write-through cache invalidation: any create/update/delete clears the cached base list
+  // so the very next GET reflects the change (not TTL-dependent).
+  async create(data: PokemonTypeInputDto): Promise<PokemonType> {
+    const created = await super.create(data);
+    await invalidate(referenceListInvalidationPrefix('pokemon-type'));
+    return created;
+  }
+
+  async update(
+    where: FindOptionsWhere<PokemonType>,
+    data: Partial<PokemonTypeInputDto>,
+    relations?: FindOptionsRelations<PokemonType>,
+  ): Promise<PokemonType> {
+    const updated = await super.update(where, data, relations);
+    await invalidate(referenceListInvalidationPrefix('pokemon-type'));
+    return updated;
   }
 
   async delete(where: FindOptionsWhere<PokemonType>): Promise<boolean> {
@@ -24,6 +43,8 @@ export class PokemonTypeService extends BaseService<PokemonType, PokemonTypeInpu
         `Cannot delete Pokemon Type: it still has ${children.join(' and ')}. Remove them first.`,
       );
     }
-    return super.delete(where);
+    const result = await super.delete(where);
+    await invalidate(referenceListInvalidationPrefix('pokemon-type'));
+    return result;
   }
 }

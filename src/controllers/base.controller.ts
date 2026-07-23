@@ -9,6 +9,7 @@ import { PaginationOptions, SortOptions } from '../utils/pagination.utils';
 import { FindOptionsRelations, FindOptionsWhere } from 'typeorm';
 import { validate, ValidationError } from 'class-validator';
 import { formatValidationErrors } from '../middleware/validation.middleware';
+import { getOrSetCached } from '../utils/cache.utils';
 
 export abstract class BaseController<
   E extends BaseApplicationEntity,
@@ -21,30 +22,40 @@ export abstract class BaseController<
   ) {}
 
   getAll = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const isFull = req.query.full === 'true';
-    const where = await this.getWhere(req);
-    const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
-    const paginationOptions = await this.getPaginationOptions(req);
-    const sortOptions = await this.getSortOptions(req);
-    const group = isFull ? this.getFullTransformGroup() : undefined;
+    // Reference-data controllers opt into caching by overriding getCacheKey; it returns
+    // null (default, and for any non-canonical request) so caching never applies here.
+    // We cache the already-serialized response envelope so a hit skips both the DB query
+    // and re-serialization and is byte-identical to a miss.
+    const cacheKey = this.getCacheKey(req);
 
-    const paginatedEntities = await this.service.findAll(
-      where,
-      relations,
-      paginationOptions,
-      sortOptions,
-    );
+    const buildResponse = async () => {
+      const isFull = req.query.full === 'true';
+      const where = await this.getWhere(req);
+      const relations = isFull ? this.getFullRelations() : this.getBaseRelations();
+      const paginationOptions = await this.getPaginationOptions(req);
+      const sortOptions = await this.getSortOptions(req);
+      const group = isFull ? this.getFullTransformGroup() : undefined;
 
-    const response = {
-      data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
-        groups: group,
-        excludeExtraneousValues: true,
-      }),
-      total: paginatedEntities.total,
-      page: paginatedEntities.page,
-      pageSize: paginatedEntities.pageSize,
-      totalPages: paginatedEntities.totalPages,
+      const paginatedEntities = await this.service.findAll(
+        where,
+        relations,
+        paginationOptions,
+        sortOptions,
+      );
+
+      return {
+        data: plainToInstance(this.outputDtoClass, paginatedEntities.data, {
+          groups: group,
+          excludeExtraneousValues: true,
+        }),
+        total: paginatedEntities.total,
+        page: paginatedEntities.page,
+        pageSize: paginatedEntities.pageSize,
+        totalPages: paginatedEntities.totalPages,
+      };
     };
+
+    const response = await getOrSetCached(cacheKey, buildResponse);
     res.json(response);
   });
 
@@ -146,6 +157,13 @@ export abstract class BaseController<
 
   protected getMaxPageSize(): number {
     return 100;
+  }
+
+  // Opt-in reference-data caching hook. Returns null by default (no caching); reference
+  // controllers override it to return a cache key for canonical requests only, and null
+  // (bypass) for anything carrying a filter/sort/pagination outside the cacheable shape.
+  protected getCacheKey(req: Request): string | null {
+    return null;
   }
 
   protected async getPaginationOptions(req: Request): Promise<PaginationOptions> {

@@ -4,6 +4,7 @@ import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
 import { AbilityInputDto } from '../dtos/ability.dto';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
+import { hydrateRelations } from '../utils/relation-hydration.utils';
 import { getQueryIntArray } from '../utils/request.utils';
 import { Request } from 'express';
 
@@ -24,15 +25,21 @@ export class AbilityService extends BaseService<Ability, AbilityInputDto> {
   ): Promise<PaginatedResponse<Ability>> {
     const { page, pageSize } = paginationOptions ? paginationOptions : { page: 1, pageSize: 25 };
 
+    // Phase 1: filter/sort/paginate for the page's ids only — no hydration joins
+    // (the `pokemon` ManyToMany relation would Cartesian-multiply). Phase 2 hydrates
+    // via separate queries below.
     let queryBuilder = this.repository.createQueryBuilder('ability');
 
-    queryBuilder = this.applyRelations(queryBuilder, relations);
     queryBuilder = this.applyNameFilter(queryBuilder, req);
     queryBuilder = this.applyGenerationFilter(queryBuilder, req);
     queryBuilder = this.applySorting(queryBuilder, sortOptions);
     queryBuilder = this.applyPagination(queryBuilder, page, pageSize);
 
-    const [data, total] = await queryBuilder.getManyAndCount();
+    const [rows, total] = await queryBuilder.getManyAndCount();
+
+    const data = relations
+      ? await hydrateRelations(this.repository, rows.map((r) => r.id), relations)
+      : rows;
 
     return {
       data,
@@ -41,18 +48,6 @@ export class AbilityService extends BaseService<Ability, AbilityInputDto> {
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     };
-  }
-
-  private applyRelations(
-    queryBuilder: SelectQueryBuilder<Ability>,
-    relations?: FindOptionsRelations<Ability>,
-  ): SelectQueryBuilder<Ability> {
-    if (relations) {
-      Object.keys(relations).forEach((relation) => {
-        queryBuilder = queryBuilder.leftJoinAndSelect(`ability.${relation}`, relation);
-      });
-    }
-    return queryBuilder;
   }
 
   private applyNameFilter(

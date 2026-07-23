@@ -6,6 +6,7 @@ import { validateDto, validatePartialDto } from '../middleware/validation.middle
 import { SpecialMoveCategoryInputDto, SpecialMoveCategoryOutputDto } from '../dtos/special-move-category.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import { referenceListCacheKey } from '../utils/cache.utils';
 
 export class SpecialMoveCategoryController extends BaseController<
   SpecialMoveCategory,
@@ -47,6 +48,10 @@ export class SpecialMoveCategoryController extends BaseController<
 
   protected getBaseRelations(): FindOptionsRelations<SpecialMoveCategory> | undefined {
     return undefined;
+  }
+
+  protected getCacheKey(req: Request): string | null {
+    return referenceListCacheKey('special-move-category', req);
   }
 
   protected getFullRelations(): FindOptionsRelations<SpecialMoveCategory> | undefined {

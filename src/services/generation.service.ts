@@ -1,9 +1,10 @@
 import { Generation } from '../entities/generation.entity';
 import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsRelations, FindOptionsWhere, Repository } from 'typeorm';
 import { GenerationInputDto } from '../dtos/generation.dto';
 import { ConflictError } from '../errors';
+import { invalidate, referenceListInvalidationPrefix } from '../utils/cache.utils';
 
 @Service()
 export class GenerationService extends BaseService<Generation, GenerationInputDto> {
@@ -12,6 +13,23 @@ export class GenerationService extends BaseService<Generation, GenerationInputDt
     private GenerationRepository: Repository<Generation>,
   ) {
     super(GenerationRepository, 'Generation');
+  }
+
+  // Write-through cache invalidation (see PokemonTypeService for the rationale).
+  async create(data: GenerationInputDto): Promise<Generation> {
+    const created = await super.create(data);
+    await invalidate(referenceListInvalidationPrefix('generation'));
+    return created;
+  }
+
+  async update(
+    where: FindOptionsWhere<Generation>,
+    data: Partial<GenerationInputDto>,
+    relations?: FindOptionsRelations<Generation>,
+  ): Promise<Generation> {
+    const updated = await super.update(where, data, relations);
+    await invalidate(referenceListInvalidationPrefix('generation'));
+    return updated;
   }
 
   async delete(where: FindOptionsWhere<Generation>): Promise<boolean> {
@@ -31,6 +49,8 @@ export class GenerationService extends BaseService<Generation, GenerationInputDt
         `Cannot delete Generation: it still has ${children.join(', ')}. Remove them first.`,
       );
     }
-    return super.delete(where);
+    const result = await super.delete(where);
+    await invalidate(referenceListInvalidationPrefix('generation'));
+    return result;
   }
 }
