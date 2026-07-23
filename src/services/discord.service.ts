@@ -510,6 +510,8 @@ export class DiscordService {
           },
         },
       },
+      // 'query' strategy avoids seasonPokemonTeams × pokemonTypes amplification (Neon egress).
+      relationLoadStrategy: 'query',
     });
 
     if (!team) {
@@ -603,6 +605,7 @@ export class DiscordService {
       const weeksWithMatches = await this.weekRepository.find({
         where: { seasonId: season.id },
         relations: { matches: true },
+        relationLoadStrategy: 'query',
         order: { createdAt: 'DESC' },
       });
       week = weeksWithMatches.find((w) => w.matches && w.matches.length > 0) ?? weeksWithMatches[0] ?? null;
@@ -617,6 +620,8 @@ export class DiscordService {
     const matches = await this.matchRepository.find({
       where: { weekId: week.id },
       relations: { teams: true, winningTeam: true, losingTeam: true, games: true },
+      // 'query' strategy avoids the teams × games Cartesian product (Neon egress). See base.service.ts.
+      relationLoadStrategy: 'query',
     });
 
     const embed = this.buildScheduleEmbed(league, season, week, matches);

@@ -26,6 +26,11 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
     const [data, total] = await this.repository.findAndCount({
       where: where,
       relations: relations,
+      // Load each to-many relation with a separate query instead of one giant LEFT JOIN.
+      // This eliminates the Cartesian-product row amplification that drives Neon data-transfer
+      // egress. It issues N extra round trips (one per to-many relation) but ships far fewer
+      // rows overall — a net win for the data-transfer metric, not an N+1 regression.
+      relationLoadStrategy: 'query',
       skip: skip,
       take: pageSize,
       order: order,
@@ -44,6 +49,10 @@ export abstract class BaseService<E extends BaseApplicationEntity, I extends Bas
     const entity = await this.repository.findOne({
       where: where,
       relations: relations,
+      // See findAll(): 'query' strategy avoids Cartesian-product row amplification on to-many
+      // relations (e.g. the single-Pokemon full=true detail modal drops from ~526 raw rows to
+      // ~1-per-relation-query). Nested relation array order may differ from a join, which is fine.
+      relationLoadStrategy: 'query',
     });
 
     if (!entity) {

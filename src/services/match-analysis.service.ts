@@ -153,6 +153,8 @@ export class MatchAnalysisService {
     const match = await this.matchRepo.findOne({
       where: { id: dto.matchId },
       relations: { teams: true, week: true, games: true },
+      // 'query' strategy avoids the teams × games Cartesian product (Neon egress). See base.service.ts.
+      relationLoadStrategy: 'query',
     });
 
     if (!match) {
@@ -631,6 +633,8 @@ export class MatchAnalysisService {
     const allSeasonMatches: Match[] = await this.matchRepo.find({
       where: { week: { seasonId } },
       relations: { teams: true, week: true, games: true },
+      // 'query' strategy avoids the teams × games Cartesian product across all matches (Neon egress).
+      relationLoadStrategy: 'query',
     });
 
     const teamAId = teamA.id;
@@ -700,6 +704,7 @@ export class MatchAnalysisService {
         const pool = await this.seasonPokemonRepo.find({
           where: { seasonId, seasonPokemonTeams: { teamId: p.teamId } },
           relations: { pokemon: true, seasonPokemonTeams: true },
+          relationLoadStrategy: 'query',
         });
         poolByTeamId.set(p.teamId, pool);
       }
@@ -715,6 +720,7 @@ export class MatchAnalysisService {
           (await this.seasonPokemonRepo.find({
             where: { seasonId },
             relations: { pokemon: true, seasonPokemonTeams: true },
+            relationLoadStrategy: 'query',
           })) ?? [];
       }
       return seasonPool;
