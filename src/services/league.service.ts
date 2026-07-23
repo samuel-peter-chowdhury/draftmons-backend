@@ -6,6 +6,7 @@ import { LeagueInputDto } from '../dtos/league.dto';
 import { ConflictError } from '../errors';
 import { deleteOwnedBlob } from '../utils/blob.utils';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
+import { hydrateRelations } from '../utils/relation-hydration.utils';
 import { Request } from 'express';
 import { getQueryIntArray } from '../utils/request.utils';
 
@@ -29,13 +30,9 @@ export class LeagueService extends BaseService<League, LeagueInputDto> {
     const { page, pageSize } = paginationOptions ? paginationOptions : { page: 1, pageSize: 25 };
     const skip = (page - 1) * pageSize;
 
+    // Phase 1: filter/sort/paginate for the page's ids only — no hydration joins
+    // (they multiply rows). Phase 2 hydrates relations via separate queries below.
     let queryBuilder = this.repository.createQueryBuilder('league');
-
-    if (relations) {
-      Object.keys(relations).forEach((relation) => {
-        queryBuilder = queryBuilder.leftJoinAndSelect(`league.${relation}`, relation);
-      });
-    }
 
     if (nameLike) {
       queryBuilder = queryBuilder.andWhere(
@@ -62,7 +59,11 @@ export class LeagueService extends BaseService<League, LeagueInputDto> {
 
     queryBuilder = queryBuilder.skip(skip).take(pageSize);
 
-    const [data, total] = await queryBuilder.getManyAndCount();
+    const [rows, total] = await queryBuilder.getManyAndCount();
+
+    const data = relations
+      ? await hydrateRelations(this.repository, rows.map((r) => r.id), relations)
+      : rows;
 
     return {
       data,

@@ -6,6 +6,7 @@ import { validateDto, validatePartialDto } from '../middleware/validation.middle
 import { PokemonTypeInputDto, PokemonTypeOutputDto } from '../dtos/pokemon-type.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import { referenceListCacheKey } from '../utils/cache.utils';
 
 export class PokemonTypeController extends BaseController<
   PokemonType,
@@ -43,6 +44,10 @@ export class PokemonTypeController extends BaseController<
 
   protected getBaseRelations(): FindOptionsRelations<PokemonType> | undefined {
     return undefined;
+  }
+
+  protected getCacheKey(req: Request): string | null {
+    return referenceListCacheKey('pokemon-type', req);
   }
 
   protected getFullRelations(): FindOptionsRelations<PokemonType> | undefined {

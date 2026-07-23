@@ -6,6 +6,7 @@ import { validateDto, validatePartialDto } from '../middleware/validation.middle
 import { GenerationInputDto, GenerationOutputDto } from '../dtos/generation.dto';
 import { FindOptionsWhere, FindOptionsRelations } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
+import { referenceListCacheKey } from '../utils/cache.utils';
 
 export class GenerationController extends BaseController<
   Generation,
@@ -43,6 +44,10 @@ export class GenerationController extends BaseController<
 
   protected getBaseRelations(): FindOptionsRelations<Generation> | undefined {
     return undefined;
+  }
+
+  protected getCacheKey(req: Request): string | null {
+    return referenceListCacheKey('generation', req);
   }
 
   protected getFullRelations(): FindOptionsRelations<Generation> | undefined {

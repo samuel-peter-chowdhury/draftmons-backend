@@ -4,6 +4,7 @@ import { BaseService } from './base.service';
 import { Service, Inject } from 'typedi';
 import { MoveInputDto } from '../dtos/move.dto';
 import { PaginatedResponse, PaginationOptions, SortOptions } from '../utils/pagination.utils';
+import { hydrateRelations } from '../utils/relation-hydration.utils';
 import { getQueryIntArray } from '../utils/request.utils';
 import { Request } from 'express';
 
@@ -24,16 +25,18 @@ export class MoveService extends BaseService<Move, MoveInputDto> {
   ): Promise<PaginatedResponse<Move>> {
     const { page, pageSize } = paginationOptions ? paginationOptions : { page: 1, pageSize: 25 };
 
+    // Phase 1: filter/sort/paginate for the page's move ids only — no hydration joins.
     let queryBuilder = this.repository.createQueryBuilder('move');
-
-    queryBuilder = this.applyRelations(queryBuilder, relations, req);
     queryBuilder = this.applyNameFilter(queryBuilder, req);
     queryBuilder = this.applyGenerationFilter(queryBuilder, req);
     queryBuilder = this.applyPokemonFilter(queryBuilder, req);
     queryBuilder = this.applySorting(queryBuilder, sortOptions);
     queryBuilder = this.applyPagination(queryBuilder, page, pageSize);
 
-    const [data, total] = await queryBuilder.getManyAndCount();
+    const [rows, total] = await queryBuilder.getManyAndCount();
+    const ids = rows.map((r) => r.id);
+
+    const data = relations ? await this.hydrateMoves(ids, relations, req) : rows;
 
     return {
       data,
@@ -44,32 +47,46 @@ export class MoveService extends BaseService<Move, MoveInputDto> {
     };
   }
 
-  private applyRelations(
-    queryBuilder: SelectQueryBuilder<Move>,
-    relations?: FindOptionsRelations<Move>,
-    req?: Request,
-  ): SelectQueryBuilder<Move> {
-    if (relations) {
-      const pokemonIds = req?.query.pokemonIds
-        ? getQueryIntArray(req, 'pokemonIds')
-        : [];
+  /**
+   * Phase 2: hydrate the page's moves via separate, non-multiplying queries.
+   *
+   * Special case (option (a) from the spec): when `pokemonIds` is present, the
+   * `pokemon` (learners) relation must stay scoped to just those ids — otherwise a
+   * popular move's full learner pool (hundreds of rows) would ship from Postgres and
+   * be discarded, working against the data-transfer goal. So we hydrate every relation
+   * EXCEPT `pokemon` via `relationLoadStrategy: 'query'`, then attach the scoped
+   * learners with one dedicated join query filtered to `pokemonIds`.
+   */
+  private async hydrateMoves(
+    ids: number[],
+    relations: FindOptionsRelations<Move>,
+    req: Request,
+  ): Promise<Move[]> {
+    const pokemonIds = req.query.pokemonIds ? getQueryIntArray(req, 'pokemonIds') : [];
+    const scopePokemon = relations.pokemon === true && pokemonIds.length > 0;
 
-      Object.keys(relations).forEach((relation) => {
-        if (relation === 'pokemon' && pokemonIds.length > 0) {
-          // When pokemonIds filter is active, only load matching Pokemon
-          // in the relation to keep the response lean
-          queryBuilder = queryBuilder.leftJoinAndSelect(
-            `move.${relation}`,
-            relation,
-            `${relation}.id IN (:...relPokemonIds)`,
-            { relPokemonIds: pokemonIds },
-          );
-        } else {
-          queryBuilder = queryBuilder.leftJoinAndSelect(`move.${relation}`, relation);
-        }
-      });
+    const hydrationRelations: FindOptionsRelations<Move> = scopePokemon
+      ? { ...relations, pokemon: false }
+      : relations;
+
+    const moves = await hydrateRelations(this.repository, ids, hydrationRelations);
+
+    if (scopePokemon && moves.length > 0) {
+      const scoped = await this.repository
+        .createQueryBuilder('move')
+        .leftJoinAndSelect('move.pokemon', 'pokemon', 'pokemon.id IN (:...relPokemonIds)', {
+          relPokemonIds: pokemonIds,
+        })
+        .where('move.id IN (:...moveIds)', { moveIds: ids })
+        .getMany();
+
+      const learnersByMoveId = new Map(scoped.map((m) => [m.id, m.pokemon ?? []]));
+      for (const move of moves) {
+        move.pokemon = learnersByMoveId.get(move.id) ?? [];
+      }
     }
-    return queryBuilder;
+
+    return moves;
   }
 
   private applyNameFilter(
