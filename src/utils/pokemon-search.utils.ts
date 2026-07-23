@@ -383,6 +383,17 @@ export function applySearchSorting<T extends BaseApplicationEntity>(
     throw new Error(`Invalid sort field: ${sortOptions.sortBy}`);
   }
 
+  // When sorting by a joined (non-root) column that was only `leftJoin`-ed for
+  // filtering (not `leftJoinAndSelect`-ed), TypeORM's paginated queries (skip/take
+  // + joins) wrap the query in a "distinctAlias" subquery and assume the order
+  // column was selected there. Without an explicit addSelect, that column is
+  // missing from the subquery and Postgres throws "column distinctAlias.x does
+  // not exist".
+  const [columnAlias] = column.split('.');
+  if (columnAlias !== qb.alias) {
+    qb.addSelect(column);
+  }
+
   return qb.orderBy(column, sortOptions.sortOrder as 'ASC' | 'DESC');
 }
 
