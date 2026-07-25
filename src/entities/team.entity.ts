@@ -24,8 +24,8 @@ export class Team extends BaseApplicationEntity {
   @Column()
   seasonId: number;
 
-  @Column()
-  userId: number;
+  @Column({ nullable: true })
+  userId: number | null;
 
   @Column({ type: 'int', nullable: true })
   skillLevel: number | null;
@@ -37,9 +37,9 @@ export class Team extends BaseApplicationEntity {
   @JoinColumn({ name: 'season_id' })
   season: Season;
 
-  @ManyToOne(() => User, (user) => user.teams, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => User, (user) => user.teams, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: User | null;
 
   @OneToMany(() => SeasonPokemonTeam, (seasonPokemonTeam) => seasonPokemonTeam.team)
   seasonPokemonTeams: SeasonPokemonTeam[];
