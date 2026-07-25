@@ -15,7 +15,7 @@ export class TeamOutputDto extends BaseOutputDto {
   seasonId: number;
 
   @Expose()
-  userId: number;
+  userId: number | null;
 
   @Expose()
   skillLevel: number | null;
@@ -29,7 +29,7 @@ export class TeamOutputDto extends BaseOutputDto {
 
   @Expose({ groups: ['team.full', 'season.full'] })
   @Type(() => UserOutputDto)
-  user: UserOutputDto;
+  user: UserOutputDto | null;
 
   @Expose({ groups: ['team.full'] })
   @Type(() => SeasonPokemonTeamOutputDto)
@@ -66,8 +66,9 @@ export class TeamInputDto extends BaseInputDto {
   seasonId: number;
 
   @Expose()
+  @IsOptional()
   @IsNumber()
-  userId: number;
+  userId?: number | null;
 
   @Expose()
   @IsOptional()

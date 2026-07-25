@@ -123,7 +123,6 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *         - id
    *         - name
    *         - seasonId
-   *         - userId
    *         - isActive
    *         - createdAt
    *         - updatedAt
@@ -142,7 +141,8 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *           example: 1
    *         userId:
    *           type: integer
-   *           description: ID of the team owner
+   *           nullable: true
+   *           description: ID of the team owner, or null if the team has no assigned coach
    *           example: 5
    *         isActive:
    *           type: boolean
@@ -191,7 +191,6 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *       required:
    *         - name
    *         - seasonId
-   *         - userId
    *       properties:
    *         name:
    *           type: string
@@ -206,7 +205,8 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *           minimum: 1
    *         userId:
    *           type: integer
-   *           description: ID of the team owner
+   *           nullable: true
+   *           description: ID of the team owner. Omit or set to null to create an unassigned team.
    *           example: 5
    *           minimum: 1
    *
@@ -226,7 +226,8 @@ export class TeamController extends BaseController<Team, TeamInputDto, TeamOutpu
    *           minimum: 1
    *         userId:
    *           type: integer
-   *           description: ID of the team owner
+   *           nullable: true
+   *           description: ID of the team owner. Set to null to unassign the current owner.
    *           example: 5
    *           minimum: 1
    */

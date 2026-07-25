@@ -572,7 +572,7 @@ export class MatchAnalysisService {
       } else {
         // Candidates: all roster users excluding already-matched ones
         const candidates = seasonTeams
-          .filter((t) => t.user && !usedUserIds.has(t.user.id))
+          .filter((t): t is Team & { user: User } => !!t.user && !usedUserIds.has(t.user.id))
           .map((t) => ({
             userId: t.user.id,
             name: [t.user.firstName, t.user.lastName].filter(Boolean).join(' '),
