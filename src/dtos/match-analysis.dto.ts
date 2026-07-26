@@ -1,10 +1,23 @@
-import { Expose } from 'class-transformer';
-import { IsArray, IsNumber, IsUrl } from 'class-validator';
+import { Expose, Type } from 'class-transformer';
+import { IsArray, IsInt, IsNumber, IsOptional, IsUrl, ValidateNested } from 'class-validator';
 import { BaseInputDto } from './base.dto';
 
 // ---------------------------------------------------------------------------
 // Input DTO (controller in Phase 4 will validateDto this)
 // ---------------------------------------------------------------------------
+
+// A moderator's direct team pick for an unresolved player, keyed by the
+// player's index (0 or 1) in the canonical pair derived from the first
+// successful replay. Lets the pipeline resolve a player straight to a team
+// (including an unassigned/ownerless one) instead of via showdownUsername
+// matching.
+export class PlayerOverrideInputDto {
+  @IsInt()
+  playerIndex: number;
+
+  @IsInt()
+  teamId: number;
+}
 
 export class AnalyzeInputDto extends BaseInputDto {
   @IsNumber()
@@ -13,6 +26,12 @@ export class AnalyzeInputDto extends BaseInputDto {
   @IsArray()
   @IsUrl({}, { each: true })
   replayUrls: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PlayerOverrideInputDto)
+  playerOverrides?: PlayerOverrideInputDto[];
 }
 
 // ---------------------------------------------------------------------------
@@ -32,8 +51,8 @@ export enum PreviewErrorCode {
   COUNT_OUT_OF_RANGE = 'COUNT_OUT_OF_RANGE',
   PLAYERS_INCONSISTENT = 'PLAYERS_INCONSISTENT',
 
-  // Stage 3: user resolution errors
-  USER_NOT_FOUND = 'USER_NOT_FOUND',
+  // Stage 3: player/team resolution errors
+  PLAYER_UNRESOLVED = 'PLAYER_UNRESOLVED',
 
   // Stage 4: match lookup errors
   MATCH_NOT_FOUND = 'MATCH_NOT_FOUND',
@@ -55,7 +74,7 @@ export class PreviewErrorDto {
   @Expose() field: string; // e.g. 'set', 'players[0].user', 'match', 'replays[1]'
   @Expose() code: string; // PreviewErrorCode value
   @Expose() message: string;
-  @Expose() candidates?: unknown[]; // shape varies by code (user/pokemon/match lists)
+  @Expose() candidates?: unknown[]; // shape varies by code (team/pokemon/match lists)
 }
 
 // ---------------------------------------------------------------------------

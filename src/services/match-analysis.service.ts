@@ -14,6 +14,7 @@ import {
 import {
   GamePreviewDto,
   MatchPreviewDto,
+  PlayerOverrideInputDto,
   PlayerPreviewDto,
   PreviewErrorCode,
   PreviewErrorDto,
@@ -74,7 +75,11 @@ export class MatchAnalysisService {
    *
    * NEVER writes to the database (ANLZ-10).
    */
-  async analyze(seasonId: number, replayUrls: string[]): Promise<MatchPreviewDto> {
+  async analyze(
+    seasonId: number,
+    replayUrls: string[],
+    playerOverrides: PlayerOverrideInputDto[] = [],
+  ): Promise<MatchPreviewDto> {
     const errors: PreviewErrorDto[] = [];
 
     const pushError = (
@@ -113,6 +118,7 @@ export class MatchAnalysisService {
       parsed,
       errors,
       pushError,
+      playerOverrides,
     );
 
     // Build the result DTO
@@ -529,6 +535,7 @@ export class MatchAnalysisService {
     parsed: ParsedReplay[],
     errors: PreviewErrorDto[],
     pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+    playerOverrides: PlayerOverrideInputDto[],
   ): Promise<{
     players: PlayerPreviewDto[];
     matchPreview: { matchId: number | null; weekId: number | null; weekName: string | null };
@@ -539,10 +546,11 @@ export class MatchAnalysisService {
       relations: { user: true },
     });
 
-    // Stage 3: resolve each player name to a User via toID normalization
-    const resolved = this.resolvePlayers(twoPlayerNames, seasonTeams, errors, pushError);
+    // Stage 3: resolve each player name to a team, either via a moderator's
+    // direct override or via showdownUsername matching
+    const resolved = this.resolvePlayers(twoPlayerNames, seasonTeams, playerOverrides, errors, pushError);
 
-    // Stage 4: map each resolved user to their team + find the match
+    // Stage 4: map each resolved player to their team + find the match
     const players = this.buildPlayerDtos(resolved, seasonTeams);
     const matchPreview = await this.resolveTeamsAndMatch(seasonId, resolved, players, errors, pushError);
 
@@ -552,38 +560,77 @@ export class MatchAnalysisService {
   private resolvePlayers(
     twoPlayerNames: [string, string],
     seasonTeams: Team[],
+    playerOverrides: PlayerOverrideInputDto[],
     errors: PreviewErrorDto[],
     pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
   ): ResolvedPlayer[] {
     const resolved: ResolvedPlayer[] = [];
-    const usedUserIds = new Set<number>();
+    const usedTeamIds = new Set<number>();
+
+    const buildTeamCandidates = () =>
+      seasonTeams
+        .filter((t) => !usedTeamIds.has(t.id))
+        .map((t) => ({
+          teamId: t.id,
+          teamName: t.name,
+          userId: t.user?.id ?? null,
+          userDisplayName: t.user
+            ? [t.user.firstName, t.user.lastName].filter(Boolean).join(' ') || t.user.showdownUsername
+            : null,
+        }));
 
     for (let i = 0; i < 2; i++) {
       const rawName = twoPlayerNames[i];
+      const override = playerOverrides.find((o) => o.playerIndex === i);
+
+      if (override) {
+        const team = seasonTeams.find((t) => t.id === override.teamId);
+
+        if (!team) {
+          pushError(
+            `players[${i}].user`,
+            PreviewErrorCode.PLAYER_UNRESOLVED,
+            `Selected team ${override.teamId} does not belong to this season.`,
+            buildTeamCandidates(),
+          );
+          resolved.push({ rawShowdownName: rawName, user: null, team: null });
+          continue;
+        }
+
+        if (usedTeamIds.has(team.id)) {
+          pushError(
+            `players[${i}].user`,
+            PreviewErrorCode.PLAYER_UNRESOLVED,
+            `Team "${team.name}" is already assigned to the other player in this match.`,
+            buildTeamCandidates(),
+          );
+          resolved.push({ rawShowdownName: rawName, user: null, team: null });
+          continue;
+        }
+
+        usedTeamIds.add(team.id);
+        resolved.push({ rawShowdownName: rawName, user: team.user ?? null, team });
+        continue;
+      }
+
       const normalizedName = toID(rawName);
 
       const match = seasonTeams.find(
-        (t) => t.user && toID(t.user.showdownUsername ?? '') === normalizedName && !usedUserIds.has(t.user.id),
+        (t) => t.user && toID(t.user.showdownUsername ?? '') === normalizedName && !usedTeamIds.has(t.id),
       );
 
-      if (match?.user) {
-        usedUserIds.add(match.user.id);
+      if (match) {
+        usedTeamIds.add(match.id);
         resolved.push({ rawShowdownName: rawName, user: match.user, team: match });
       } else {
-        // Candidates: all roster users excluding already-matched ones
-        const candidates = seasonTeams
-          .filter((t): t is Team & { user: User } => !!t.user && !usedUserIds.has(t.user.id))
-          .map((t) => ({
-            userId: t.user.id,
-            name: [t.user.firstName, t.user.lastName].filter(Boolean).join(' '),
-            showdownUsername: t.user.showdownUsername,
-          }));
-
+        // Candidates: every remaining roster team (owned or unassigned) so a
+        // moderator can resolve the player directly to a team when Showdown-
+        // username matching fails — including teams with no assigned coach.
         pushError(
           `players[${i}].user`,
-          PreviewErrorCode.USER_NOT_FOUND,
-          `No roster user found with Showdown username matching "${rawName}".`,
-          candidates,
+          PreviewErrorCode.PLAYER_UNRESOLVED,
+          `No roster team found with a coach matching Showdown username "${rawName}".`,
+          buildTeamCandidates(),
         );
         resolved.push({ rawShowdownName: rawName, user: null, team: null });
       }
