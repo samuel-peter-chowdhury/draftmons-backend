@@ -341,7 +341,7 @@ describe('MatchAnalysisService.analyze — stage 2 player consistency', () => {
 // ---------------------------------------------------------------------------
 
 describe('MatchAnalysisService.analyze — stage 3 user resolution', () => {
-  it('emits USER_NOT_FOUND with candidates when player does not match any roster user', async () => {
+  it('emits PLAYER_UNRESOLVED with team candidates when player does not match any roster coach', async () => {
     const mocks = makeMocks();
     mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
     mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, 'UnknownPlayer']));
@@ -353,12 +353,12 @@ describe('MatchAnalysisService.analyze — stage 3 user resolution', () => {
     const service = buildService(mocks);
     const result = await service.analyze(1, [URL_1, URL_2]);
 
-    const userErr = result.errors.find(
-      (e) => e.field === 'players[1].user' && e.code === PreviewErrorCode.USER_NOT_FOUND,
+    const playerErr = result.errors.find(
+      (e) => e.field === 'players[1].user' && e.code === PreviewErrorCode.PLAYER_UNRESOLVED,
     );
-    expect(userErr).toBeDefined();
-    // candidates should list the remaining roster users (USER_A already matched to player[0])
-    expect(Array.isArray(userErr!.candidates)).toBe(true);
+    expect(playerErr).toBeDefined();
+    // candidates should list the remaining roster teams (TEAM_A already matched to player[0])
+    expect(Array.isArray(playerErr!.candidates)).toBe(true);
   });
 
   it('resolves users correctly via toID normalization (case/special-char insensitive)', async () => {
@@ -377,9 +377,78 @@ describe('MatchAnalysisService.analyze — stage 3 user resolution', () => {
     const service = buildService(mocks);
     const result = await service.analyze(1, [URL_1, URL_2]);
 
-    expect(result.errors.filter((e) => e.code === PreviewErrorCode.USER_NOT_FOUND)).toHaveLength(0);
+    expect(result.errors.filter((e) => e.code === PreviewErrorCode.PLAYER_UNRESOLVED)).toHaveLength(0);
     expect(result.players[0].userId).toBe(USER_A.id);
     expect(result.players[1].userId).toBe(USER_B.id);
+  });
+
+  it('resolves a player directly to an unassigned (ownerless) team via playerOverrides', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, 'UnknownPlayer']));
+    mocks.parserService.parse.mockResolvedValue(makeAnalysis([PLAYER_A, 'UnknownPlayer']));
+
+    const UNASSIGNED_TEAM = { id: 300, name: 'Team Unclaimed', seasonId: 1, userId: null, user: null, matches: [] };
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, UNASSIGNED_TEAM]);
+    mocks.matchRepo.find.mockResolvedValue([
+      { ...MATCH_1, teams: [TEAM_A, UNASSIGNED_TEAM] },
+    ]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1, URL_2], [
+      { playerIndex: 1, teamId: UNASSIGNED_TEAM.id },
+    ]);
+
+    expect(
+      result.errors.some(
+        (e) => e.field === 'players[1].user' && e.code === PreviewErrorCode.PLAYER_UNRESOLVED,
+      ),
+    ).toBe(false);
+    expect(result.players[1].teamId).toBe(UNASSIGNED_TEAM.id);
+    expect(result.players[1].userId).toBeNull();
+    expect(result.matchId).toBe(MATCH_1.id);
+  });
+
+  it('rejects an override teamId that does not belong to the season', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson([PLAYER_A, 'UnknownPlayer']));
+    mocks.parserService.parse.mockResolvedValue(makeAnalysis([PLAYER_A, 'UnknownPlayer']));
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A]);
+    mocks.matchRepo.find.mockResolvedValue([]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1, URL_2], [{ playerIndex: 1, teamId: 999999 }]);
+
+    expect(result.players[1].teamId).toBeNull();
+    expect(
+      result.errors.some(
+        (e) => e.field === 'players[1].user' && e.code === PreviewErrorCode.PLAYER_UNRESOLVED,
+      ),
+    ).toBe(true);
+  });
+
+  it('rejects an override that picks the same team already used by the other player', async () => {
+    const mocks = makeMocks();
+    mocks.seasonRepo.findOne.mockResolvedValue(SEASON);
+    mocks.fetcherService.fetchReplay.mockResolvedValue(makeReplayJson(['UnknownA', 'UnknownB']));
+    mocks.parserService.parse.mockResolvedValue(makeAnalysis(['UnknownA', 'UnknownB']));
+    mocks.teamRepo.find.mockResolvedValue([TEAM_A, TEAM_B]);
+    mocks.matchRepo.find.mockResolvedValue([]);
+
+    const service = buildService(mocks);
+    const result = await service.analyze(1, [URL_1, URL_2], [
+      { playerIndex: 0, teamId: TEAM_A.id },
+      { playerIndex: 1, teamId: TEAM_A.id },
+    ]);
+
+    expect(result.players[0].teamId).toBe(TEAM_A.id);
+    expect(result.players[1].teamId).toBeNull();
+    expect(
+      result.errors.some(
+        (e) => e.field === 'players[1].user' && e.code === PreviewErrorCode.PLAYER_UNRESOLVED,
+      ),
+    ).toBe(true);
   });
 });
 

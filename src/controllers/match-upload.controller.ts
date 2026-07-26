@@ -151,6 +151,26 @@ export class MatchUploadController {
    *                 example:
    *                   - "https://replay.pokemonshowdown.com/gen9draft-123456789"
    *                   - "https://replay.pokemonshowdown.com/gen9draft-987654321"
+   *               playerOverrides:
+   *                 type: array
+   *                 description: >
+   *                   Optional direct team picks for players that could not be resolved via
+   *                   Showdown-username matching (including unassigned/ownerless teams).
+   *                   Re-run analyze with these to recompute match lookup and stat resolution
+   *                   against the chosen team(s).
+   *                 items:
+   *                   type: object
+   *                   required:
+   *                     - playerIndex
+   *                     - teamId
+   *                   properties:
+   *                     playerIndex:
+   *                       type: integer
+   *                       description: 0 or 1 — index into the canonical player pair.
+   *                       example: 1
+   *                     teamId:
+   *                       type: integer
+   *                       example: 42
    *     responses:
    *       200:
    *         description: Match preview (may contain field-level errors in `errors`).
@@ -165,7 +185,11 @@ export class MatchUploadController {
    */
   private analyze = async (req: Request, res: Response): Promise<void> => {
     const body = req.body as AnalyzeInputDto;
-    const preview = await this.matchAnalysisService.analyze(body.seasonId, body.replayUrls);
+    const preview = await this.matchAnalysisService.analyze(
+      body.seasonId,
+      body.replayUrls,
+      body.playerOverrides,
+    );
     res.json(preview);
   };
 
