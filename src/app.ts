@@ -70,6 +70,11 @@ import { MatchAnalysisService } from './services/match-analysis.service';
 import { MatchUploadController } from './controllers/match-upload.controller';
 import { SeasonPokemonBulkController } from './controllers/season-pokemon-bulk.controller';
 
+// Session lifetime, shared by the dev (MemoryStore) and prod (Redis) session configs.
+// Combined with `rolling: true`, each authenticated request resets this countdown, so
+// only users inactive for 30+ days are logged out.
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 export class App {
   public app: Application;
   private discordService: DiscordService;
@@ -150,11 +155,12 @@ export class App {
           secret: APP_CONFIG.sessionSecret,
           resave: false,
           saveUninitialized: false,
+          rolling: true,
           cookie: {
             secure: false,
             httpOnly: true,
             sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000, // 1 day
+            maxAge: SESSION_MAX_AGE_MS,
           },
         }),
       );
@@ -191,11 +197,12 @@ export class App {
         secret: APP_CONFIG.sessionSecret,
         resave: false,
         saveUninitialized: false,
+        rolling: true,
         cookie: {
           secure: APP_CONFIG.isProduction,
           httpOnly: true,
           sameSite: APP_CONFIG.isProduction ? 'none' : 'lax',
-          maxAge: 24 * 60 * 60 * 1000, // 1 day
+          maxAge: SESSION_MAX_AGE_MS,
         },
       }),
     );
