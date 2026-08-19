@@ -4,6 +4,18 @@ import { Game } from './game.entity';
 import { BaseApplicationEntity } from './base-application.entity';
 import { Team } from './team.entity';
 
+/**
+ * How a match's result got into the system. NULL means "no result yet".
+ * REPLAY  — parsed from Showdown replays via the match-upload analyze/submit flow.
+ * MANUAL  — entered by a moderator, optionally with per-game replay links/stats.
+ * FORFEIT — decided without play; games (if any) are placeholders with differential 0.
+ */
+export enum MatchResultSource {
+  REPLAY = 'REPLAY',
+  MANUAL = 'MANUAL',
+  FORFEIT = 'FORFEIT',
+}
+
 @Entity('match')
 export class Match extends BaseApplicationEntity {
   @Column()
@@ -14,6 +26,13 @@ export class Match extends BaseApplicationEntity {
 
   @Column({ nullable: true })
   winningTeamId: number;
+
+  @Column({
+    type: 'enum',
+    enum: MatchResultSource,
+    nullable: true,
+  })
+  resultSource: MatchResultSource | null;
 
   @ManyToOne(() => Week, (week) => week.matches, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'week_id' })

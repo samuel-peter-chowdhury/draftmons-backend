@@ -34,6 +34,23 @@ export class AnalyzeInputDto extends BaseInputDto {
   playerOverrides?: PlayerOverrideInputDto[];
 }
 
+// Single-replay analysis for the manual-entry flow. Unlike AnalyzeInputDto the
+// target match is already known, so the pipeline resolves players against that
+// match's two teams instead of the whole season roster.
+export class AnalyzeGameInputDto extends BaseInputDto {
+  @IsNumber()
+  matchId: number;
+
+  @IsUrl()
+  replayUrl: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PlayerOverrideInputDto)
+  playerOverrides?: PlayerOverrideInputDto[];
+}
+
 // ---------------------------------------------------------------------------
 // Error codes — string-valued so serialized JSON carries readable codes
 // ---------------------------------------------------------------------------
@@ -131,5 +148,19 @@ export class MatchPreviewDto {
   @Expose() matchWinnerTeamId: number | null;
   @Expose() matchLoserTeamId: number | null;
   @Expose() isDecisive: boolean;
+  @Expose() errors: PreviewErrorDto[];
+}
+
+// ---------------------------------------------------------------------------
+// Single-game preview — the analyze-game response. Same preview-only,
+// never-throwing contract as MatchPreviewDto: failures land in errors[] and
+// `game` is null when the replay could not be fetched/parsed at all.
+// ---------------------------------------------------------------------------
+
+export class GameAnalysisPreviewDto {
+  @Expose() matchId: number;
+  @Expose() replayUrl: string;
+  @Expose() players: PlayerPreviewDto[]; // the replay's two players, in replay order
+  @Expose() game: GamePreviewDto | null;
   @Expose() errors: PreviewErrorDto[];
 }

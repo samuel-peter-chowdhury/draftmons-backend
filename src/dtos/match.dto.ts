@@ -4,6 +4,7 @@ import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsNumber, IsOptional } from
 import { GameOutputDto } from './game.dto';
 import { WeekOutputDto } from './week.dto';
 import { TeamOutputDto } from './team.dto';
+import { MatchResultSource } from '../entities/match.entity';
 
 export class MatchOutputDto extends BaseOutputDto {
   @Expose()
@@ -14,6 +15,12 @@ export class MatchOutputDto extends BaseOutputDto {
 
   @Expose()
   winningTeamId: number;
+
+  // NULL means "no result yet". Only ever written by the match-upload submit /
+  // submit-manual flows — deliberately absent from MatchInputDto so the generic
+  // PUT /api/league/:leagueId/match/:id cannot set it.
+  @Expose()
+  resultSource: MatchResultSource | null;
 
   @Expose({ groups: ['match.full', 'team.full'] })
   @Type(() => WeekOutputDto)
