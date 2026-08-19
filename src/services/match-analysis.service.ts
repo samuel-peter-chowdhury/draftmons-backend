@@ -1,5 +1,5 @@
 import { Service, Inject } from 'typedi';
-import { In, Repository } from 'typeorm';
+import { FindOptionsRelations, In, Repository } from 'typeorm';
 import {
   ReplayNotFoundError,
   ReplayPrivateError,
@@ -12,6 +12,8 @@ import {
   StructuredConflictError,
 } from '../errors';
 import {
+  AnalyzeGameInputDto,
+  GameAnalysisPreviewDto,
   GamePreviewDto,
   MatchPreviewDto,
   PlayerOverrideInputDto,
@@ -21,10 +23,11 @@ import {
   StatPreviewDto,
 } from '../dtos/match-analysis.dto';
 import { SubmitInputDto } from '../dtos/submit-input.dto';
+import { ManualSubmitInputDto } from '../dtos/manual-submit-input.dto';
 import { Season } from '../entities/season.entity';
 import { User } from '../entities/user.entity';
 import { Team } from '../entities/team.entity';
-import { Match } from '../entities/match.entity';
+import { Match, MatchResultSource } from '../entities/match.entity';
 import { Game } from '../entities/game.entity';
 import { GameStat } from '../entities/game-stat.entity';
 import { SeasonPokemon } from '../entities/season-pokemon.entity';
@@ -50,6 +53,36 @@ interface ResolvedPlayer {
   rawShowdownName: string;
   user: User | null;
   team: Team | null;
+}
+
+/** Accumulates a field-level preview error instead of throwing (ANLZ-10 contract). */
+type PushError = (
+  field: string,
+  code: PreviewErrorCode,
+  message: string,
+  candidates?: unknown[],
+) => void;
+
+/** Draft pools for Pokémon/stat resolution: per-team, plus a lazy season-wide fallback. */
+interface DraftPools {
+  poolByTeamId: Map<number, SeasonPokemon[]>;
+  loadSeasonPool: () => Promise<SeasonPokemon[]>;
+}
+
+/** Shape of one existing game in the 409 overwrite-conflict detail. */
+interface ExistingGameSummary {
+  id: number;
+  gameNumber: number;
+  replayLink: string;
+  winningTeamId: number;
+  losingTeamId: number;
+  differential: number;
+  stats: Array<{
+    seasonPokemonId: number;
+    directKills: number;
+    indirectKills: number;
+    deaths: number;
+  }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -80,23 +113,7 @@ export class MatchAnalysisService {
     replayUrls: string[],
     playerOverrides: PlayerOverrideInputDto[] = [],
   ): Promise<MatchPreviewDto> {
-    const errors: PreviewErrorDto[] = [];
-
-    const pushError = (
-      field: string,
-      code: PreviewErrorCode,
-      message: string,
-      candidates?: unknown[],
-    ): void => {
-      const err = new PreviewErrorDto();
-      err.field = field;
-      err.code = code;
-      err.message = message;
-      if (candidates !== undefined) {
-        err.candidates = candidates;
-      }
-      errors.push(err);
-    };
+    const { errors, pushError } = this.makeErrorSink();
 
     // Load season (raw repo, no throw)
     const season = await this.seasonRepo.findOne({ where: { id: seasonId } });
@@ -133,6 +150,65 @@ export class MatchAnalysisService {
 
     // STAGE 5: Pokémon resolution + stat mapping + per-game winners + match winner
     await this.resolveStats(seasonId, parsed, players, preview, errors, pushError);
+
+    return preview;
+  }
+
+  // ---------------------------------------------------------------------------
+  // analyzeGame() — single-replay preview for the manual-entry flow
+  // ---------------------------------------------------------------------------
+
+  /**
+   * A narrower analyze(): the target match is already known, so instead of
+   * resolving the match from scratch across N replays this fetches/parses ONE
+   * replay and resolves its two players against that match's two teams (via each
+   * team owner's showdownUsername, or a playerOverrides pick). Reuses the same
+   * fetch/parse, player-resolution, and Pokémon/stat-resolution stages.
+   *
+   * League scope + match existence are thrown (403/404) — those are not
+   * moderator-correctable. Everything else accumulates in errors[] and NEVER
+   * writes to the database, same preview-only contract as analyze() (ANLZ-10).
+   */
+  async analyzeGame(leagueId: number, dto: AnalyzeGameInputDto): Promise<GameAnalysisPreviewDto> {
+    const { errors, pushError } = this.makeErrorSink();
+
+    const { match, season } = await this.loadLeagueScopedMatch(leagueId, dto.matchId, {
+      teams: { user: true },
+      week: true,
+    });
+
+    const preview = new GameAnalysisPreviewDto();
+    preview.matchId = match.id;
+    preview.replayUrl = dto.replayUrl;
+    preview.players = [];
+    preview.game = null;
+    preview.errors = errors;
+
+    // STAGE 1: fetch + parse the single replay. On failure the reason is already
+    // in errors[] and there is nothing left to resolve.
+    const parsed = await this.fetchAndParse([dto.replayUrl], errors);
+    if (parsed.length === 0) {
+      return preview;
+    }
+
+    // STAGE 3: resolve the replay's two players against the match's two teams only
+    const matchTeams = match.teams ?? [];
+    const playerNames = parsed[0].analysis.playerNames;
+    const twoPlayerNames: [string, string] = [playerNames[0] ?? '', playerNames[1] ?? ''];
+
+    const resolved = this.resolvePlayers(
+      twoPlayerNames,
+      matchTeams,
+      dto.playerOverrides ?? [],
+      errors,
+      pushError,
+      'this match',
+    );
+    preview.players = this.buildPlayerDtos(resolved, matchTeams);
+
+    // STAGE 5: Pokémon resolution + stats + winner/differential for this one game
+    const pools = await this.loadDraftPools(season.id, preview.players);
+    preview.game = await this.buildGamePreview(0, parsed[0], preview.players, pools, errors, pushError);
 
     return preview;
   }
@@ -247,22 +323,8 @@ export class MatchAnalysisService {
     }
 
     // Compute overall match winner/loser from submitted game results
-    const gameWins = new Map<number, number>();
-    for (const game of dto.games) {
-      gameWins.set(game.winningTeamId, (gameWins.get(game.winningTeamId) ?? 0) + 1);
-    }
-
-    const totalGames = dto.games.length;
-    const majority = totalGames / 2;
-    let matchWinnerTeamId: number | null = null;
+    const matchWinnerTeamId = this.computeStrictMajorityWinner(dto.games);
     let matchLoserTeamId: number | null = null;
-
-    for (const [teamId, wins] of gameWins.entries()) {
-      if (wins > majority) {
-        matchWinnerTeamId = teamId;
-        break;
-      }
-    }
 
     // Validate match winner/loser are among the match's teams
     if (matchWinnerTeamId === null || !validTeamIds.has(matchWinnerTeamId)) {
@@ -302,37 +364,7 @@ export class MatchAnalysisService {
     }
 
     // ---- Overwrite handling (D-02/D-03) ----
-    // Keyed off presence of Game rows, NOT match.winningTeamId (D-02)
-    const existingGames = match.games ?? [];
-
-    if (existingGames.length > 0 && dto.confirmOverwrite !== true) {
-      // Build structured existing-game summary with stats for the 409 detail
-      const existingGameIds = existingGames.map((g) => g.id);
-      const existingGameStats = await this.gameRepo
-        .createQueryBuilder('game')
-        .leftJoinAndSelect('game.gameStats', 'gameStat')
-        .where('game.id IN (:...ids)', { ids: existingGameIds })
-        .getMany();
-
-      const existingGamesSummary = existingGameStats.map((g) => ({
-        id: g.id,
-        gameNumber: g.gameNumber,
-        replayLink: g.replayLink,
-        winningTeamId: g.winningTeamId,
-        losingTeamId: g.losingTeamId,
-        differential: g.differential,
-        stats: (g.gameStats ?? []).map((gs) => ({
-          seasonPokemonId: gs.seasonPokemonId,
-          directKills: gs.directKills,
-          indirectKills: gs.indirectKills,
-          deaths: gs.deaths,
-        })),
-      }));
-
-      throw new StructuredConflictError('Match already has results — confirm overwrite', {
-        existingGames: existingGamesSummary,
-      });
-    }
+    const existingGames = await this.assertOverwriteAllowed(match, dto.confirmOverwrite);
 
     // ---- Transactional write (SUB-01) ----
     const createdGames = await AppDataSource.transaction(async (manager) => {
@@ -396,10 +428,12 @@ export class MatchAnalysisService {
         savedGames.push(savedGame);
       }
 
-      // Set match winner/loser
+      // Set match winner/loser + record that this result came from replays, so
+      // correcting a MANUAL/FORFEIT result back to a replay one clears the badge.
       await matchRepo.update(dto.matchId, {
         winningTeamId: matchWinnerTeamId!,
         losingTeamId: matchLoserTeamId!,
+        resultSource: MatchResultSource.REPLAY,
       });
 
       return savedGames;
@@ -413,6 +447,357 @@ export class MatchAnalysisService {
         replayLink: g.replayLink,
       })),
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // submitManual() — manual / forfeit write path (no replay required)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Records a match result a moderator entered by hand, for matches that were
+   * played without a saved replay or decided by forfeit. Produces real
+   * Game/GameStat rows so standings read exactly as they do for replay results.
+   *
+   * Differs from submit() in three ways: the match winner/loser is stated
+   * explicitly (a FORFEIT can have zero games), replayLink and stats are optional
+   * per game, and gameNumber is assigned from array order rather than supplied.
+   *
+   * Throws 4xx errors directly. NEVER contacts Showdown.
+   */
+  async submitManual(
+    leagueId: number,
+    dto: ManualSubmitInputDto,
+  ): Promise<{
+    matchId: number;
+    resultSource: MatchResultSource;
+    winningTeamId: number;
+    losingTeamId: number;
+    games: Array<{ id: number; gameNumber: number; replayLink: string }>;
+  }> {
+    const isForfeit = dto.resultSource === MatchResultSource.FORFEIT;
+
+    // ---- Load + league-scope the target match (CR-01: the route's :leagueId
+    // only authorizes this league, so the match must resolve back to it) ----
+    const { match, season } = await this.loadLeagueScopedMatch(leagueId, dto.matchId, {
+      teams: true,
+      week: true,
+      games: true,
+    });
+
+    const validTeamIds = new Set((match.teams ?? []).map((t) => t.id));
+    if (validTeamIds.size !== 2) {
+      throw new ValidationError(
+        `Match ${dto.matchId} does not have two participant teams — assign both teams before recording a result`,
+      );
+    }
+
+    // ---- Top-level winner/loser must be the match's two teams ----
+    if (dto.winningTeamId === dto.losingTeamId) {
+      throw new ValidationError('winningTeamId and losingTeamId must be distinct');
+    }
+    if (!validTeamIds.has(dto.winningTeamId)) {
+      throw new ValidationError(
+        `winningTeamId ${dto.winningTeamId} is not a participant team in match ${dto.matchId}`,
+      );
+    }
+    if (!validTeamIds.has(dto.losingTeamId)) {
+      throw new ValidationError(
+        `losingTeamId ${dto.losingTeamId} is not a participant team in match ${dto.matchId}`,
+      );
+    }
+
+    // ---- Game-count sanity: gameNumber is positional, so the set can't exceed
+    // the season's Bo-N length (mirrors submit()'s gameNumber range check) ----
+    const numberOfGames = season.numberOfGames ?? 3;
+    if (dto.games.length > numberOfGames) {
+      throw new ValidationError(
+        `games has ${dto.games.length} entries, more than the season's ${numberOfGames} game(s) per match`,
+      );
+    }
+
+    // ---- Per-game structural checks ----
+    for (let i = 0; i < dto.games.length; i++) {
+      const game = dto.games[i];
+
+      if (game.winningTeamId === game.losingTeamId) {
+        throw new ValidationError(`games[${i}]: winningTeamId and losingTeamId must be distinct`);
+      }
+      if (!validTeamIds.has(game.winningTeamId)) {
+        throw new ValidationError(
+          `games[${i}].winningTeamId ${game.winningTeamId} is not a participant team in match ${dto.matchId}`,
+        );
+      }
+      if (!validTeamIds.has(game.losingTeamId)) {
+        throw new ValidationError(
+          `games[${i}].losingTeamId ${game.losingTeamId} is not a participant team in match ${dto.matchId}`,
+        );
+      }
+    }
+
+    // ---- Mode-specific result validation ----
+    if (isForfeit) {
+      // A forfeit is a clean sweep — mixing real played games in is the MANUAL flow's job.
+      const stray = dto.games.findIndex((g) => g.winningTeamId !== dto.winningTeamId);
+      if (stray !== -1) {
+        throw new ValidationError(
+          `games[${stray}]: a FORFEIT must be a clean sweep — every game must be won by winningTeamId ${dto.winningTeamId}. Use resultSource MANUAL to record a mix of played and forfeited games.`,
+        );
+      }
+    } else {
+      if (dto.games.length === 0) {
+        throw new ValidationError('resultSource MANUAL requires at least one game');
+      }
+      // Same strict-majority rule as submit(): there is no way to record a tied
+      // or indecisive set in this flow.
+      const impliedWinner = this.computeStrictMajorityWinner(dto.games);
+      if (impliedWinner === null) {
+        throw new ValidationError(
+          `No team has a strict majority of the ${dto.games.length} submitted game win(s) — set is not decisive`,
+        );
+      }
+      if (impliedWinner !== dto.winningTeamId) {
+        throw new ValidationError(
+          `Game results imply team ${impliedWinner} won, but winningTeamId is ${dto.winningTeamId}`,
+        );
+      }
+    }
+
+    // ---- Re-validate stat seasonPokemonIds against the live season pool (D-04) ----
+    // Skipped for forfeits, whose placeholder games are written without stats.
+    if (!isForfeit) {
+      const seasonPokemons = await this.seasonPokemonRepo.find({
+        where: { seasonId: season.id },
+        select: ['id'],
+      });
+      const validSeasonPokemonIds = new Set(seasonPokemons.map((sp) => sp.id));
+
+      for (let i = 0; i < dto.games.length; i++) {
+        for (const stat of dto.games[i].stats ?? []) {
+          if (!validSeasonPokemonIds.has(stat.seasonPokemonId)) {
+            throw new NotFoundError('SeasonPokemon', stat.seasonPokemonId);
+          }
+        }
+      }
+    }
+
+    // ---- Within-set duplicate-link pre-check (D-07), ignoring the no-replay rows ----
+    if (!isForfeit) {
+      const seenLinks = new Set<string>();
+      const duplicateLinks: string[] = [];
+      for (const game of dto.games) {
+        const link = game.replayLink;
+        if (!link) continue;
+        if (seenLinks.has(link)) {
+          duplicateLinks.push(link);
+        }
+        seenLinks.add(link);
+      }
+
+      if (duplicateLinks.length > 0) {
+        throw new StructuredConflictError('Duplicate replay link in submission', {
+          duplicateLinks,
+        });
+      }
+    }
+
+    // ---- Overwrite handling (D-02/D-03) — same 409 contract as submit() ----
+    const existingGames = await this.assertOverwriteAllowed(match, dto.confirmOverwrite);
+
+    // ---- Transactional write ----
+    const createdGames = await AppDataSource.transaction(async (manager) => {
+      const gameRepo = manager.getRepository(Game);
+      const gameStatRepo = manager.getRepository(GameStat);
+      const matchRepo = manager.getRepository(Match);
+
+      if (existingGames.length > 0) {
+        const existingGameIds = existingGames.map((g) => g.id);
+        await gameStatRepo.delete({ gameId: In(existingGameIds) });
+        await gameRepo.delete({ matchId: dto.matchId });
+      }
+
+      const savedGames: Game[] = [];
+
+      for (let i = 0; i < dto.games.length; i++) {
+        const gameDto = dto.games[i];
+
+        // Forfeit rows are placeholders: no replay, no stats, differential 0.
+        const newGame = gameRepo.create({
+          matchId: dto.matchId,
+          winningTeamId: gameDto.winningTeamId,
+          losingTeamId: gameDto.losingTeamId,
+          differential: isForfeit ? 0 : (gameDto.differential ?? 0),
+          replayLink: isForfeit ? undefined : gameDto.replayLink,
+          gameNumber: i + 1,
+        });
+
+        let savedGame: Game;
+        try {
+          savedGame = await gameRepo.save(newGame);
+        } catch (err: any) {
+          const isUniqueViolation =
+            err?.code === '23505' ||
+            (typeof err?.message === 'string' && err.message.toLowerCase().includes('duplicate'));
+          if (isUniqueViolation && gameDto.replayLink) {
+            throw new StructuredConflictError('Duplicate replay link', {
+              duplicateLinks: [gameDto.replayLink],
+            });
+          }
+          throw err;
+        }
+
+        if (!isForfeit) {
+          for (const statDto of gameDto.stats ?? []) {
+            const newStat = gameStatRepo.create({
+              gameId: savedGame.id,
+              seasonPokemonId: statDto.seasonPokemonId,
+              directKills: statDto.directKills,
+              indirectKills: statDto.indirectKills,
+              deaths: statDto.deaths,
+            });
+            await gameStatRepo.save(newStat);
+          }
+        }
+
+        savedGames.push(savedGame);
+      }
+
+      await matchRepo.update(dto.matchId, {
+        winningTeamId: dto.winningTeamId,
+        losingTeamId: dto.losingTeamId,
+        resultSource: dto.resultSource,
+      });
+
+      return savedGames;
+    });
+
+    return {
+      matchId: dto.matchId,
+      resultSource: dto.resultSource,
+      winningTeamId: dto.winningTeamId,
+      losingTeamId: dto.losingTeamId,
+      games: createdGames.map((g) => ({
+        id: g.id,
+        gameNumber: g.gameNumber,
+        replayLink: g.replayLink,
+      })),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Shared helpers (used by both the replay and manual paths)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Creates the accumulate-don't-throw error sink used by the preview endpoints.
+   */
+  private makeErrorSink(): { errors: PreviewErrorDto[]; pushError: PushError } {
+    const errors: PreviewErrorDto[] = [];
+
+    const pushError: PushError = (field, code, message, candidates): void => {
+      const err = new PreviewErrorDto();
+      err.field = field;
+      err.code = code;
+      err.message = message;
+      if (candidates !== undefined) {
+        err.candidates = candidates;
+      }
+      errors.push(err);
+    };
+
+    return { errors, pushError };
+  }
+
+  /**
+   * Loads a match and proves it belongs to :leagueId via week → season → league
+   * (the enforceLeagueScope pattern). A league-A moderator must not be able to
+   * touch a league-B match by passing its id in the body (threat T-04-07).
+   */
+  private async loadLeagueScopedMatch(
+    leagueId: number,
+    matchId: number,
+    relations: FindOptionsRelations<Match>,
+  ): Promise<{ match: Match; season: Season }> {
+    const match = await this.matchRepo.findOne({
+      where: { id: matchId },
+      relations,
+      // 'query' strategy avoids the teams × games Cartesian product (Neon egress).
+      relationLoadStrategy: 'query',
+    });
+
+    if (!match) {
+      throw new NotFoundError('Match', matchId);
+    }
+
+    const season = await this.seasonRepo.findOne({ where: { id: match.week.seasonId } });
+    if (!season) {
+      throw new NotFoundError('Season', match.week.seasonId);
+    }
+
+    if (season.leagueId !== leagueId) {
+      throw new ForbiddenError(`Match ${matchId} does not belong to league ${leagueId}`);
+    }
+
+    return { match, season };
+  }
+
+  /**
+   * A team wins the set only with STRICTLY MORE THAN HALF of the game wins.
+   * Returns null for a tied/indecisive set.
+   */
+  private computeStrictMajorityWinner(games: Array<{ winningTeamId: number }>): number | null {
+    const gameWins = new Map<number, number>();
+    for (const game of games) {
+      gameWins.set(game.winningTeamId, (gameWins.get(game.winningTeamId) ?? 0) + 1);
+    }
+
+    const majority = games.length / 2;
+    for (const [teamId, wins] of gameWins.entries()) {
+      if (wins > majority) {
+        return teamId;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Overwrite protection (D-02/D-03), keyed off the presence of Game rows rather
+   * than match.winningTeamId. Returns the existing games (empty when there are
+   * none) so the caller's transaction can delete them; throws a structured 409
+   * carrying their full contents when confirmOverwrite wasn't set.
+   */
+  private async assertOverwriteAllowed(match: Match, confirmOverwrite: boolean): Promise<Game[]> {
+    const existingGames = match.games ?? [];
+
+    if (existingGames.length === 0 || confirmOverwrite === true) {
+      return existingGames;
+    }
+
+    const existingGameIds = existingGames.map((g) => g.id);
+    const existingGameStats = await this.gameRepo
+      .createQueryBuilder('game')
+      .leftJoinAndSelect('game.gameStats', 'gameStat')
+      .where('game.id IN (:...ids)', { ids: existingGameIds })
+      .getMany();
+
+    const existingGamesSummary: ExistingGameSummary[] = existingGameStats.map((g) => ({
+      id: g.id,
+      gameNumber: g.gameNumber,
+      replayLink: g.replayLink,
+      winningTeamId: g.winningTeamId,
+      losingTeamId: g.losingTeamId,
+      differential: g.differential,
+      stats: (g.gameStats ?? []).map((gs) => ({
+        seasonPokemonId: gs.seasonPokemonId,
+        directKills: gs.directKills,
+        indirectKills: gs.indirectKills,
+        deaths: gs.deaths,
+      })),
+    }));
+
+    throw new StructuredConflictError('Match already has results — confirm overwrite', {
+      existingGames: existingGamesSummary,
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -477,7 +862,7 @@ export class MatchAnalysisService {
     numberOfGames: number,
     replayUrls: string[],
     errors: PreviewErrorDto[],
-    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+    pushError: PushError,
   ): [string, string] | null {
     const parsedCount = parsed.length;
     const minCount = Math.ceil(numberOfGames / 2);
@@ -534,7 +919,7 @@ export class MatchAnalysisService {
     twoPlayerNames: [string, string],
     parsed: ParsedReplay[],
     errors: PreviewErrorDto[],
-    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+    pushError: PushError,
     playerOverrides: PlayerOverrideInputDto[],
   ): Promise<{
     players: PlayerPreviewDto[];
@@ -562,7 +947,10 @@ export class MatchAnalysisService {
     seasonTeams: Team[],
     playerOverrides: PlayerOverrideInputDto[],
     errors: PreviewErrorDto[],
-    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+    pushError: PushError,
+    // What `seasonTeams` is scoped to, for the override error message — the whole
+    // season roster for analyze(), just the two match teams for analyzeGame().
+    scopeLabel: string = 'this season',
   ): ResolvedPlayer[] {
     const resolved: ResolvedPlayer[] = [];
     const usedTeamIds = new Set<number>();
@@ -590,7 +978,7 @@ export class MatchAnalysisService {
           pushError(
             `players[${i}].user`,
             PreviewErrorCode.PLAYER_UNRESOLVED,
-            `Selected team ${override.teamId} does not belong to this season.`,
+            `Selected team ${override.teamId} does not belong to ${scopeLabel}.`,
             buildTeamCandidates(),
           );
           resolved.push({ rawShowdownName: rawName, user: null, team: null });
@@ -657,7 +1045,7 @@ export class MatchAnalysisService {
     resolved: ResolvedPlayer[],
     players: PlayerPreviewDto[],
     errors: PreviewErrorDto[],
-    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+    pushError: PushError,
   ): Promise<{ matchId: number | null; weekId: number | null; weekName: string | null }> {
     const teamA = resolved[0].team;
     const teamB = resolved[1].team;
@@ -721,10 +1109,8 @@ export class MatchAnalysisService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Stage 5 entry point. Bulk-loads each team's draft pool once, then iterates
-   * over each parsed replay to build GamePreviewDto entries with StatPreviewDto
-   * per Pokémon. After all games are computed, derives match winner/loser/
-   * decisiveness.
+   * Stage 5 entry point. Bulk-loads each team's draft pool once, builds a
+   * GamePreviewDto per parsed replay, then derives match winner/loser/decisiveness.
    *
    * NEVER writes to the database (ANLZ-10).
    */
@@ -734,137 +1120,16 @@ export class MatchAnalysisService {
     players: PlayerPreviewDto[],
     preview: MatchPreviewDto,
     errors: PreviewErrorDto[],
-    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+    pushError: PushError,
   ): Promise<void> {
-    // Build player-name → PlayerPreviewDto lookup (keyed by toID of raw showdown name)
-    // so we can map parser player names → team IDs.
-    const playerByIdKey = new Map<string, PlayerPreviewDto>();
-    for (const p of players) {
-      playerByIdKey.set(toID(p.rawShowdownName), p);
-    }
-
-    // Bulk-load each resolved team's draft pool ONCE (Pitfall 2 — avoid N+1).
-    // Map: teamId → SeasonPokemon[]
-    const poolByTeamId = new Map<number, SeasonPokemon[]>();
-    for (const p of players) {
-      if (p.teamId !== null && !poolByTeamId.has(p.teamId)) {
-        const pool = await this.seasonPokemonRepo.find({
-          where: { seasonId, seasonPokemonTeams: { teamId: p.teamId } },
-          relations: { pokemon: true, seasonPokemonTeams: true },
-          relationLoadStrategy: 'query',
-        });
-        poolByTeamId.set(p.teamId, pool);
-      }
-    }
-
-    // Lazily-loaded full season pool, used as candidate fallback when a player's
-    // team is unresolved (teamId null). Loaded at most once (Pitfall 2 — avoid N+1):
-    // never fetched when every player resolves to a team.
-    let seasonPool: SeasonPokemon[] | null = null;
-    const loadSeasonPool = async (): Promise<SeasonPokemon[]> => {
-      if (seasonPool === null) {
-        seasonPool =
-          (await this.seasonPokemonRepo.find({
-            where: { seasonId },
-            relations: { pokemon: true, seasonPokemonTeams: true },
-            relationLoadStrategy: 'query',
-          })) ?? [];
-      }
-      return seasonPool;
-    };
+    const pools = await this.loadDraftPools(seasonId, players);
 
     // Process each parsed replay in submission order (1-indexed gameNumber)
     const games: GamePreviewDto[] = [];
     const gameWins = new Map<number, number>(); // teamId → win count
 
     for (let i = 0; i < parsed.length; i++) {
-      const { url, analysis } = parsed[i];
-      const gameDto = new GamePreviewDto();
-      gameDto.gameNumber = i + 1;
-      gameDto.replayUrl = url;
-      gameDto.stats = [];
-
-      // Build stats for each player in this replay
-      for (const [rawPlayerName, playerStats] of Object.entries(analysis.players)) {
-        const playerIdKey = toID(rawPlayerName);
-        const playerDto = playerByIdKey.get(playerIdKey);
-        const teamId = playerDto?.teamId ?? null;
-        const teamPool = teamId !== null ? (poolByTeamId.get(teamId) ?? []) : [];
-
-        // Build a name-key → SeasonPokemon[] map from this team's pool
-        const poolByKey = new Map<string, SeasonPokemon[]>();
-        for (const sp of teamPool) {
-          const key = toID(normalizePokemonName(sp.pokemon.name));
-          if (!poolByKey.has(key)) {
-            poolByKey.set(key, []);
-          }
-          poolByKey.get(key)!.push(sp);
-        }
-
-        // Collect all Pokémon names from kills + deaths for this player
-        const allPokemonNames = new Set([
-          ...Object.keys(playerStats.kills),
-          ...Object.keys(playerStats.deaths),
-        ]);
-
-        for (const rawPokeName of allPokemonNames) {
-          const statDto = new StatPreviewDto();
-          statDto.rawName = rawPokeName;
-          statDto.teamId = teamId;
-          statDto.directKills = playerStats.kills[rawPokeName]?.direct ?? 0;
-          statDto.indirectKills = playerStats.kills[rawPokeName]?.passive ?? 0;
-          statDto.deaths = playerStats.deaths[rawPokeName] ?? 0;
-
-          // Resolve via normalizePokemonName + toID
-          const normalizedKey = toID(normalizePokemonName(rawPokeName));
-          const poolMatches = poolByKey.get(normalizedKey) ?? [];
-
-          if (poolMatches.length === 1) {
-            // Resolved
-            statDto.seasonPokemonId = poolMatches[0].id;
-            statDto.name = poolMatches[0].pokemon.name;
-          } else if (poolMatches.length > 1) {
-            // Ambiguous — 2+ entries for same normalized key
-            statDto.seasonPokemonId = null;
-            statDto.name = null;
-            const candidates = poolMatches.map((sp) => ({
-              seasonPokemonId: sp.id,
-              name: sp.pokemon.name,
-            }));
-            pushError(
-              `games[${i}].stats`,
-              PreviewErrorCode.POKEMON_AMBIGUOUS,
-              `Pokémon "${rawPokeName}" matches ${poolMatches.length} entries in the draft pool — cannot resolve uniquely.`,
-              candidates,
-            );
-          } else {
-            // Not found — emit with team pool candidates, or the full season pool
-            // when the player's team is unresolved (teamId null) so the moderator
-            // still gets an actionable override list.
-            statDto.seasonPokemonId = null;
-            statDto.name = null;
-            const candidatePool =
-              teamId !== null ? teamPool : await loadSeasonPool();
-            const candidates = candidatePool.map((sp) => ({
-              seasonPokemonId: sp.id,
-              name: sp.pokemon.name,
-            }));
-            pushError(
-              `games[${i}].stats`,
-              PreviewErrorCode.POKEMON_NOT_FOUND,
-              teamId !== null
-                ? `Pokémon "${rawPokeName}" was not found in the team's draft pool.`
-                : `Pokémon "${rawPokeName}" was not found in the season pool.`,
-              candidates,
-            );
-          }
-
-          gameDto.stats.push(statDto);
-        }
-      }
-
-      // Per-game winner/loser/differential
-      this.computeGameResult(i, analysis, playerByIdKey, gameDto, errors, pushError);
+      const gameDto = await this.buildGamePreview(i, parsed[i], players, pools, errors, pushError);
 
       // Track game win for match winner computation
       if (gameDto.winnerTeamId !== null) {
@@ -881,6 +1146,154 @@ export class MatchAnalysisService {
   }
 
   /**
+   * Bulk-loads each resolved team's draft pool ONCE (Pitfall 2 — avoid N+1), plus
+   * a lazily-loaded full-season pool used as the candidate fallback when a
+   * player's team is unresolved. The season pool is never fetched when every
+   * player resolved to a team.
+   */
+  private async loadDraftPools(
+    seasonId: number,
+    players: PlayerPreviewDto[],
+  ): Promise<DraftPools> {
+    const poolByTeamId = new Map<number, SeasonPokemon[]>();
+    for (const p of players) {
+      if (p.teamId !== null && !poolByTeamId.has(p.teamId)) {
+        const pool = await this.seasonPokemonRepo.find({
+          where: { seasonId, seasonPokemonTeams: { teamId: p.teamId } },
+          relations: { pokemon: true, seasonPokemonTeams: true },
+          relationLoadStrategy: 'query',
+        });
+        poolByTeamId.set(p.teamId, pool);
+      }
+    }
+
+    let seasonPool: SeasonPokemon[] | null = null;
+    const loadSeasonPool = async (): Promise<SeasonPokemon[]> => {
+      if (seasonPool === null) {
+        seasonPool =
+          (await this.seasonPokemonRepo.find({
+            where: { seasonId },
+            relations: { pokemon: true, seasonPokemonTeams: true },
+            relationLoadStrategy: 'query',
+          })) ?? [];
+      }
+      return seasonPool;
+    };
+
+    return { poolByTeamId, loadSeasonPool };
+  }
+
+  /**
+   * Builds one game's preview from a parsed replay: per-Pokémon stats resolved
+   * against each player's draft pool, plus the game's winner/loser/differential.
+   * Shared by the full-set analyze() pipeline and the single-replay analyzeGame().
+   */
+  private async buildGamePreview(
+    gameIndex: number,
+    parsed: ParsedReplay,
+    players: PlayerPreviewDto[],
+    pools: DraftPools,
+    errors: PreviewErrorDto[],
+    pushError: PushError,
+  ): Promise<GamePreviewDto> {
+    // Build player-name → PlayerPreviewDto lookup (keyed by toID of raw showdown
+    // name) so we can map parser player names → team IDs.
+    const playerByIdKey = new Map<string, PlayerPreviewDto>();
+    for (const p of players) {
+      playerByIdKey.set(toID(p.rawShowdownName), p);
+    }
+
+    const { url, analysis } = parsed;
+    const gameDto = new GamePreviewDto();
+    gameDto.gameNumber = gameIndex + 1;
+    gameDto.replayUrl = url;
+    gameDto.stats = [];
+
+    // Build stats for each player in this replay
+    for (const [rawPlayerName, playerStats] of Object.entries(analysis.players)) {
+      const playerIdKey = toID(rawPlayerName);
+      const playerDto = playerByIdKey.get(playerIdKey);
+      const teamId = playerDto?.teamId ?? null;
+      const teamPool = teamId !== null ? (pools.poolByTeamId.get(teamId) ?? []) : [];
+
+      // Build a name-key → SeasonPokemon[] map from this team's pool
+      const poolByKey = new Map<string, SeasonPokemon[]>();
+      for (const sp of teamPool) {
+        const key = toID(normalizePokemonName(sp.pokemon.name));
+        if (!poolByKey.has(key)) {
+          poolByKey.set(key, []);
+        }
+        poolByKey.get(key)!.push(sp);
+      }
+
+      // Collect all Pokémon names from kills + deaths for this player
+      const allPokemonNames = new Set([
+        ...Object.keys(playerStats.kills),
+        ...Object.keys(playerStats.deaths),
+      ]);
+
+      for (const rawPokeName of allPokemonNames) {
+        const statDto = new StatPreviewDto();
+        statDto.rawName = rawPokeName;
+        statDto.teamId = teamId;
+        statDto.directKills = playerStats.kills[rawPokeName]?.direct ?? 0;
+        statDto.indirectKills = playerStats.kills[rawPokeName]?.passive ?? 0;
+        statDto.deaths = playerStats.deaths[rawPokeName] ?? 0;
+
+        // Resolve via normalizePokemonName + toID
+        const normalizedKey = toID(normalizePokemonName(rawPokeName));
+        const poolMatches = poolByKey.get(normalizedKey) ?? [];
+
+        if (poolMatches.length === 1) {
+          // Resolved
+          statDto.seasonPokemonId = poolMatches[0].id;
+          statDto.name = poolMatches[0].pokemon.name;
+        } else if (poolMatches.length > 1) {
+          // Ambiguous — 2+ entries for same normalized key
+          statDto.seasonPokemonId = null;
+          statDto.name = null;
+          const candidates = poolMatches.map((sp) => ({
+            seasonPokemonId: sp.id,
+            name: sp.pokemon.name,
+          }));
+          pushError(
+            `games[${gameIndex}].stats`,
+            PreviewErrorCode.POKEMON_AMBIGUOUS,
+            `Pokémon "${rawPokeName}" matches ${poolMatches.length} entries in the draft pool — cannot resolve uniquely.`,
+            candidates,
+          );
+        } else {
+          // Not found — emit with team pool candidates, or the full season pool
+          // when the player's team is unresolved (teamId null) so the moderator
+          // still gets an actionable override list.
+          statDto.seasonPokemonId = null;
+          statDto.name = null;
+          const candidatePool = teamId !== null ? teamPool : await pools.loadSeasonPool();
+          const candidates = candidatePool.map((sp) => ({
+            seasonPokemonId: sp.id,
+            name: sp.pokemon.name,
+          }));
+          pushError(
+            `games[${gameIndex}].stats`,
+            PreviewErrorCode.POKEMON_NOT_FOUND,
+            teamId !== null
+              ? `Pokémon "${rawPokeName}" was not found in the team's draft pool.`
+              : `Pokémon "${rawPokeName}" was not found in the season pool.`,
+            candidates,
+          );
+        }
+
+        gameDto.stats.push(statDto);
+      }
+    }
+
+    // Per-game winner/loser/differential
+    this.computeGameResult(gameIndex, analysis, playerByIdKey, gameDto, errors, pushError);
+
+    return gameDto;
+  }
+
+  /**
    * Derive per-game winner, loser, and differential from the parser's
    * info.winner / info.loser fields.
    */
@@ -890,7 +1303,7 @@ export class MatchAnalysisService {
     playerByIdKey: Map<string, PlayerPreviewDto>,
     gameDto: GamePreviewDto,
     errors: PreviewErrorDto[],
-    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+    pushError: PushError,
   ): void {
     const rawWinner = analysis.info.winner;
     const rawLoser = analysis.info.loser;
@@ -934,7 +1347,7 @@ export class MatchAnalysisService {
     gameWins: Map<number, number>,
     preview: MatchPreviewDto,
     errors: PreviewErrorDto[],
-    pushError: (field: string, code: PreviewErrorCode, message: string, candidates?: unknown[]) => void,
+    pushError: PushError,
   ): void {
     const totalGames = games.length;
     const majority = totalGames / 2; // strict majority = > half
