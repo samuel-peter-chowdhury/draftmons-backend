@@ -129,7 +129,9 @@ export class App {
       cors({
         origin: APP_CONFIG.isProduction
           ? (APP_CONFIG.clientUrl ? [APP_CONFIG.clientUrl] : [])
-          : ['http://localhost:3333', 'http://localhost:3000'],
+          : // Development: accept any localhost port so parallel worktrees can
+            // each run their own frontend dev server on its own port.
+            /^http:\/\/localhost:\d+$/,
         credentials: true,
       }),
     );
