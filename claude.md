@@ -602,10 +602,16 @@ npm start      # Run compiled JavaScript
 
 ### Database Migrations
 ```bash
-npm run migration:generate -- src/migrations/MigrationName
+npm run migration:generate --name=MigrationName
 npm run migration:run
 npm run migration:revert
 ```
+
+It must be `--name=MigrationName`, **not** `-- src/migrations/MigrationName`.
+The script is `… migration:generate ./src/migrations/$npm_config_name -d …`,
+and npm only populates `$npm_config_name` from a `--name=` flag. A `--`
+passthrough leaves the path empty and appends the argument as a stray
+positional, so TypeORM receives `./src/migrations/ … src/migrations/MigrationName`.
 
 ## Additional Resources
 
